@@ -12,7 +12,7 @@ export {
 } from './utils';
 export type { ScrapedMeeting, ScrapedAgendaItem } from './utils';
 
-// CivicClerk (meetings, agendas, minutes)
+// CivicClerk (meetings, agendas, minutes, votes)
 export {
   scrapeCivicClerkMeetingDetails,
   discoverCivicClerkEventIds,
@@ -21,8 +21,10 @@ export {
   getCivicClerkMinutesPdfUrl,
   fetchCivicClerkMinutesPdf,
   scrapeCivicClerkMeetingsWithPlaywright,
+  fetchVoteOutcomesFromOverview,
+  hasVoteDataAvailable,
 } from './civicclerk';
-export type { CivicClerkMeeting } from './civicclerk';
+export type { CivicClerkMeeting, VoteOutcome } from './civicclerk';
 
 // Resolutions and ordinance linking
 export {

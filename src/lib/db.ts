@@ -133,12 +133,13 @@ function initializeSchema() {
       number TEXT NOT NULL UNIQUE,
       title TEXT NOT NULL,
       description TEXT,
-      status TEXT NOT NULL DEFAULT 'adopted',
+      status TEXT NOT NULL DEFAULT 'pending_minutes',
       introduced_date TEXT,
       adopted_date TEXT,
       meeting_id TEXT,
       packet_url TEXT,
       summary TEXT,
+      outcome_verified INTEGER DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (meeting_id) REFERENCES meetings(id)
@@ -182,6 +183,13 @@ function initializeSchema() {
   }
   try {
     database.exec(`ALTER TABLE meetings ADD COLUMN minutes_summary TEXT`);
+  } catch {
+    // Column already exists, ignore error
+  }
+
+  // Add outcome_verified column to resolutions table if it doesn't exist
+  try {
+    database.exec(`ALTER TABLE resolutions ADD COLUMN outcome_verified INTEGER DEFAULT 0`);
   } catch {
     // Column already exists, ignore error
   }
@@ -650,6 +658,7 @@ export interface ResolutionRow {
   meeting_id: string | null;
   packet_url: string | null;
   summary: string | null;
+  outcome_verified: number;
   created_at: string;
   updated_at: string;
 }
@@ -666,24 +675,41 @@ export function insertResolution(resolution: {
   meetingId?: string;
   packetUrl?: string;
   summary?: string;
+  outcomeVerified?: boolean;
 }) {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO resolutions (id, number, title, description, status, introduced_date, adopted_date, meeting_id, packet_url, summary, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT OR REPLACE INTO resolutions (id, number, title, description, status, introduced_date, adopted_date, meeting_id, packet_url, summary, outcome_verified, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `);
   stmt.run(
     resolution.id,
     resolution.number,
     resolution.title,
     resolution.description || null,
-    resolution.status || 'adopted',
+    resolution.status || 'pending_minutes',
     resolution.introducedDate || null,
     resolution.adoptedDate || null,
     resolution.meetingId || null,
     resolution.packetUrl || null,
-    resolution.summary || null
+    resolution.summary || null,
+    resolution.outcomeVerified ? 1 : 0
   );
+}
+
+// Update resolution status and mark as verified from minutes
+export function updateResolutionOutcome(
+  id: string,
+  status: 'adopted' | 'rejected' | 'tabled',
+  adoptedDate?: string
+) {
+  const db = getDb();
+  const stmt = db.prepare(`
+    UPDATE resolutions
+    SET status = ?, outcome_verified = 1, adopted_date = COALESCE(?, adopted_date), updated_at = datetime('now')
+    WHERE id = ?
+  `);
+  stmt.run(status, adoptedDate || null, id);
 }
 
 export function getResolutions(options?: { year?: string; limit?: number }): ResolutionRow[] {

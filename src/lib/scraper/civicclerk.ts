@@ -704,9 +704,18 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
           title = 'Work Session';
         }
 
+        // Check if there's an actual Minutes document in the sidebar
+        // Use the same selector as getCivicClerkMinutesPdfUrl for consistency
         const hasMinutes = await page.evaluate(() => {
-          const text = document.body.textContent || '';
-          return text.toLowerCase().includes('minutes');
+          // Look for sidebar list items with a primary text span containing exactly "Minutes"
+          const items = document.querySelectorAll('li.MuiListItem-container');
+          for (const item of items) {
+            const textSpan = item.querySelector('.MuiListItemText-primary');
+            if (textSpan?.textContent?.trim() === 'Minutes') {
+              return true;
+            }
+          }
+          return false;
         });
 
         if (dateStr) {
@@ -752,4 +761,263 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
   }
 
   return meetings.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Vote outcome from overview page
+export interface VoteOutcome {
+  itemTitle: string;
+  motion: string;
+  result: 'passed' | 'failed' | 'tabled';
+  initiatedBy: string;
+  secondedBy: string;
+  yesCount: number;
+  noCount: number;
+  abstainCount: number;
+  yesVotes: string[];
+  noVotes: string[];
+  abstainVotes: string[];
+}
+
+// Fetch vote outcomes from the overview page (more reliable than PDF parsing)
+export async function fetchVoteOutcomesFromOverview(
+  eventId: number
+): Promise<VoteOutcome[]> {
+  const { chromium } = await import('playwright');
+  const outcomes: VoteOutcome[] = [];
+
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    });
+    const page = await context.newPage();
+
+    const overviewUrl = `${DATA_SOURCES.civicClerk.baseUrl}/event/${eventId}/overview`;
+    console.log(`Fetching vote outcomes from ${overviewUrl}...`);
+    await page.goto(overviewUrl, { waitUntil: 'networkidle', timeout: 30000 });
+
+    // Wait for page content to load (look for Meeting Overview text)
+    await page.waitForSelector('text=Meeting Overview', { timeout: 10000 });
+
+    // Expand all collapsed sections first
+    const expandButtons = await page.$$('[aria-expanded="false"]');
+    for (const btn of expandButtons) {
+      try {
+        await btn.click();
+        // Wait for expansion animation
+        await page.waitForFunction(
+          (el) => el.getAttribute('aria-expanded') === 'true',
+          btn,
+          { timeout: 2000 }
+        ).catch(() => {});
+      } catch {
+        // Ignore click errors
+      }
+    }
+
+    // Find all items with MOTIONS/VOTES buttons and their associated text
+    const itemsWithVotes = await page.evaluate(() => {
+      const results: { itemText: string; buttonIndex: number }[] = [];
+      const allElements = Array.from(document.querySelectorAll('*'));
+      let buttonIndex = 0;
+
+      for (const el of allElements) {
+        if (
+          el.innerText === 'MOTIONS / VOTES' ||
+          el.textContent?.trim() === 'MOTIONS / VOTES'
+        ) {
+          // Find parent to get context
+          let parent = el.parentElement;
+          for (let i = 0; i < 8; i++) {
+            if (!parent) break;
+            const text = parent.innerText || parent.textContent || '';
+            if (text.length > 50 && text.length < 800) {
+              const itemText = text
+                .replace(/MOTIONS \/ VOTES/g, '')
+                .trim()
+                .slice(0, 200);
+              results.push({ itemText, buttonIndex });
+              break;
+            }
+            parent = parent.parentElement;
+          }
+          buttonIndex++;
+        }
+      }
+      return results;
+    });
+
+    console.log(`Found ${itemsWithVotes.length} items with vote buttons`);
+
+    // Click each MOTIONS/VOTES button and extract vote data
+    for (const item of itemsWithVotes) {
+      try {
+        console.log(`  Processing item ${item.buttonIndex}: ${item.itemText.slice(0, 50)}...`);
+
+        // Find and click the button
+        const clicked = await page.evaluate((idx) => {
+          const allElements = Array.from(document.querySelectorAll('*'));
+          let buttonIndex = 0;
+          for (const el of allElements) {
+            if (
+              el.innerText === 'MOTIONS / VOTES' ||
+              el.textContent?.trim() === 'MOTIONS / VOTES'
+            ) {
+              if (buttonIndex === idx) {
+                (el as HTMLElement).click();
+                return true;
+              }
+              buttonIndex++;
+            }
+          }
+          return false;
+        }, item.buttonIndex);
+
+        if (!clicked) {
+          console.log(`    Failed to click button`);
+          continue;
+        }
+        console.log(`    Button clicked`)
+
+        // Wait for modal with vote result to fully load (not just the header)
+        try {
+          await page.waitForFunction(
+            () => {
+              const text = document.body.innerText;
+              // Wait for the actual vote result, not just the modal header
+              return text.includes('Motions/Votes Detail') &&
+                     (text.includes('Passed') || text.includes('Failed') || text.includes('Tabled'));
+            },
+            { timeout: 5000 }
+          );
+        } catch {
+          console.log(`    Modal did not appear or has no vote result (timeout)`);
+          continue;
+        }
+        console.log(`    Modal appeared with vote result`);
+
+        // Extract vote data from modal
+        const voteData = await page.evaluate(() => {
+          // Look for the modal content more broadly
+          const bodyText = document.body.innerText;
+
+          // Debug: find the modal text
+          const modalMatch = bodyText.match(/Motions\/Votes Detail[\s\S]{0,800}/);
+          const modalText = modalMatch ? modalMatch[0] : '';
+
+          // Parse motion and result from modal text specifically
+          const motionMatch = modalText.match(/Motion:\s*(\w+)/i);
+          const resultMatch = modalText.match(/(Passed|Failed|Tabled)/i);
+          const initiatedMatch = modalText.match(/Initiated by\s+([^,]+)/i);
+          const secondedMatch = modalText.match(/seconded by\s+([^.\n\d]+)/i);
+
+          // Parse vote counts
+          const yesMatch = modalText.match(/Yes\s*(\d+)/i);
+          const noMatch = modalText.match(/No\s+(\d+)/i);
+          const abstainMatch = modalText.match(/Abstain\s*(\d+)/i);
+
+          // Parse individual votes (numbered list)
+          const voterLines = modalText.match(/\d+\.\s+[A-Z][a-z]+\s+[A-Z][a-zA-Z]+/g) || [];
+          const voters = voterLines.map(v => v.replace(/^\d+\.\s*/, '').trim());
+
+          if (!resultMatch) {
+            return { debug: modalText.slice(0, 300), error: 'No result match' };
+          }
+
+          return {
+            motion: motionMatch?.[1] || 'Unknown',
+            result: resultMatch?.[1]?.toLowerCase() || 'unknown',
+            initiatedBy: initiatedMatch?.[1]?.trim() || 'Unknown',
+            secondedBy: secondedMatch?.[1]?.trim() || 'Unknown',
+            yesCount: parseInt(yesMatch?.[1] || '0'),
+            noCount: parseInt(noMatch?.[1] || '0'),
+            abstainCount: parseInt(abstainMatch?.[1] || '0'),
+            voters,
+          };
+        });
+
+        if (voteData && voteData.result && voteData.result !== 'unknown' && !voteData.error) {
+          console.log(`    Extracted: ${voteData.result} (${voteData.yesCount}-${voteData.noCount})`);
+          outcomes.push({
+            itemTitle: item.itemText,
+            motion: voteData.motion,
+            result: voteData.result as 'passed' | 'failed' | 'tabled',
+            initiatedBy: voteData.initiatedBy,
+            secondedBy: voteData.secondedBy,
+            yesCount: voteData.yesCount,
+            noCount: voteData.noCount,
+            abstainCount: voteData.abstainCount,
+            yesVotes: voteData.voters || [],
+            noVotes: [],
+            abstainVotes: [],
+          });
+        } else if (voteData?.debug) {
+          console.log(`    Debug modal text: ${voteData.debug}`);
+        } else {
+          console.log(`    No vote data extracted`);
+        }
+
+        // Close modal by pressing Escape and wait for it to close
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(
+          () => !document.body.innerText.includes('Motions/Votes Detail'),
+          { timeout: 2000 }
+        ).catch(() => {});
+      } catch (error) {
+        console.error(`Error extracting vote for item: ${item.itemText}`, error);
+      }
+    }
+
+    console.log(`Extracted ${outcomes.length} vote outcomes`);
+    return outcomes;
+  } catch (error) {
+    console.error(`Failed to fetch vote outcomes for event ${eventId}:`, error);
+    return [];
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
+// Check if a meeting has vote data available on the overview page
+export async function hasVoteDataAvailable(eventId: number): Promise<boolean> {
+  const { chromium } = await import('playwright');
+
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    });
+    const page = await context.newPage();
+
+    const overviewUrl = `${DATA_SOURCES.civicClerk.baseUrl}/event/${eventId}/overview`;
+    await page.goto(overviewUrl, { waitUntil: 'networkidle', timeout: 30000 });
+
+    // Wait for page content to load
+    await page.waitForSelector('text=Meeting Overview', { timeout: 10000 });
+
+    // Check if there are any MOTIONS/VOTES buttons
+    const hasVotes = await page.evaluate(() => {
+      const allElements = Array.from(document.querySelectorAll('*'));
+      return allElements.some(
+        (el) =>
+          el.innerText === 'MOTIONS / VOTES' ||
+          el.textContent?.trim() === 'MOTIONS / VOTES'
+      );
+    });
+
+    return hasVotes;
+  } catch (error) {
+    console.error(`Failed to check vote data for event ${eventId}:`, error);
+    return false;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 }

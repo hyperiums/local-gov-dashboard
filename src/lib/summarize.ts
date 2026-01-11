@@ -1303,3 +1303,117 @@ Keep the summary concise and use plain language that a resident would understand
 
   return response.choices[0]?.message?.content || '';
 }
+
+// Interface for voting outcome extraction
+export interface VotingOutcome {
+  reference: string;  // Resolution/Ordinance number (e.g., "25-015", "767")
+  title: string;      // Item title for matching
+  outcome: 'adopted' | 'rejected' | 'tabled';
+  voteDetails?: {
+    motion?: string;
+    second?: string;
+    ayes?: string[];
+    nays?: string[];
+  };
+}
+
+// Extract voting outcomes from meeting minutes PDF
+// This is the authoritative source for resolution/ordinance status
+export async function extractOutcomesFromMinutesPdf(
+  pdfBase64: string,
+  agendaItems: { reference: string; title: string }[]
+): Promise<VotingOutcome[]> {
+  const client = getClient();
+  const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+
+  // Build a list of items to look for
+  const itemsToFind = agendaItems.map(item =>
+    `- ${item.reference ? `${item.reference}: ` : ''}${item.title}`
+  ).join('\n');
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',  // Using GPT-4o for better accuracy on structured extraction
+    max_tokens: 4000,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: `You are extracting voting outcomes from official city council meeting minutes.
+
+CRITICAL ACCURACY RULES:
+- Only extract outcomes that are EXPLICITLY stated in the minutes
+- Look for voting records that follow the pattern:
+  Motion: [name]
+  Second: [name]
+  Ayes: [list of names]
+  Nays: [list of names or "None"]
+  Result: passed/approved/adopted OR failed/rejected/denied OR tabled
+- Match items by their reference number (Resolution 25-015, Ordinance 767) or by title
+- If an item is not mentioned or has no vote recorded, do NOT include it in results
+- NEVER guess or infer outcomes - only report what is explicitly stated
+
+Return a JSON object with this structure:
+{
+  "outcomes": [
+    {
+      "reference": "25-015",
+      "title": "Accept Public Right-of-Way at Pod Knutson",
+      "outcome": "adopted",
+      "voteDetails": {
+        "motion": "Council Member Name",
+        "second": "Council Member Name",
+        "ayes": ["Name1", "Name2", "Name3"],
+        "nays": []
+      }
+    }
+  ]
+}
+
+Valid outcome values: "adopted" (passed/approved), "rejected" (failed/denied), "tabled"
+${TONE_GUIDELINES}`,
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Extract voting outcomes for these agenda items from the meeting minutes:
+
+${itemsToFind}
+
+Search the minutes document for each item and extract the official voting result. Only include items that have a recorded vote.`
+          },
+          {
+            type: 'file',
+            file: {
+              filename: 'minutes.pdf',
+              file_data: `data:application/pdf;base64,${cleanBase64}`,
+            }
+          } as unknown as { type: 'text'; text: string }
+        ],
+      },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content || '{}';
+
+  try {
+    const parsed = JSON.parse(content);
+    const outcomes = parsed.outcomes || [];
+
+    // Validate and clean the outcomes
+    return outcomes
+      .filter((o: { outcome?: string }) =>
+        o.outcome && ['adopted', 'rejected', 'tabled'].includes(o.outcome)
+      )
+      .map((o: { reference?: string; title?: string; outcome: string; voteDetails?: { motion?: string; second?: string; ayes?: string[]; nays?: string[] } }) => ({
+        reference: o.reference || '',
+        title: o.title || '',
+        outcome: o.outcome as 'adopted' | 'rejected' | 'tabled',
+        voteDetails: o.voteDetails,
+      }));
+  } catch (error) {
+    console.error('Failed to parse voting outcomes JSON:', error);
+    return [];
+  }
+}

@@ -20,9 +20,10 @@ import {
   linkOrdinancesToMeetings,
   updateOrdinanceDatesFromMeetings,
   extractResolutionsFromAgendaItems,
+  fetchVoteOutcomesFromOverview,
   type CivicDocType,
 } from '@/lib/scraper';
-import { fetchPdfAsBase64, analyzePdf, generateAllSummaryLevels, extractResolutionFromAgendaPdf, generateResolutionSummaryFromText } from '@/lib/summarize';
+import { fetchPdfAsBase64, analyzePdf, generateAllSummaryLevels, extractResolutionFromAgendaPdf, generateResolutionSummaryFromText, extractOutcomesFromMinutesPdf } from '@/lib/summarize';
 import { getRecentYears, getAllMonths } from '@/lib/dates';
 import {
   insertMeeting,
@@ -35,12 +36,14 @@ import {
   getMeetingById,
   updateOrdinanceSummary,
   updateResolutionSummary,
+  updateResolutionOutcome,
   updateMeetingSummary,
   updateMeetingAgendaSummary,
   updateMeetingMinutesSummary,
   updateSummaryMetadata,
   getDb,
   type MeetingRow,
+  type ResolutionRow,
 } from '@/lib/db';
 
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
@@ -368,6 +371,205 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
         return NextResponse.json({
           success: true,
           resolutionsExtracted: count,
+        });
+      }
+
+      case 'backfill-resolution-outcomes': {
+        // Backfill resolution outcomes from the CivicClerk overview page
+        // This extracts actual voting results from the structured vote data
+        const { limit = 50 } = params || {};
+        console.log('Backfilling resolution outcomes from overview page...');
+
+        const db = getDb();
+
+        // Get all meetings that have resolutions needing verification
+        const meetingsWithResolutions = db.prepare(`
+          SELECT DISTINCT m.id, m.date
+          FROM meetings m
+          JOIN resolutions r ON r.meeting_id = m.id
+          WHERE r.outcome_verified = 0
+            AND m.date < date('now')
+          ORDER BY m.date DESC
+          LIMIT ?
+        `).all(limit) as { id: string; date: string }[];
+
+        console.log(`Found ${meetingsWithResolutions.length} meetings with unverified resolutions`);
+
+        const results: {
+          meetingId: string;
+          date: string;
+          success: boolean;
+          hasVoteData?: boolean;
+          outcomesExtracted?: number;
+          resolutionsUpdated?: string[];
+          error?: string;
+        }[] = [];
+
+        for (const meeting of meetingsWithResolutions) {
+          try {
+            // Extract event ID from meeting ID
+            const eventIdMatch = meeting.id.match(/civicclerk-(\d+)/);
+            if (!eventIdMatch) {
+              results.push({ meetingId: meeting.id, date: meeting.date, success: false, error: 'Invalid meeting ID format' });
+              continue;
+            }
+
+            const eventId = parseInt(eventIdMatch[1]);
+
+            // Get resolutions for this meeting
+            const resolutions = db.prepare(`
+              SELECT id, number, title
+              FROM resolutions
+              WHERE meeting_id = ? AND outcome_verified = 0
+            `).all(meeting.id) as { id: string; number: string; title: string }[];
+
+            if (resolutions.length === 0) {
+              results.push({ meetingId: meeting.id, date: meeting.date, success: true, outcomesExtracted: 0 });
+              continue;
+            }
+
+            console.log(`Processing ${resolutions.length} resolutions from meeting ${meeting.id} (event ${eventId})...`);
+
+            // Fetch vote outcomes from overview page
+            const voteOutcomes = await fetchVoteOutcomesFromOverview(eventId);
+
+            if (voteOutcomes.length === 0) {
+              // No vote data on overview page - try PDF fallback
+              console.log(`  No overview vote data, trying PDF fallback...`);
+
+              const minutesPdf = await fetchCivicClerkMinutesPdf(eventId);
+              if (!minutesPdf) {
+                // No minutes PDF available either
+                console.log(`  No minutes PDF available for event ${eventId}`);
+                results.push({
+                  meetingId: meeting.id,
+                  date: meeting.date,
+                  success: true,
+                  hasVoteData: false,
+                  outcomesExtracted: 0,
+                  resolutionsUpdated: [],
+                });
+                continue;
+              }
+
+              console.log(`  Found minutes PDF, extracting via GPT-4o...`);
+
+              // Get agenda items for matching
+              const agendaItems = db.prepare(`
+                SELECT reference_number as reference, title
+                FROM agenda_items WHERE meeting_id = ?
+              `).all(meeting.id) as { reference: string; title: string }[];
+
+              // Extract outcomes from PDF via AI
+              const pdfOutcomes = await extractOutcomesFromMinutesPdf(minutesPdf, agendaItems);
+              console.log(`  Extracted ${pdfOutcomes.length} outcomes from PDF`);
+
+              if (pdfOutcomes.length === 0) {
+                results.push({
+                  meetingId: meeting.id,
+                  date: meeting.date,
+                  success: true,
+                  hasVoteData: false,
+                  outcomesExtracted: 0,
+                  resolutionsUpdated: [],
+                });
+                continue;
+              }
+
+              // Update resolutions with PDF-extracted outcomes
+              const updatedResolutions: string[] = [];
+              for (const resolution of resolutions) {
+                // Match by resolution number
+                const matchingOutcome = pdfOutcomes.find(o =>
+                  o.reference === resolution.number ||
+                  o.reference === `Resolution ${resolution.number}` ||
+                  o.title?.toLowerCase().includes(resolution.number.toLowerCase())
+                );
+
+                if (matchingOutcome) {
+                  const status = matchingOutcome.outcome;
+                  updateResolutionOutcome(
+                    resolution.id,
+                    status,
+                    status === 'adopted' ? meeting.date : undefined
+                  );
+
+                  const voteInfo = matchingOutcome.voteDetails
+                    ? `${matchingOutcome.voteDetails.ayes?.length || '?'}-${matchingOutcome.voteDetails.nays?.length || 0}`
+                    : 'from PDF';
+                  updatedResolutions.push(`${resolution.number}: ${status} (${voteInfo})`);
+                  console.log(`  Updated ${resolution.number} → ${status} (from PDF)`);
+                }
+              }
+
+              results.push({
+                meetingId: meeting.id,
+                date: meeting.date,
+                success: true,
+                hasVoteData: true,
+                outcomesExtracted: pdfOutcomes.length,
+                resolutionsUpdated: updatedResolutions,
+              });
+              continue;
+            }
+
+            console.log(`Found ${voteOutcomes.length} vote outcomes from overview page`);
+
+            // Update resolutions with extracted outcomes
+            const updatedResolutions: string[] = [];
+            for (const resolution of resolutions) {
+              // Find matching vote outcome by resolution number in item title
+              const matchingVote = voteOutcomes.find(v =>
+                v.itemTitle.toLowerCase().includes(`resolution ${resolution.number}`.toLowerCase()) ||
+                v.itemTitle.toLowerCase().includes(`resolution no. ${resolution.number}`.toLowerCase()) ||
+                v.itemTitle.includes(resolution.number)
+              );
+
+              if (matchingVote) {
+                // Map result to our status
+                const status = matchingVote.result === 'passed' ? 'adopted' :
+                               matchingVote.result === 'failed' ? 'rejected' :
+                               matchingVote.result === 'tabled' ? 'tabled' : 'adopted';
+
+                updateResolutionOutcome(
+                  resolution.id,
+                  status,
+                  status === 'adopted' ? meeting.date : undefined
+                );
+                updatedResolutions.push(`${resolution.number}: ${status} (${matchingVote.yesCount}-${matchingVote.noCount})`);
+                console.log(`  Updated ${resolution.number} → ${status} (Yes: ${matchingVote.yesCount}, No: ${matchingVote.noCount})`);
+              }
+            }
+
+            results.push({
+              meetingId: meeting.id,
+              date: meeting.date,
+              success: true,
+              hasVoteData: true,
+              outcomesExtracted: voteOutcomes.length,
+              resolutionsUpdated: updatedResolutions,
+            });
+
+          } catch (error) {
+            console.error(`Error processing meeting ${meeting.id}:`, error);
+            results.push({
+              meetingId: meeting.id,
+              date: meeting.date,
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
+        }
+
+        const totalUpdated = results
+          .filter(r => r.success)
+          .reduce((sum, r) => sum + (r.resolutionsUpdated?.length || 0), 0);
+
+        return NextResponse.json({
+          success: true,
+          meetingsProcessed: results.length,
+          resolutionsUpdated: totalUpdated,
+          results,
         });
       }
 

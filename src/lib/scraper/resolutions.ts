@@ -550,9 +550,15 @@ export function extractResolutionsFromAgendaItems(meetingId?: string): number {
     const today = new Date().toISOString().split('T')[0];
     const isFutureMeeting = item.meeting_date > today;
 
-    // Default status: 'proposed' for future meetings, 'adopted' for past meetings
-    let status = isFutureMeeting ? 'proposed' : 'adopted';
-    if (item.outcome) {
+    // Determine status based on available data
+    // - Future meeting → 'proposed' (hasn't happened yet)
+    // - Past meeting without outcome → 'pending_minutes' (need to verify from minutes)
+    // - Past meeting with explicit outcome → use that outcome
+    let status: string;
+    if (isFutureMeeting) {
+      status = 'proposed';
+    } else if (item.outcome) {
+      // We have an explicit outcome from the agenda item
       const outcomeLower = item.outcome.toLowerCase();
       if (
         outcomeLower.includes('approved') ||
@@ -567,7 +573,13 @@ export function extractResolutionsFromAgendaItems(meetingId?: string): number {
         status = 'rejected';
       } else if (outcomeLower.includes('tabled')) {
         status = 'tabled';
+      } else {
+        // Unknown outcome format - mark as pending verification
+        status = 'pending_minutes';
       }
+    } else {
+      // Past meeting but no outcome data - needs verification from minutes
+      status = 'pending_minutes';
     }
 
     if (!existing) {
@@ -576,17 +588,18 @@ export function extractResolutionsFromAgendaItems(meetingId?: string): number {
         title: cleanTitle || item.title,
         status,
         introducedDate: item.meeting_date,
-        // Only set adoptedDate if status is 'adopted' AND meeting has already happened
-        adoptedDate: (status === 'adopted' && !isFutureMeeting) ? item.meeting_date : null,
+        // Only set adoptedDate if status is 'adopted' (verified from explicit outcome)
+        adoptedDate: status === 'adopted' ? item.meeting_date : null,
         meetingId: item.meeting_id,
         packetUrl: item.packet_url,
       });
     } else {
-      // Only update to adopted if meeting has already happened
-      if (status === 'adopted' && !isFutureMeeting && !existing.adoptedDate) {
+      // Only update to adopted if we have explicit verification
+      if (status === 'adopted' && !existing.adoptedDate) {
         existing.adoptedDate = item.meeting_date;
         existing.status = 'adopted';
       }
+      // Update introduced date if we found an earlier mention
       if (item.meeting_date < existing.introducedDate) {
         existing.introducedDate = item.meeting_date;
       }

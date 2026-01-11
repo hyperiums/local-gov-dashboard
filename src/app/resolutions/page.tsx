@@ -281,6 +281,7 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
     const statusMap: Record<string, { label: string; color: string }> = {
       'adopted': { label: 'Adopted', color: 'bg-emerald-100 text-emerald-700' },
       'proposed': { label: 'Proposed', color: 'bg-blue-100 text-blue-700' },
+      'pending_minutes': { label: 'Pending Minutes', color: 'bg-amber-100 text-amber-700' },
       'tabled': { label: 'Tabled', color: 'bg-slate-100 text-slate-700' },
       'rejected': { label: 'Rejected', color: 'bg-red-100 text-red-700' },
     };
