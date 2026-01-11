@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { FileText, ExternalLink, Search, ChevronDown, ChevronRight, Sparkles, Calendar, Package } from 'lucide-react';
+import { FileText, ExternalLink, Search, ChevronDown, ChevronUp, ChevronRight, Sparkles, Calendar, Package } from 'lucide-react';
 import { getRecentYears } from '@/lib/dates';
 
 interface Resolution {
@@ -45,6 +45,7 @@ function ResolutionsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const defaultExpandedYears = useMemo(() => new Set(getRecentYears(2)), []);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(defaultExpandedYears);
+  const [autoExpandResolution, setAutoExpandResolution] = useState<string | null>(null);
 
   // Initialize search from URL params
   useEffect(() => {
@@ -52,7 +53,31 @@ function ResolutionsContent() {
     if (search) {
       setSearchTerm(search);
     }
+    // Handle expand param for auto-expanding resolution summary
+    const expand = searchParams.get('expand');
+    if (expand) {
+      setAutoExpandResolution(expand);
+    }
   }, [searchParams]);
+
+  // Auto-expand year and scroll when expand param is set and resolutions are loaded
+  useEffect(() => {
+    if (autoExpandResolution && resolutions.length > 0) {
+      const res = resolutions.find(r => r.number === autoExpandResolution);
+      const date = res?.adopted_date || res?.introduced_date;
+      if (date) {
+        const year = date.substring(0, 4);
+        setExpandedYears(prev => new Set([...prev, year]));
+      }
+      // Scroll to the resolution after a brief delay for rendering
+      setTimeout(() => {
+        const element = document.getElementById(`resolution-${autoExpandResolution}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+    }
+  }, [autoExpandResolution, resolutions]);
 
   useEffect(() => {
     async function loadResolutions() {
@@ -192,7 +217,11 @@ function ResolutionsContent() {
           </div>
           <div className="divide-y divide-slate-100">
             {filteredResolutions.map((res) => (
-              <ResolutionRow key={res.id} resolution={res} />
+              <ResolutionRow
+                key={res.id}
+                resolution={res}
+                autoExpand={autoExpandResolution === res.number}
+              />
             ))}
           </div>
         </div>
@@ -228,7 +257,11 @@ function ResolutionsContent() {
                       return b.number.localeCompare(a.number);
                     })
                     .map((res) => (
-                      <ResolutionRow key={res.id} resolution={res} />
+                      <ResolutionRow
+                        key={res.id}
+                        resolution={res}
+                        autoExpand={autoExpandResolution === res.number}
+                      />
                     ))}
                 </div>
               )}
@@ -240,8 +273,8 @@ function ResolutionsContent() {
   );
 }
 
-function ResolutionRow({ resolution }: { resolution: Resolution }) {
-  const [showSummary, setShowSummary] = useState(false);
+function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolution; autoExpand?: boolean }) {
+  const [showSummary, setShowSummary] = useState(autoExpand && !!resolution.summary);
 
   // Get status display info
   const getStatusDisplay = (status: string) => {
@@ -258,7 +291,10 @@ function ResolutionRow({ resolution }: { resolution: Resolution }) {
   const displayDate = resolution.adopted_date || resolution.introduced_date;
 
   return (
-    <div className="p-4 hover:bg-slate-50 transition">
+    <div
+      id={`resolution-${resolution.number}`}
+      className={`p-4 hover:bg-slate-50 transition ${autoExpand ? 'bg-purple-50 ring-2 ring-purple-200' : ''}`}
+    >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
           <div className="flex items-center flex-wrap gap-2">
@@ -290,17 +326,6 @@ function ResolutionRow({ resolution }: { resolution: Resolution }) {
                 })}
               </span>
             )}
-            {resolution.summary && (
-              <>
-                <span>•</span>
-                <button
-                  onClick={() => setShowSummary(!showSummary)}
-                  className="text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  {showSummary ? 'Hide Summary' : 'Show Summary'}
-                </button>
-              </>
-            )}
             {resolution.meeting_id && (
               <>
                 <span>•</span>
@@ -313,6 +338,18 @@ function ResolutionRow({ resolution }: { resolution: Resolution }) {
               </>
             )}
           </div>
+
+          {/* Summary Toggle Button */}
+          {resolution.summary && (
+            <button
+              onClick={() => setShowSummary(!showSummary)}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm text-slate-600 transition border border-slate-200"
+            >
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              {showSummary ? 'Hide AI Summary' : 'Show AI Summary'}
+              {showSummary ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          )}
 
           {/* AI Summary - collapsible */}
           {showSummary && resolution.summary && (

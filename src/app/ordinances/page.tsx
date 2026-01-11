@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Scale, ExternalLink, Search, ChevronDown, ChevronRight, Sparkles, Calendar, Clock } from 'lucide-react';
+import { Scale, ExternalLink, Search, ChevronDown, ChevronUp, ChevronRight, Sparkles, Calendar, Clock } from 'lucide-react';
 import { getRecentYears } from '@/lib/dates';
 
 interface Ordinance {
@@ -50,6 +50,7 @@ function OrdinancesContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const defaultExpandedYears = useMemo(() => new Set(getRecentYears(2)), []);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(defaultExpandedYears);
+  const [autoExpandOrdinance, setAutoExpandOrdinance] = useState<string | null>(null);
 
   // Initialize search from URL params
   useEffect(() => {
@@ -57,7 +58,30 @@ function OrdinancesContent() {
     if (search) {
       setSearchTerm(search);
     }
+    // Handle expand param for auto-expanding ordinance summary
+    const expand = searchParams.get('expand');
+    if (expand) {
+      setAutoExpandOrdinance(expand);
+    }
   }, [searchParams]);
+
+  // Auto-expand year and scroll when expand param is set and ordinances are loaded
+  useEffect(() => {
+    if (autoExpandOrdinance && ordinances.length > 0) {
+      const ord = ordinances.find(o => o.number === autoExpandOrdinance);
+      if (ord?.adopted_date) {
+        const year = ord.adopted_date.substring(0, 4);
+        setExpandedYears(prev => new Set([...prev, year]));
+      }
+      // Scroll to the ordinance after a brief delay for rendering
+      setTimeout(() => {
+        const element = document.getElementById(`ordinance-${autoExpandOrdinance}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+    }
+  }, [autoExpandOrdinance, ordinances]);
 
   useEffect(() => {
     async function loadOrdinances() {
@@ -196,7 +220,11 @@ function OrdinancesContent() {
           </div>
           <div className="divide-y divide-slate-100">
             {filteredOrdinances.map((ord) => (
-              <OrdinanceRow key={ord.id} ordinance={ord} />
+              <OrdinanceRow
+                key={ord.id}
+                ordinance={ord}
+                autoExpand={autoExpandOrdinance === ord.number}
+              />
             ))}
           </div>
         </div>
@@ -229,7 +257,11 @@ function OrdinancesContent() {
                   {ordinancesByYear[year]
                     .sort((a, b) => parseInt(b.number) - parseInt(a.number))
                     .map((ord) => (
-                      <OrdinanceRow key={ord.id} ordinance={ord} />
+                      <OrdinanceRow
+                        key={ord.id}
+                        ordinance={ord}
+                        autoExpand={autoExpandOrdinance === ord.number}
+                      />
                     ))}
                 </div>
               )}
@@ -241,8 +273,8 @@ function OrdinancesContent() {
   );
 }
 
-function OrdinanceRow({ ordinance }: { ordinance: Ordinance }) {
-  const [showSummary, setShowSummary] = useState(false);
+function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance; autoExpand?: boolean }) {
+  const [showSummary, setShowSummary] = useState(autoExpand && !!ordinance.summary);
   const [showMeetingHistory, setShowMeetingHistory] = useState(false);
   const [meetings, setMeetings] = useState<MeetingWithAction[]>([]);
   const [loadingMeetings, setLoadingMeetings] = useState(false);
@@ -283,7 +315,10 @@ function OrdinanceRow({ ordinance }: { ordinance: Ordinance }) {
   };
 
   return (
-    <div className="p-4 hover:bg-slate-50 transition">
+    <div
+      id={`ordinance-${ordinance.number}`}
+      className={`p-4 hover:bg-slate-50 transition ${autoExpand ? 'bg-emerald-50 ring-2 ring-emerald-200' : ''}`}
+    >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
           <div className="flex items-center flex-wrap gap-2">
@@ -318,17 +353,6 @@ function OrdinanceRow({ ordinance }: { ordinance: Ordinance }) {
                 </span>
               </>
             )}
-            {ordinance.summary && (
-              <>
-                <span>•</span>
-                <button
-                  onClick={() => setShowSummary(!showSummary)}
-                  className="text-emerald-600 hover:text-emerald-700 font-medium"
-                >
-                  {showSummary ? 'Hide Summary' : 'Show Summary'}
-                </button>
-              </>
-            )}
             <span>•</span>
             <button
               onClick={toggleMeetingHistory}
@@ -338,6 +362,18 @@ function OrdinanceRow({ ordinance }: { ordinance: Ordinance }) {
               {showMeetingHistory ? 'Hide Meeting History' : 'Meeting History'}
             </button>
           </div>
+
+          {/* Summary Toggle Button */}
+          {ordinance.summary && (
+            <button
+              onClick={() => setShowSummary(!showSummary)}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm text-slate-600 transition border border-slate-200"
+            >
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              {showSummary ? 'Hide AI Summary' : 'Show AI Summary'}
+              {showSummary ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          )}
 
           {/* AI Summary - collapsible */}
           {showSummary && ordinance.summary && (
