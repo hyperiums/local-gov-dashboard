@@ -418,6 +418,33 @@ export async function GET(request: Request) {
         );
       }
 
+      case 'resolution-meetings': {
+        const meetingId = searchParams.get('meetingId');
+        if (!meetingId) {
+          return NextResponse.json(
+            { error: 'meetingId is required' },
+            { status: 400 }
+          );
+        }
+
+        const db = getDb();
+        const resolutions = db.prepare(`
+          SELECT id, number, title, status, summary, adopted_date
+          FROM resolutions
+          WHERE meeting_id = ?
+          ORDER BY number DESC
+        `).all(meetingId) as Array<{
+          id: string;
+          number: string;
+          title: string;
+          status: string;
+          summary: string | null;
+          adopted_date: string | null;
+        }>;
+
+        return NextResponse.json({ resolutions });
+      }
+
       case 'activity': {
         const limit = searchParams.get('limit')
           ? parseInt(searchParams.get('limit')!)
