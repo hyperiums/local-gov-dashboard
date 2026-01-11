@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
+import ContactEmail from "@/components/ContactEmail";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +40,7 @@ export default function RootLayout({
         <main>{children}</main>
         <footer className="bg-slate-100 border-t border-slate-200 text-slate-600 py-8 mt-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-4 gap-8">
               <div>
                 <h3 className="text-slate-800 font-semibold mb-3">About This Dashboard</h3>
                 <p className="text-sm">
@@ -62,6 +63,13 @@ export default function RootLayout({
                   This is not an official city resource. AI-generated summaries are for
                   convenience only. Always verify information with official sources.
                 </p>
+              </div>
+              <div>
+                <h3 className="text-slate-800 font-semibold mb-3">Contact</h3>
+                <p className="text-sm mb-2">
+                  Notice an error or have a suggestion?
+                </p>
+                <ContactEmail />
               </div>
             </div>
             <div className="border-t border-slate-200 mt-8 pt-6 text-center text-sm">
