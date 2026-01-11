@@ -546,7 +546,12 @@ export function extractResolutionsFromAgendaItems(meetingId?: string): number {
 
     cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
 
-    let status = 'adopted';
+    // Check if meeting is in the future - can't be adopted yet
+    const today = new Date().toISOString().split('T')[0];
+    const isFutureMeeting = item.meeting_date > today;
+
+    // Default status: 'proposed' for future meetings, 'adopted' for past meetings
+    let status = isFutureMeeting ? 'proposed' : 'adopted';
     if (item.outcome) {
       const outcomeLower = item.outcome.toLowerCase();
       if (
@@ -571,12 +576,14 @@ export function extractResolutionsFromAgendaItems(meetingId?: string): number {
         title: cleanTitle || item.title,
         status,
         introducedDate: item.meeting_date,
-        adoptedDate: status === 'adopted' ? item.meeting_date : null,
+        // Only set adoptedDate if status is 'adopted' AND meeting has already happened
+        adoptedDate: (status === 'adopted' && !isFutureMeeting) ? item.meeting_date : null,
         meetingId: item.meeting_id,
         packetUrl: item.packet_url,
       });
     } else {
-      if (status === 'adopted' && !existing.adoptedDate) {
+      // Only update to adopted if meeting has already happened
+      if (status === 'adopted' && !isFutureMeeting && !existing.adoptedDate) {
         existing.adoptedDate = item.meeting_date;
         existing.status = 'adopted';
       }
