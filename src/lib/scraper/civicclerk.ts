@@ -824,12 +824,13 @@ export async function fetchVoteOutcomesFromOverview(
       let buttonIndex = 0;
 
       for (const el of allElements) {
+        const htmlEl = el as HTMLElement;
         if (
-          el.innerText === 'MOTIONS / VOTES' ||
+          htmlEl.innerText === 'MOTIONS / VOTES' ||
           el.textContent?.trim() === 'MOTIONS / VOTES'
         ) {
           // Find parent to get context
-          let parent = el.parentElement;
+          let parent = el.parentElement as HTMLElement | null;
           for (let i = 0; i < 8; i++) {
             if (!parent) break;
             const text = parent.innerText || parent.textContent || '';
@@ -861,12 +862,13 @@ export async function fetchVoteOutcomesFromOverview(
           const allElements = Array.from(document.querySelectorAll('*'));
           let buttonIndex = 0;
           for (const el of allElements) {
+            const htmlEl = el as HTMLElement;
             if (
-              el.innerText === 'MOTIONS / VOTES' ||
+              htmlEl.innerText === 'MOTIONS / VOTES' ||
               el.textContent?.trim() === 'MOTIONS / VOTES'
             ) {
               if (buttonIndex === idx) {
-                (el as HTMLElement).click();
+                htmlEl.click();
                 return true;
               }
               buttonIndex++;
@@ -1006,7 +1008,7 @@ export async function hasVoteDataAvailable(eventId: number): Promise<boolean> {
       const allElements = Array.from(document.querySelectorAll('*'));
       return allElements.some(
         (el) =>
-          el.innerText === 'MOTIONS / VOTES' ||
+          (el as HTMLElement).innerText === 'MOTIONS / VOTES' ||
           el.textContent?.trim() === 'MOTIONS / VOTES'
       );
     });
