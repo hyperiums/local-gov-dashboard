@@ -1140,9 +1140,15 @@ If found=false, do NOT include rawText field.`,
 export async function generateResolutionSummaryFromText(
   resolutionNumber: string,
   resolutionTitle: string,
-  rawText: string
+  rawText: string,
+  status: 'proposed' | 'adopted' | 'rejected' | 'tabled' = 'adopted'
 ): Promise<string> {
   const client = getClient();
+  const isProposed = status === 'proposed';
+
+  const proposedNote = `
+Note: This is a draft document. Signature lines are templates, not endorsements.
+Describe what this resolution would do IF adopted. Do not attribute positions to officials.`;
 
   const response = await client.chat.completions.create({
     model: 'gpt-4o-mini',
@@ -1158,19 +1164,20 @@ ${TONE_GUIDELINES}`,
       {
         role: 'user',
         content: `Resolution ${resolutionNumber}: "${resolutionTitle}"
-
+Status: ${status.toUpperCase()}${isProposed ? ' (not yet voted on)' : ''}
+${isProposed ? proposedNote : ''}
 Resolution Text:
 ${rawText}
 
 Provide a structured summary:
 
-**What it does**: A clear 2-3 sentence summary of what this resolution accomplishes
+**What it does**: A clear 2-3 sentence summary of what this resolution ${isProposed ? 'would accomplish if adopted' : 'accomplishes'}
 
 **Key details**: Any important specifics (amounts, locations, parties involved)
 
-**Background**: Why this resolution was needed (from WHEREAS clauses)
+**Background**: Why this resolution was ${isProposed ? 'proposed' : 'needed'} (from WHEREAS clauses)
 
-**Impact**: How this affects residents or the community
+**Impact**: How this ${isProposed ? 'would affect' : 'affects'} residents or the community
 
 Keep the summary concise (2-3 paragraphs). Use plain language that a resident would understand.`,
       },

@@ -181,6 +181,7 @@ export async function POST(request: Request) {
                   id: string;
                   number: string;
                   title: string;
+                  status: string;
                   summary: string | null;
                   meeting_id: string | null;
                 }[];
@@ -203,18 +204,24 @@ export async function POST(request: Request) {
                     }
 
                     const hasStaffReport = !!attachments.staffReport;
+                    const isProposed = res.status === 'proposed';
+                    const proposedNote = isProposed
+                      ? `\nNote: This is a draft document. Signature lines are templates, not endorsements.\nDescribe what this resolution would do IF adopted. Do not attribute positions to officials.\n`
+                      : '';
+
                     const customPrompt = `You are analyzing resolution documents from Flowery Branch City Council.
 
 Resolution ${res.number}: "${res.title}"
-
+Status: ${res.status.toUpperCase()}${isProposed ? ' (not yet voted on)' : ''}
+${proposedNote}
 You have access to:
 1. The official resolution document (contains WHEREAS clauses and the resolution text)${hasStaffReport ? '\n2. Staff recommendations (explains context and reasoning)' : ''}
 
 Extract and summarize:
-1. **What it does** - Explain in plain language what this resolution accomplishes
+1. **What it does** - Explain in plain language what this resolution ${isProposed ? 'would accomplish if adopted' : 'accomplishes'}
 2. **Key details** - Any important specifics (amounts, locations, parties involved, street names)
-3. **Background** - Why this resolution was needed (from WHEREAS clauses or staff report)
-4. **Impact** - How this affects residents or the community
+3. **Background** - Why this resolution was ${isProposed ? 'proposed' : 'needed'} (from WHEREAS clauses or staff report)
+4. **Impact** - How this ${isProposed ? 'would affect' : 'affects'} residents or the community
 
 Keep the summary concise (2-3 paragraphs). Use plain language that a resident would understand.`;
 
@@ -373,6 +380,7 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
           id: string;
           number: string;
           title: string;
+          status: string;
           summary: string | null;
           meeting_id: string | null;
         }[];
@@ -412,18 +420,24 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
               console.log(`Analyzing resolution ${res.number} from separate PDF...`);
 
               const hasStaffReport = !!attachments.staffReport;
+              const isProposed = res.status === 'proposed';
+              const proposedNote = isProposed
+                ? `\nNote: This is a draft document. Signature lines are templates, not endorsements.\nDescribe what this resolution would do IF adopted. Do not attribute positions to officials.\n`
+                : '';
+
               const customPrompt = `You are analyzing resolution documents from Flowery Branch City Council.
 
 Resolution ${res.number}: "${res.title}"
-
+Status: ${res.status.toUpperCase()}${isProposed ? ' (not yet voted on)' : ''}
+${proposedNote}
 You have access to:
 1. The official resolution document (contains WHEREAS clauses and the resolution text)${hasStaffReport ? '\n2. Staff recommendations (explains context and reasoning)' : ''}
 
 Extract and summarize:
-1. **What it does** - Explain in plain language what this resolution accomplishes
+1. **What it does** - Explain in plain language what this resolution ${isProposed ? 'would accomplish if adopted' : 'accomplishes'}
 2. **Key details** - Any important specifics (amounts, locations, parties involved, street names)
-3. **Background** - Why this resolution was needed (from WHEREAS clauses or staff report)
-4. **Impact** - How this affects residents or the community
+3. **Background** - Why this resolution was ${isProposed ? 'proposed' : 'needed'} (from WHEREAS clauses or staff report)
+4. **Impact** - How this ${isProposed ? 'would affect' : 'affects'} residents or the community
 
 Keep the summary concise (2-3 paragraphs). Use plain language that a resident would understand.`;
 
@@ -451,7 +465,12 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
                   if (extracted.found && extracted.rawText) {
                     // Step 2: Generate summary from extracted text
                     console.log(`Generating summary for resolution ${res.number} from extracted text...`);
-                    summary = await generateResolutionSummaryFromText(res.number, res.title, extracted.rawText);
+                    summary = await generateResolutionSummaryFromText(
+                      res.number,
+                      res.title,
+                      extracted.rawText,
+                      res.status as 'proposed' | 'adopted' | 'rejected' | 'tabled'
+                    );
                     summarySource = 'agenda_pdf';
                   } else {
                     console.log(`Resolution ${res.number}: Not found in agenda PDF`);
