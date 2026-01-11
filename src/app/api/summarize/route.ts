@@ -9,7 +9,7 @@ import {
   analyzePdf,
   fetchPdfAsBase64,
 } from '@/lib/summarize';
-import { getMeetings, getRecentBusinesses, getPermitStats, getOrdinances } from '@/lib/db';
+import { getMeetings, getPermitStats, getOrdinances } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -86,16 +86,6 @@ export async function POST(request: Request) {
           m => new Date(m.date) >= weekAgo && new Date(m.date) <= now
         );
 
-        // Get recent businesses
-        const businesses = getRecentBusinesses(20) as {
-          name: string;
-          address?: string;
-          created_at: string;
-        }[];
-        const recentBusinesses = businesses.filter(
-          b => new Date(b.created_at) >= weekAgo
-        );
-
         // Get permit stats
         const permitStats = getPermitStats(monthStr, monthStr) as { count: number }[];
         const permitCount = permitStats[0]?.count || 0;
@@ -114,10 +104,7 @@ export async function POST(request: Request) {
               date: m.date,
               summary: m.summary,
             })),
-            newBusinesses: recentBusinesses.map(b => ({
-              name: b.name,
-              address: b.address,
-            })),
+            newBusinesses: [], // Business data from summaries table, not structured data
             permitCount,
             ordinances: ordinances.map(o => ({
               number: o.number,

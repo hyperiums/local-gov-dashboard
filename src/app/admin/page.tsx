@@ -315,35 +315,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Businesses */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h2 className="font-semibold text-slate-900 mb-4">Business Data</h2>
-          <p className="text-sm text-slate-600 mb-4">
-            Import monthly new business registrations from the city website PDFs.
-          </p>
-          <div className="space-y-3">
-            <button
-              onClick={() => runScrape('bulk-businesses', { years: backfillYears })}
-              disabled={loading !== null}
-              className="w-full flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition"
-            >
-              {loading === 'bulk-businesses' ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 mr-2" />
-              )}
-              Backfill Businesses ({backfillYears[backfillYears.length - 1]}-{backfillYears[0]})
-            </button>
-            <button
-              onClick={() => runScrape('bulk-businesses', { years: [currentYear] })}
-              disabled={loading !== null}
-              className="w-full flex items-center justify-center px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition text-sm"
-            >
-              Import {currentYear} Only
-            </button>
-          </div>
-        </div>
-
         {/* Development Summaries */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <h2 className="font-semibold text-slate-900 mb-4 flex items-center">
@@ -713,9 +684,16 @@ export default function AdminPage() {
               Summarize Upcoming Meetings
             </button>
             <button
-              onClick={() => runScrape('generate-meeting-summaries', { limit: globalBatchLimit, status: 'all', summaryType: 'agenda', forceRefresh: globalForceRefresh })}
+              onClick={() => runScrape('generate-meeting-summaries', { limit: globalBatchLimit, status: 'past', summaryType: 'agenda', forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition"
+            >
+              Summarize Past Agendas
+            </button>
+            <button
+              onClick={() => runScrape('generate-meeting-summaries', { limit: globalBatchLimit, status: 'all', summaryType: 'agenda', forceRefresh: globalForceRefresh })}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center px-4 py-2 bg-purple-400 text-white rounded-lg hover:bg-purple-500 disabled:opacity-50 transition"
             >
               Summarize All Agendas
             </button>

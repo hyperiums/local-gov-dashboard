@@ -7,7 +7,6 @@ import {
   getBusinessPdfUrl,
   fetchPdfWithFallback,
   parsePermitPdfText,
-  parseBusinessPdfText,
   scrapeFinancialReports,
   getFinancialDocumentsByType,
   getCivicDocumentsByType,
@@ -29,7 +28,6 @@ import {
   insertMeeting,
   insertAgendaItem,
   insertPermit,
-  insertBusiness,
   insertOrdinance,
   getOrdinances,
   getOrdinanceByNumber,
@@ -278,37 +276,6 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
         });
       }
 
-      case 'businesses': {
-        // Scrape business listing PDFs for a given month
-        const { year, month } = params || {};
-        if (!year || !month) {
-          return NextResponse.json({ error: 'year and month are required' }, { status: 400 });
-        }
-
-        const urls = getBusinessPdfUrl(year, month);
-        const result = await fetchPdfWithFallback(urls);
-
-        if (!result) {
-          return NextResponse.json({
-            error: 'Business listing PDF not found',
-            triedUrls: urls,
-          }, { status: 404 });
-        }
-
-        const pdfData = await parsePdf(result.buffer);
-        const businesses = parseBusinessPdfText(pdfData.text, `${year}-${month}`, result.url);
-
-        for (const business of businesses) {
-          insertBusiness(business);
-        }
-
-        return NextResponse.json({
-          success: true,
-          businessCount: businesses.length,
-          sourceUrl: result.url,
-        });
-      }
-
       case 'financial': {
         // Scrape financial report links
         const reports = await scrapeFinancialReports();
@@ -542,8 +509,6 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
           'ordinances',
           'resolutions',
           'permits',
-          'businesses',
-          'financial_reports',
           'summaries',
         ];
 
@@ -1342,68 +1307,6 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
           skipped: results.filter(r => r.error === 'Already exists (skipped)').length,
           documentsFound: documents.length,
           results,
-        });
-      }
-
-      case 'bulk-businesses': {
-        // Scrape businesses for multiple months and years
-        const { year, years, months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'] } = params || {};
-
-        const yearsToProcess = years || (year ? [year] : null);
-        if (!yearsToProcess) {
-          return NextResponse.json({ error: 'year or years is required' }, { status: 400 });
-        }
-
-        const allResults: { year: string; month: string; success: boolean; businessCount?: number; sourceUrl?: string; error?: string }[] = [];
-
-        for (const y of yearsToProcess) {
-          for (const month of months) {
-            try {
-              const urls = getBusinessPdfUrl(y, month);
-              const result = await fetchPdfWithFallback(urls);
-
-              if (result) {
-                const pdfData = await parsePdf(result.buffer);
-                const businesses = parseBusinessPdfText(pdfData.text, `${y}-${month}`, result.url);
-
-                for (const business of businesses) {
-                  insertBusiness(business);
-                }
-
-                allResults.push({
-                  year: y,
-                  month,
-                  success: true,
-                  businessCount: businesses.length,
-                  sourceUrl: result.url,
-                });
-              } else {
-                allResults.push({
-                  year: y,
-                  month,
-                  success: false,
-                  error: 'PDF not found',
-                });
-              }
-            } catch (error) {
-              allResults.push({
-                year: y,
-                month,
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
-              });
-            }
-          }
-        }
-
-        const totalBusinesses = allResults.filter(r => r.success).reduce((sum, r) => sum + (r.businessCount || 0), 0);
-
-        return NextResponse.json({
-          success: true,
-          years: yearsToProcess,
-          totalBusinesses,
-          successfulMonths: allResults.filter(r => r.success).length,
-          results: allResults,
         });
       }
 

@@ -102,17 +102,6 @@ function initializeSchema() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    -- Businesses table
-    CREATE TABLE IF NOT EXISTS businesses (
-      id TEXT PRIMARY KEY,
-      month TEXT NOT NULL,
-      name TEXT NOT NULL,
-      address TEXT,
-      type TEXT,
-      source_url TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
     -- Ordinances table
     CREATE TABLE IF NOT EXISTS ordinances (
       id TEXT PRIMARY KEY,
@@ -155,17 +144,6 @@ function initializeSchema() {
       FOREIGN KEY (meeting_id) REFERENCES meetings(id)
     );
 
-    -- Financial reports table
-    CREATE TABLE IF NOT EXISTS financial_reports (
-      id TEXT PRIMARY KEY,
-      fiscal_year TEXT NOT NULL,
-      type TEXT NOT NULL,
-      title TEXT NOT NULL,
-      url TEXT NOT NULL,
-      summary TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
     -- Summaries cache table (for AI-generated content)
     CREATE TABLE IF NOT EXISTS summaries (
       id TEXT PRIMARY KEY,
@@ -183,7 +161,6 @@ function initializeSchema() {
     CREATE INDEX IF NOT EXISTS idx_meetings_status ON meetings(status);
     CREATE INDEX IF NOT EXISTS idx_agenda_items_meeting ON agenda_items(meeting_id);
     CREATE INDEX IF NOT EXISTS idx_permits_month ON permits(month);
-    CREATE INDEX IF NOT EXISTS idx_businesses_month ON businesses(month);
     CREATE INDEX IF NOT EXISTS idx_ordinances_number ON ordinances(number);
     CREATE INDEX IF NOT EXISTS idx_resolutions_number ON resolutions(number);
     CREATE INDEX IF NOT EXISTS idx_summaries_entity ON summaries(entity_type, entity_id);
@@ -404,40 +381,6 @@ export function getPermitSummaryStats() {
       return acc;
     }, {} as Record<string, number>),
   };
-}
-
-// Business operations
-export function insertBusiness(business: {
-  id: string;
-  month: string;
-  name: string;
-  address?: string;
-  type?: string;
-  sourceUrl: string;
-}) {
-  const db = getDb();
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO businesses (id, month, name, address, type, source_url)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  stmt.run(
-    business.id,
-    business.month,
-    business.name,
-    business.address || null,
-    business.type || null,
-    business.sourceUrl
-  );
-}
-
-export function getBusinessesByMonth(month: string) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM businesses WHERE month = ?').all(month);
-}
-
-export function getRecentBusinesses(limit: number = 10) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM businesses ORDER BY created_at DESC LIMIT ?').all(limit);
 }
 
 // Ordinance operations

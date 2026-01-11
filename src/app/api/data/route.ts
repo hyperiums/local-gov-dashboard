@@ -7,8 +7,6 @@ import {
   getPermitStats,
   getAllPermits,
   getPermitSummaryStats,
-  getBusinessesByMonth,
-  getRecentBusinesses,
   getOrdinances,
   getResolutions,
   getDashboardStats,
@@ -156,40 +154,63 @@ export async function GET(request: Request) {
       }
 
       case 'permit-chart-data': {
-        // Get permit data for trend charts
+        // Get permit data for trend charts from AI summaries (more accurate than scraped data)
         const db = getDb();
 
-        // Monthly counts (all months)
-        const monthlyData = db.prepare(`
-          SELECT month, COUNT(*) as count, SUM(COALESCE(value, 0)) as total_value
-          FROM permits
-          GROUP BY month
-          ORDER BY month ASC
-        `).all() as { month: string; count: number; total_value: number }[];
+        // Get all permit summaries and extract counts using regex
+        const summaries = db.prepare(`
+          SELECT entity_id as month, content
+          FROM summaries
+          WHERE entity_type = 'permit' AND summary_type = 'pdf-analysis'
+          ORDER BY entity_id ASC
+        `).all() as { month: string; content: string }[];
 
-        // Breakdown by type
-        const typeBreakdown = db.prepare(`
-          SELECT
-            COALESCE(type, 'unclassified') as type,
-            COUNT(*) as count
-          FROM permits
-          GROUP BY type
-          ORDER BY count DESC
-        `).all() as { type: string; count: number }[];
+        // Extract permit counts from AI summaries
+        const monthlyData: { month: string; count: number; total_value: number }[] = [];
+        for (const summary of summaries) {
+          // Match patterns like "A total of 24 permits were issued" or "24 permits were issued"
+          const match = summary.content.match(/(?:total of\s+)?(\d+)\s+permits?\s+were\s+issued/i);
+          if (match) {
+            monthlyData.push({
+              month: summary.month,
+              count: parseInt(match[1], 10),
+              total_value: 0, // We don't have value data from summaries
+            });
+          }
+        }
 
-        // Year-over-year data (permits per month by year)
-        const yearOverYear = db.prepare(`
-          SELECT
-            SUBSTR(month, 1, 4) as year,
-            SUBSTR(month, 6, 2) as monthNum,
-            COUNT(*) as count
-          FROM permits
-          GROUP BY SUBSTR(month, 1, 4), SUBSTR(month, 6, 2)
-          ORDER BY year, monthNum
-        `).all() as { year: string; monthNum: string; count: number }[];
+        // Extract type breakdown from summaries (aggregate new construction counts)
+        // Parse "X new homes" and "Y home improvements" patterns
+        let newConstructionTotal = 0;
+        let homeImprovementsTotal = 0;
+        for (const summary of summaries) {
+          const newHomesMatch = summary.content.match(/(\d+)\s+new\s+(homes?|construction)/i);
+          if (newHomesMatch) {
+            newConstructionTotal += parseInt(newHomesMatch[1], 10);
+          }
+          // Home improvements often mentioned as difference between total and new construction
+          const totalMatch = summary.content.match(/(\d+)\s+permits?\s+were\s+issued/i);
+          if (totalMatch && newHomesMatch) {
+            const total = parseInt(totalMatch[1], 10);
+            const newHomes = parseInt(newHomesMatch[1], 10);
+            homeImprovementsTotal += Math.max(0, total - newHomes);
+          }
+        }
 
-        // Get min/max years for chart range
-        const years = [...new Set(yearOverYear.map(d => d.year))].sort();
+        const typeBreakdown = [
+          { type: 'new construction', count: newConstructionTotal },
+          { type: 'home improvements', count: homeImprovementsTotal },
+        ].filter(t => t.count > 0);
+
+        // Year-over-year data from monthly data
+        const yearOverYear: { year: string; monthNum: string; count: number }[] = [];
+        for (const m of monthlyData) {
+          const [year, monthNum] = m.month.split('-');
+          yearOverYear.push({ year, monthNum, count: m.count });
+        }
+
+        // Get unique years
+        const years = [...new Set(monthlyData.map(d => d.month.split('-')[0]))].sort();
 
         return NextResponse.json({
           monthly: monthlyData,
@@ -218,16 +239,13 @@ export async function GET(request: Request) {
           ORDER BY s.entity_id DESC
         `).all() as { month: string; summary: string; pdfUrl: string | null }[];
 
-        // Join with businesses table to get actual source URLs
+        // Get business summaries (UI constructs PDF URLs from month)
         const businessSummaries = db.prepare(`
-          SELECT s.entity_id as month, s.content as summary, b.source_url as pdfUrl
-          FROM summaries s
-          LEFT JOIN (
-            SELECT month, source_url FROM businesses GROUP BY month
-          ) b ON b.month = s.entity_id
-          WHERE s.entity_type = 'business' AND s.summary_type = 'pdf-analysis'
-          ORDER BY s.entity_id DESC
-        `).all() as { month: string; summary: string; pdfUrl: string | null }[];
+          SELECT entity_id as month, content as summary
+          FROM summaries
+          WHERE entity_type = 'business' AND summary_type = 'pdf-analysis'
+          ORDER BY entity_id DESC
+        `).all() as { month: string; summary: string }[];
 
         return NextResponse.json({
           permits: permitSummaries,
@@ -360,17 +378,6 @@ export async function GET(request: Request) {
             total: documents.length,
           },
         });
-      }
-
-      case 'businesses': {
-        const month = searchParams.get('month');
-        if (month) {
-          const businesses = getBusinessesByMonth(month);
-          return NextResponse.json({ businesses });
-        }
-
-        const recent = getRecentBusinesses(20);
-        return NextResponse.json({ businesses: recent });
       }
 
       case 'ordinances': {

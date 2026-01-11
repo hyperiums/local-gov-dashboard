@@ -525,40 +525,75 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
           `Navigating calendar back to ${options.minYear} (${monthsToGoBack} months)...`
         );
 
-        const monthYearButton = await page.$(
-          'button[aria-label*="month"], [class*="month-year"], .MuiPickersCalendarHeader-switchViewButton'
-        );
-        if (monthYearButton) {
-          await monthYearButton.click();
-          await page.waitForTimeout(500);
+        // Try to click the month/year header to open the picker
+        try {
+          const monthYearSelector = 'button[aria-label*="month"], [class*="month-year"], .MuiPickersCalendarHeader-switchViewButton';
+          const monthYearButton = await page.$(monthYearSelector);
+          if (monthYearButton) {
+            await monthYearButton.click();
+            await page.waitForTimeout(500);
+          }
+        } catch (e) {
+          console.log('Could not open month picker, continuing with scroll navigation');
         }
 
-        for (let i = 0; i < Math.min(monthsToGoBack, 36); i++) {
-          const leftArrow = await page.$(
-            'button[aria-label*="previous"], [class*="prev"], svg[data-testid="NavigateBeforeIcon"]'
-          );
-          if (leftArrow) {
-            await leftArrow.click();
-            await page.waitForTimeout(150);
-          } else {
-            const prevButton = await page.evaluate(() => {
-              const buttons = Array.from(document.querySelectorAll('button'));
-              for (const btn of buttons) {
-                const svg = btn.querySelector('svg');
-                if (svg && btn.closest('[class*="calendar"], [class*="picker"]')) {
-                  const rect = btn.getBoundingClientRect();
-                  if (rect.x < 200) {
-                    (btn as HTMLElement).click();
-                    return true;
-                  }
+        // Navigate backwards month by month
+        // Use page.evaluate() to click elements directly in the DOM to avoid stale element handles
+        let navigatedMonths = 0;
+        const maxAttempts = Math.min(monthsToGoBack, 36);
+
+        for (let i = 0; i < maxAttempts; i++) {
+          const clicked = await page.evaluate(() => {
+            // Find navigation buttons - look for left/previous arrows
+            const selectors = [
+              'button[aria-label*="previous"]',
+              'button[aria-label*="Previous"]',
+              '[class*="prev"] button',
+              'button svg[data-testid="NavigateBeforeIcon"]',
+              'button svg[data-testid="ArrowLeftIcon"]',
+            ];
+
+            for (const selector of selectors) {
+              const btn = document.querySelector(selector);
+              if (btn) {
+                // Get the clickable button (might be parent of svg)
+                const clickTarget = btn.closest('button') || btn;
+                (clickTarget as HTMLElement).click();
+                return true;
+              }
+            }
+
+            // Fallback: find any left-positioned button with an SVG in a calendar context
+            const buttons = Array.from(document.querySelectorAll('button'));
+            for (const btn of buttons) {
+              const svg = btn.querySelector('svg');
+              if (svg && btn.closest('[class*="calendar"], [class*="picker"], [class*="Calendar"]')) {
+                const rect = btn.getBoundingClientRect();
+                if (rect.x < 200 && rect.width < 60) { // Left side, small button
+                  (btn as HTMLElement).click();
+                  return true;
                 }
               }
-              return false;
-            });
-            if (!prevButton) break;
+            }
+            return false;
+          });
+
+          if (!clicked) {
+            console.log(`Could not find previous button after ${navigatedMonths} months`);
+            break;
+          }
+
+          navigatedMonths++;
+          // Wait for React to re-render the calendar - use longer wait for stability
+          await page.waitForTimeout(500);
+
+          // Every 6 months, log progress
+          if (navigatedMonths % 6 === 0) {
+            console.log(`  Navigated back ${navigatedMonths} months...`);
           }
         }
 
+        // Try to click on the target year if a year picker is visible
         await page.evaluate((year) => {
           const yearButtons = Array.from(document.querySelectorAll('button'));
           for (const btn of yearButtons) {
@@ -570,7 +605,7 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
         }, options.minYear);
 
         await page.waitForTimeout(1000);
-        console.log(`Calendar navigated to ${options.minYear}`);
+        console.log(`Calendar navigation complete: navigated ${navigatedMonths} months`);
       }
     }
 
@@ -597,10 +632,11 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
         const match = href.match(/\/event\/(\d+)/);
         if (match) ids.add(parseInt(match[1]));
       });
-      return Array.from(ids);
+      // Sort descending - higher event IDs are typically newer meetings
+      return Array.from(ids).sort((a, b) => b - a);
     });
 
-    console.log(`Found ${eventIds.length} unique event IDs, fetching details...`);
+    console.log(`Found ${eventIds.length} unique event IDs, fetching details (newest first)...`);
 
     let consecutiveSkips = 0;
     const maxConsecutiveSkips = 30;
