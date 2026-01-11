@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Scale, ExternalLink, Search, ChevronDown, ChevronRight, Sparkles, Calendar, Clock } from 'lucide-react';
+import { getRecentYears } from '@/lib/dates';
 
 interface Ordinance {
   id: string;
@@ -47,7 +48,8 @@ function OrdinancesContent() {
   const [ordinances, setOrdinances] = useState<Ordinance[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set(['2025', '2024']));
+  const defaultExpandedYears = useMemo(() => new Set(getRecentYears(2)), []);
+  const [expandedYears, setExpandedYears] = useState<Set<string>>(defaultExpandedYears);
 
   // Initialize search from URL params
   useEffect(() => {

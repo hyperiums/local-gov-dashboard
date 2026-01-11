@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BarChart3, ExternalLink, FileText, Sparkles, ChevronDown, ChevronRight, ClipboardCheck } from 'lucide-react';
+import { getClearGovSpendingUrl } from '@/lib/dates';
 
 interface BudgetSummary {
   fiscalYear: string;
@@ -78,7 +79,7 @@ export default function BudgetPage() {
           </p>
         </div>
         <a
-          href="https://cleargov.com/georgia/hall/city/flowery-branch/2025/native/expenditures"
+          href={getClearGovSpendingUrl()}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"

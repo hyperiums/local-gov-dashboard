@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, ExternalLink, Search, ChevronDown, ChevronRight, Sparkles, Calendar, Package } from 'lucide-react';
+import { getRecentYears } from '@/lib/dates';
 
 interface Resolution {
   id: string;
@@ -42,7 +43,8 @@ function ResolutionsContent() {
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set(['2026', '2025']));
+  const defaultExpandedYears = useMemo(() => new Set(getRecentYears(2)), []);
+  const [expandedYears, setExpandedYears] = useState<Set<string>>(defaultExpandedYears);
 
   // Initialize search from URL params
   useEffect(() => {

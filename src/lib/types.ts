@@ -138,6 +138,7 @@ export const DATA_SOURCES = {
   },
   clearGov: {
     budget: 'https://city-flowery-branch-ga-budget-book.cleargov.com/5302/introduction/transmittal-letter',
-    spending: 'https://cleargov.com/georgia/hall/city/flowery-branch/2025/native/expenditures',
+    // Note: Use getClearGovSpendingUrl() from @/lib/dates for dynamic year
+    spending: 'https://cleargov.com/georgia/hall/city/flowery-branch',
   },
 } as const;

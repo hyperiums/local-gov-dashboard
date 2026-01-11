@@ -4,6 +4,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { analyzePdf, generateAllSummaryLevels } from '@/lib/summarize';
 import { getDb } from '@/lib/db';
+import { getCurrentFiscalYear } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // Strategic plans can be large
@@ -91,7 +92,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('process');
-    const year = searchParams.get('year') || '2025';
+    const year = searchParams.get('year') || String(getCurrentFiscalYear());
     const forceRefresh = searchParams.get('forceRefresh') === 'true';
 
     if (action !== 'existing') {

@@ -17,12 +17,14 @@ import {
   fetchCivicClerkAgendaPdf,
   fetchCivicClerkMinutesPdf,
   fetchCivicClerkResolutionAttachments,
+  createOrdinanceFromAgendaItem,
   linkOrdinancesToMeetings,
   updateOrdinanceDatesFromMeetings,
   extractResolutionsFromAgendaItems,
   type CivicDocType,
 } from '@/lib/scraper';
-import { fetchPdfAsBase64, analyzePdf, generateAllSummaryLevels } from '@/lib/summarize';
+import { fetchPdfAsBase64, analyzePdf, generateAllSummaryLevels, extractResolutionFromAgendaPdf, generateResolutionSummaryFromText } from '@/lib/summarize';
+import { getRecentYears, getAllMonths } from '@/lib/dates';
 import {
   insertMeeting,
   insertAgendaItem,
@@ -30,7 +32,9 @@ import {
   insertBusiness,
   insertOrdinance,
   getOrdinances,
+  getOrdinanceByNumber,
   getResolutions,
+  getMeetingById,
   updateOrdinanceSummary,
   updateResolutionSummary,
   updateMeetingSummary,
@@ -38,6 +42,7 @@ import {
   updateMeetingMinutesSummary,
   updateSummaryMetadata,
   getDb,
+  type MeetingRow,
 } from '@/lib/db';
 
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
@@ -101,10 +106,38 @@ export async function POST(request: Request) {
             });
           }
 
+          // Auto-create ordinances that are referenced in agenda items but don't exist yet
+          // This ensures ordinances are tracked even before they appear in Municode
+          let ordinancesCreated = 0;
+          for (const item of agendaItems) {
+            // Check if this item references an ordinance (either type='ordinance' or public_hearing with ref number)
+            if (item.referenceNumber && (
+              item.type === 'ordinance' ||
+              (item.type === 'public_hearing' && item.title.toLowerCase().includes('ordinance'))
+            )) {
+              const existing = getOrdinanceByNumber(item.referenceNumber);
+              if (!existing) {
+                createOrdinanceFromAgendaItem(
+                  item.referenceNumber,
+                  item.title,
+                  meeting.date,
+                  meeting.id
+                );
+                ordinancesCreated++;
+              }
+            }
+          }
+
+          // Link ordinances to this meeting
+          if (ordinancesCreated > 0 || agendaItems.some(i => i.type === 'ordinance' || i.title.toLowerCase().includes('ordinance'))) {
+            linkOrdinancesToMeetings();
+          }
+
           const result: {
             success: boolean;
             meeting: typeof meeting;
             agendaItemCount: number;
+            ordinancesCreated?: number;
             agendaSummary?: string;
             resolutionsExtracted?: number;
             resolutionSummaries?: { attempted: number; succeeded: number };
@@ -112,6 +145,7 @@ export async function POST(request: Request) {
             success: true,
             meeting,
             agendaItemCount: agendaItems.length,
+            ordinancesCreated: ordinancesCreated > 0 ? ordinancesCreated : undefined,
           };
 
           // If fullRefresh, also generate agenda summary and extract resolutions
@@ -288,7 +322,8 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
 
       case 'ordinances': {
         // Scrape ordinances from Municode
-        const { years, generateSummaries = false } = params || {};
+        // generateSummaries defaults to true so ordinances aren't left without context
+        const { years, generateSummaries = true } = params || {};
         const ordinances = await scrapeMunicodeOrdinances(years);
 
         const results = [];
@@ -402,16 +437,15 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
             // Fetch the actual resolution PDF and staff recommendations
             const attachments = await fetchCivicClerkResolutionAttachments(eventId, res.number);
 
-            if (!attachments.resolution) {
-              results.push({ number: res.number, success: false, error: 'Resolution PDF not found in attachments' });
-              continue;
-            }
+            let summary: string | null = null;
+            let summarySource: 'separate_pdf' | 'agenda_pdf' | null = null;
 
-            console.log(`Analyzing resolution ${res.number}...`);
+            if (attachments.resolution) {
+              // NEW meetings: Use separate resolution PDF
+              console.log(`Analyzing resolution ${res.number} from separate PDF...`);
 
-            // Build the prompt based on what attachments we have
-            const hasStaffReport = !!attachments.staffReport;
-            const customPrompt = `You are analyzing resolution documents from Flowery Branch City Council.
+              const hasStaffReport = !!attachments.staffReport;
+              const customPrompt = `You are analyzing resolution documents from Flowery Branch City Council.
 
 Resolution ${res.number}: "${res.title}"
 
@@ -426,16 +460,45 @@ Extract and summarize:
 
 Keep the summary concise (2-3 paragraphs). Use plain language that a resident would understand.`;
 
-            // Analyze the resolution PDF (primary document)
-            const summary = await analyzePdf(
-              `resolution-${res.number}`,
-              'resolution',
-              attachments.resolution,
-              {
-                forceRefresh,
-                customPrompt,
+              summary = await analyzePdf(
+                `resolution-${res.number}`,
+                'resolution',
+                attachments.resolution,
+                {
+                  forceRefresh,
+                  customPrompt,
+                }
+              );
+              summarySource = 'separate_pdf';
+            } else {
+              // OLDER meetings fallback: Extract from agenda PDF
+              console.log(`Resolution ${res.number}: No separate PDF, trying agenda PDF fallback...`);
+
+              try {
+                const agendaPdf = await fetchCivicClerkAgendaPdf(eventId);
+                if (agendaPdf) {
+                  // Step 1: Extract exact resolution text from agenda PDF
+                  console.log(`Extracting resolution ${res.number} text from agenda PDF...`);
+                  const extracted = await extractResolutionFromAgendaPdf(agendaPdf, res.number);
+
+                  if (extracted.found && extracted.rawText) {
+                    // Step 2: Generate summary from extracted text
+                    console.log(`Generating summary for resolution ${res.number} from extracted text...`);
+                    summary = await generateResolutionSummaryFromText(res.number, res.title, extracted.rawText);
+                    summarySource = 'agenda_pdf';
+                  } else {
+                    console.log(`Resolution ${res.number}: Not found in agenda PDF`);
+                  }
+                }
+              } catch (fallbackError) {
+                console.error(`Resolution ${res.number}: Agenda PDF fallback failed:`, fallbackError);
               }
-            );
+            }
+
+            if (!summary) {
+              results.push({ number: res.number, success: false, error: 'Resolution text not found in separate PDF or agenda' });
+              continue;
+            }
 
             // Update the resolution in the database
             updateResolutionSummary(res.id, summary);
@@ -443,9 +506,9 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
               number: res.number,
               success: true,
               summaryLength: summary.length,
-              hasStaffReport,
+              source: summarySource,
             });
-            console.log(`Generated summary for resolution ${res.number}`);
+            console.log(`Generated summary for resolution ${res.number} (source: ${summarySource})`);
 
           } catch (error) {
             console.error(`Failed to generate summary for resolution ${res.number}:`, error);
@@ -616,10 +679,11 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
 
       case 'bulk-meetings-with-agenda': {
         // First discover and import all meetings, then scrape agenda items for past meetings
-        console.log('Starting bulk meetings with agenda items...');
+        const { minYear, limit: batchLimit, forceRefresh = false } = params || {};
+        console.log(`Starting bulk meetings with agenda items (minYear: ${minYear || 'all'})...`);
 
         // Step 1: Import all meetings using Playwright
-        const meetings = await scrapeCivicClerkMeetingsWithPlaywright();
+        const meetings = await scrapeCivicClerkMeetingsWithPlaywright({ minYear });
         const meetingResults = [];
 
         for (const meeting of meetings) {
@@ -693,6 +757,88 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
         // Step 4: Update ordinance adoption dates from meeting dates
         const datesUpdated = updateOrdinanceDatesFromMeetings();
 
+        // Step 5: Extract resolutions from all agenda items
+        console.log('Extracting resolutions from agenda items...');
+        const resolutionsExtracted = extractResolutionsFromAgendaItems();
+        console.log(`Extracted ${resolutionsExtracted} resolutions`);
+
+        // Step 6: Auto-generate summaries for past meetings with agenda items
+        // Respects batchLimit to prevent timeout issues
+        // Filter to meetings without summaries (unless forceRefresh)
+        const meetingsNeedingSummaries = pastMeetings.filter(meeting => {
+          if (forceRefresh) return true;
+          const meetingId = `civicclerk-${meeting.eventId}`;
+          const existing = getMeetingById(meetingId) as MeetingRow | undefined;
+          return !existing?.agenda_summary || !existing?.minutes_summary;
+        });
+
+        const meetingsToSummarize = meetingsNeedingSummaries.slice(0, batchLimit || 10);
+        const summaryResults: { eventId: number; agenda?: string; minutes?: string }[] = [];
+
+        if (meetingsToSummarize.length > 0) {
+          console.log(`Generating summaries for ${meetingsToSummarize.length} past meetings (${pastMeetings.length - meetingsNeedingSummaries.length} already have summaries)...`);
+
+          for (const meeting of meetingsToSummarize) {
+            const meetingId = `civicclerk-${meeting.eventId}`;
+            const existing = getMeetingById(meetingId) as MeetingRow | undefined;
+            const result: { eventId: number; agenda?: string; minutes?: string } = { eventId: meeting.eventId };
+
+            // Generate agenda summary if needed
+            const needsAgenda = forceRefresh || !existing?.agenda_summary;
+            if (needsAgenda) {
+              try {
+                console.log(`Fetching agenda PDF for ${meetingId}...`);
+                const agendaPdf = await fetchCivicClerkAgendaPdf(meeting.eventId);
+
+                if (agendaPdf) {
+                  console.log(`Analyzing agenda for ${meetingId}...`);
+                  const summary = await analyzePdf(`${meetingId}-agenda`, 'agenda', agendaPdf, { forceRefresh });
+                  updateMeetingAgendaSummary(meetingId, summary);
+                  result.agenda = 'generated';
+                  console.log(`Generated agenda summary for ${meetingId}`);
+                } else {
+                  result.agenda = 'no_pdf';
+                }
+              } catch (error) {
+                console.error(`Failed to generate agenda summary for ${meetingId}:`, error);
+                result.agenda = 'error';
+              }
+            } else {
+              result.agenda = 'skipped';
+            }
+
+            // Generate minutes summary if needed
+            const needsMinutes = forceRefresh || !existing?.minutes_summary;
+            if (needsMinutes) {
+              try {
+                console.log(`Fetching minutes PDF for ${meetingId}...`);
+                const minutesPdf = await fetchCivicClerkMinutesPdf(meeting.eventId);
+
+                if (minutesPdf) {
+                  console.log(`Analyzing minutes for ${meetingId}...`);
+                  const summary = await analyzePdf(`${meetingId}-minutes`, 'minutes', minutesPdf, { forceRefresh });
+                  updateMeetingMinutesSummary(meetingId, summary);
+                  result.minutes = 'generated';
+                  console.log(`Generated minutes summary for ${meetingId}`);
+                } else {
+                  result.minutes = 'no_pdf';
+                }
+              } catch (error) {
+                console.error(`Failed to generate minutes summary for ${meetingId}:`, error);
+                result.minutes = 'error';
+              }
+            } else {
+              result.minutes = 'skipped';
+            }
+
+            summaryResults.push(result);
+          }
+        }
+
+        const agendasGenerated = summaryResults.filter(r => r.agenda === 'generated').length;
+        const minutesGenerated = summaryResults.filter(r => r.minutes === 'generated').length;
+        console.log(`Generated ${agendasGenerated} agenda summaries, ${minutesGenerated} minutes summaries`);
+
         return NextResponse.json({
           success: true,
           meetingsFound: meetings.length,
@@ -702,6 +848,12 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
           ordinancesLinked: linkResult.linked,
           ordinanceDatesUpdated: datesUpdated,
           ordinancesNotFound: linkResult.notFound,
+          resolutionsExtracted,
+          summariesGenerated: {
+            agendas: agendasGenerated,
+            minutes: minutesGenerated,
+            total: meetingsToSummarize.length,
+          },
           agendaResults,
         });
       }
@@ -771,7 +923,7 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
 
       case 'generate-permit-summaries': {
         // Generate AI summaries for monthly permit reports
-        const { years = ['2024', '2025'], months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], forceRefresh = false } = params || {};
+        const { years = getRecentYears(2), months = getAllMonths(), forceRefresh = false } = params || {};
 
         const results: { month: string; success: boolean; error?: string }[] = [];
 
@@ -832,7 +984,7 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
 
       case 'generate-business-summaries': {
         // Generate AI summaries for monthly business reports
-        const { years = ['2024', '2025'], months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], forceRefresh = false } = params || {};
+        const { years = getRecentYears(2), months = getAllMonths(), forceRefresh = false } = params || {};
 
         const results: { month: string; success: boolean; error?: string }[] = [];
 

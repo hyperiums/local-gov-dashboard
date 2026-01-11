@@ -15,6 +15,8 @@ export interface MeetingRow {
   packet_url: string | null;
   status: string;
   summary: string | null;
+  agenda_summary: string | null;
+  minutes_summary: string | null;
   raw_html: string | null;
   created_at: string;
   updated_at: string;
@@ -55,6 +57,8 @@ function initializeSchema() {
       packet_url TEXT,
       status TEXT NOT NULL DEFAULT 'upcoming',
       summary TEXT,
+      agenda_summary TEXT,
+      minutes_summary TEXT,
       raw_html TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -192,6 +196,18 @@ function initializeSchema() {
   } catch {
     // Column already exists, ignore error
   }
+
+  // Add agenda_summary and minutes_summary columns to meetings table if they don't exist
+  try {
+    database.exec(`ALTER TABLE meetings ADD COLUMN agenda_summary TEXT`);
+  } catch {
+    // Column already exists, ignore error
+  }
+  try {
+    database.exec(`ALTER TABLE meetings ADD COLUMN minutes_summary TEXT`);
+  } catch {
+    // Column already exists, ignore error
+  }
 }
 
 // Meeting operations
@@ -239,17 +255,27 @@ export function insertMeeting(meeting: {
   );
 }
 
-export function getMeetings(options?: { status?: string; limit?: number; offset?: number }): MeetingRow[] {
+export function getMeetings(options?: { status?: string; limit?: number; offset?: number; includeEmpty?: boolean }): MeetingRow[] {
   const db = getDb();
-  let query = 'SELECT * FROM meetings';
+  let query = 'SELECT * FROM meetings m';
+  const conditions: string[] = [];
   const params: (string | number)[] = [];
 
+  // By default, only show meetings with agenda items or summaries
+  if (!options?.includeEmpty) {
+    conditions.push('(m.summary IS NOT NULL OR EXISTS (SELECT 1 FROM agenda_items WHERE meeting_id = m.id))');
+  }
+
   if (options?.status) {
-    query += ' WHERE status = ?';
+    conditions.push('m.status = ?');
     params.push(options.status);
   }
 
-  query += ' ORDER BY date DESC';
+  if (conditions.length > 0) {
+    query += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  query += ' ORDER BY m.date DESC';
 
   if (options?.limit) {
     query += ' LIMIT ?';

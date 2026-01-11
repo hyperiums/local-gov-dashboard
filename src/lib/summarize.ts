@@ -960,3 +960,339 @@ export async function backfillSummaryLevels(
 
   return generateAllSummaryLevels(entityType, entityId, existing.content, options);
 }
+
+// Interface for extracted agenda items
+export interface ExtractedAgendaItem {
+  orderNum: number;
+  title: string;
+  type: 'ordinance' | 'resolution' | 'public_hearing' | 'consent' | 'new_business' | 'report' | 'other';
+  referenceNumber?: string;
+}
+
+// Extract structured agenda items from a PDF using OpenAI
+// Used when the CivicClerk sidebar doesn't have itemized agenda data (pre-2025 meetings)
+export async function extractAgendaItemsFromPdf(
+  pdfBase64: string
+): Promise<ExtractedAgendaItem[]> {
+  const client = getClient();
+
+  // Clean the base64 string (remove any data URL prefix if present)
+  const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-mini', // Using cheaper model for extraction
+    max_tokens: 4000,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: `You are extracting structured agenda items from a city council meeting agenda PDF.
+Your task is to identify all substantive agenda items and return them as a JSON array.
+
+Return ONLY a JSON object with this structure:
+{
+  "items": [
+    {
+      "orderNum": 1,
+      "title": "Full text of the agenda item",
+      "type": "ordinance|resolution|public_hearing|consent|new_business|report|other",
+      "referenceNumber": "765" // Optional - only if an ordinance/resolution number is mentioned
+    }
+  ]
+}
+
+Classification rules:
+- "ordinance": Items mentioning an Ordinance or Ordinance number
+- "resolution": Items mentioning a Resolution or Resolution number
+- "public_hearing": Items explicitly labeled as public hearings
+- "consent": Items in a consent agenda or routine approvals (minutes, bills, etc.)
+- "new_business": Items starting with "Consider" or new proposals
+- "report": Staff reports, department updates, presentations
+- "other": Everything else that's substantive
+
+SKIP these procedural items (do NOT include):
+- Call to Order, Roll Call, Pledge of Allegiance
+- Invocation, Adjournment
+- Agenda modifications
+- Executive session announcements (unless they describe a topic)
+
+For referenceNumber:
+- Extract "765" from "Ordinance 765" or "Ordinance No. 765"
+- Extract "25-012" from "Resolution 25-012" or "Resolution No. 25-012"
+- Leave undefined if no number is present
+
+ACCURACY IS CRITICAL: Only extract items that are clearly in the document.`,
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Extract all substantive agenda items from this city council meeting agenda:'
+          },
+          {
+            type: 'file',
+            file: {
+              filename: 'agenda.pdf',
+              file_data: `data:application/pdf;base64,${cleanBase64}`,
+            }
+          } as unknown as { type: 'text'; text: string } // Type workaround for file input
+        ],
+      },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content || '{}';
+
+  try {
+    const parsed = JSON.parse(content);
+    const items = parsed.items || [];
+
+    // Validate and clean the items
+    return items.map((item: { orderNum?: number; title?: string; type?: string; referenceNumber?: string }, index: number) => ({
+      orderNum: item.orderNum || index + 1,
+      title: item.title || '',
+      type: ['ordinance', 'resolution', 'public_hearing', 'consent', 'new_business', 'report', 'other'].includes(item.type || '')
+        ? item.type as ExtractedAgendaItem['type']
+        : 'other',
+      referenceNumber: item.referenceNumber,
+    })).filter((item: ExtractedAgendaItem) => item.title.length > 0);
+  } catch (error) {
+    console.error('Failed to parse agenda items JSON:', error);
+    return [];
+  }
+}
+
+// Interface for extracted resolution details
+export interface ExtractedResolutionDetails {
+  found: boolean;
+  rawText?: string;  // Exact text from the PDF (WHEREAS clauses + resolution text)
+}
+
+// Extract exact resolution text from an agenda PDF
+// Used for older meetings where separate resolution PDFs aren't available
+export async function extractResolutionFromAgendaPdf(
+  pdfBase64: string,
+  resolutionNumber: string
+): Promise<ExtractedResolutionDetails> {
+  const client = getClient();
+  const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    max_tokens: 3000,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: `You are extracting the EXACT text of a specific resolution from a city council agenda PDF.
+
+CRITICAL RULES - DO NOT HALLUCINATE:
+- Find Resolution ${resolutionNumber} in this document
+- Extract the EXACT text as written - do NOT paraphrase or summarize
+- Include WHEREAS clauses and the resolution action (BE IT RESOLVED)
+- If the resolution is not found in the document, return found: false
+- If you cannot read the document clearly, return found: false
+- NEVER make up or fabricate resolution text
+
+Return a JSON object:
+{
+  "found": true/false,
+  "rawText": "WHEREAS... BE IT RESOLVED..." // Only if found=true
+}
+
+If found=false, do NOT include rawText field.`,
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Find Resolution ${resolutionNumber} in this agenda PDF and extract its exact text. If you cannot find it, return {"found": false}.`
+          },
+          {
+            type: 'file',
+            file: {
+              filename: 'agenda.pdf',
+              file_data: `data:application/pdf;base64,${cleanBase64}`,
+            }
+          } as unknown as { type: 'text'; text: string }
+        ],
+      },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content || '{}';
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      found: parsed.found === true,
+      rawText: parsed.found ? parsed.rawText : undefined,
+    };
+  } catch (error) {
+    console.error('Failed to parse resolution extraction JSON:', error);
+    return { found: false };
+  }
+}
+
+// Generate a resolution summary from extracted text (same format as PDF analysis)
+export async function generateResolutionSummaryFromText(
+  resolutionNumber: string,
+  resolutionTitle: string,
+  rawText: string
+): Promise<string> {
+  const client = getClient();
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    max_tokens: 1000,
+    messages: [
+      {
+        role: 'system',
+        content: `You are summarizing a city council resolution for residents of Flowery Branch, Georgia.
+Your goal is to explain what this resolution does in plain language.
+
+${TONE_GUIDELINES}`,
+      },
+      {
+        role: 'user',
+        content: `Resolution ${resolutionNumber}: "${resolutionTitle}"
+
+Resolution Text:
+${rawText}
+
+Provide a structured summary:
+
+**What it does**: A clear 2-3 sentence summary of what this resolution accomplishes
+
+**Key details**: Any important specifics (amounts, locations, parties involved)
+
+**Background**: Why this resolution was needed (from WHEREAS clauses)
+
+**Impact**: How this affects residents or the community
+
+Keep the summary concise (2-3 paragraphs). Use plain language that a resident would understand.`,
+      },
+    ],
+  });
+
+  return response.choices[0]?.message?.content || '';
+}
+
+// Interface for extracted ordinance details
+export interface ExtractedOrdinanceDetails {
+  found: boolean;
+  rawText?: string;  // Exact text from the PDF
+}
+
+// Extract exact ordinance text from an agenda PDF
+// Used for older meetings where ordinance is only in the agenda packet
+export async function extractOrdinanceFromAgendaPdf(
+  pdfBase64: string,
+  ordinanceNumber: string
+): Promise<ExtractedOrdinanceDetails> {
+  const client = getClient();
+  const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    max_tokens: 3000,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: `You are extracting the EXACT text of a specific ordinance from a city council agenda PDF.
+
+CRITICAL RULES - DO NOT HALLUCINATE:
+- Find Ordinance ${ordinanceNumber} in this document
+- Extract the EXACT text as written - do NOT paraphrase or summarize
+- Include the full ordinance text with any WHEREAS clauses
+- If the ordinance is not found in the document, return found: false
+- If you cannot read the document clearly, return found: false
+- NEVER make up or fabricate ordinance text
+
+Return a JSON object:
+{
+  "found": true/false,
+  "rawText": "AN ORDINANCE..." // Only if found=true
+}
+
+If found=false, do NOT include rawText field.`,
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Find Ordinance ${ordinanceNumber} in this agenda PDF and extract its exact text. If you cannot find it, return {"found": false}.`
+          },
+          {
+            type: 'file',
+            file: {
+              filename: 'agenda.pdf',
+              file_data: `data:application/pdf;base64,${cleanBase64}`,
+            }
+          } as unknown as { type: 'text'; text: string }
+        ],
+      },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content || '{}';
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      found: parsed.found === true,
+      rawText: parsed.found ? parsed.rawText : undefined,
+    };
+  } catch (error) {
+    console.error('Failed to parse ordinance extraction JSON:', error);
+    return { found: false };
+  }
+}
+
+// Generate an ordinance summary from extracted text (same format as PDF analysis)
+export async function generateOrdinanceSummaryFromText(
+  ordinanceNumber: string,
+  ordinanceTitle: string,
+  rawText: string
+): Promise<string> {
+  const client = getClient();
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    max_tokens: 1000,
+    messages: [
+      {
+        role: 'system',
+        content: `You are summarizing a city ordinance for residents of Flowery Branch, Georgia.
+Your goal is to explain what this ordinance does in plain language.
+
+${TONE_GUIDELINES}`,
+      },
+      {
+        role: 'user',
+        content: `Ordinance ${ordinanceNumber}: "${ordinanceTitle}"
+
+Ordinance Text:
+${rawText}
+
+Provide a structured summary:
+
+**What it does**: A clear 2-3 sentence summary of what this ordinance accomplishes
+
+**Who it affects**: Which residents, businesses, or areas are impacted
+
+**Key details**: Any important dates, requirements, or changes
+
+**Why it matters**: Why the city implemented this (if stated in WHEREAS clauses)
+
+Keep the summary concise and use plain language that a resident would understand.`,
+      },
+    ],
+  });
+
+  return response.choices[0]?.message?.content || '';
+}

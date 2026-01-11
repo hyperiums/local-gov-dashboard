@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Database, Download, RefreshCw, CheckCircle, XCircle, AlertCircle, Sparkles, Upload, LogOut } from 'lucide-react';
+import { Database, Download, RefreshCw, CheckCircle, XCircle, AlertCircle, Sparkles, Upload, LogOut, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { getRecentYears, getRecentFiscalYears, getHistoricalYears, getCurrentYear } from '@/lib/dates';
 
 interface ScrapeResult {
   success: boolean;
@@ -16,6 +17,8 @@ export default function AdminPage() {
   const [results, setResults] = useState<ScrapeResult[]>([]);
   const [strategicFile, setStrategicFile] = useState<File | null>(null);
   const [strategicYear, setStrategicYear] = useState(new Date().getFullYear().toString());
+  const [globalForceRefresh, setGlobalForceRefresh] = useState(false);
+  const [globalBatchLimit, setGlobalBatchLimit] = useState(10);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -86,7 +89,11 @@ export default function AdminPage() {
     }
   };
 
-  const currentYear = new Date().getFullYear().toString();
+  const currentYear = getCurrentYear().toString();
+  const recentYears = getRecentYears(3); // e.g., ['2026', '2025', '2024']
+  const backfillYears = getRecentYears(3); // e.g., ['2026', '2025', '2024'] - includes 3 years to not miss any
+  const historicalYears = getHistoricalYears(2009, 3); // Years before recent 3
+  const fiscalYears = getRecentFiscalYears(4); // For strategic plan dropdown
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -117,6 +124,38 @@ export default function AdminPage() {
               This page is for data administration. Scraping operations may take time
               and make requests to official city sources. Use responsibly.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Global Scrape Options */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-8">
+        <div className="flex items-center mb-3">
+          <Settings className="w-5 h-5 text-slate-500 mr-2" />
+          <h3 className="font-semibold text-slate-900">Scrape Options</h3>
+        </div>
+        <div className="flex flex-wrap items-center gap-6">
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={globalForceRefresh}
+              onChange={(e) => setGlobalForceRefresh(e.target.checked)}
+              className="w-4 h-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+            />
+            <span className="ml-2 text-sm text-slate-700">Force Refresh</span>
+            <span className="ml-1 text-xs text-slate-500">(regenerate existing)</span>
+          </label>
+          <div className="flex items-center">
+            <label className="text-sm text-slate-700 mr-2">Batch Limit:</label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={globalBatchLimit}
+              onChange={(e) => setGlobalBatchLimit(Math.max(1, Math.min(100, parseInt(e.target.value) || 10)))}
+              className="w-16 px-2 py-1 border border-slate-300 rounded text-sm text-center"
+            />
+            <span className="ml-1 text-xs text-slate-500">(items per op)</span>
           </div>
         </div>
       </div>
@@ -158,8 +197,23 @@ export default function AdminPage() {
             Import meeting data from the CivicClerk portal. The system automatically discovers valid event IDs.
           </p>
           <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-slate-600">From year:</span>
+              <select
+                id="meetingMinYear"
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                defaultValue={backfillYears[backfillYears.length - 1]}
+              >
+                {[...backfillYears, ...historicalYears.slice(0, 5)].map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
             <button
-              onClick={() => runScrape('bulk-meetings-with-agenda')}
+              onClick={() => {
+                const minYear = parseInt((document.getElementById('meetingMinYear') as HTMLSelectElement).value);
+                runScrape('bulk-meetings-with-agenda', { minYear, limit: globalBatchLimit, forceRefresh: globalForceRefresh });
+              }}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition"
             >
@@ -168,7 +222,7 @@ export default function AdminPage() {
               ) : (
                 <Download className="w-4 h-4 mr-2" />
               )}
-              Import All Meetings + Agenda Items
+              Import Meetings + Agenda Items
             </button>
             <button
               onClick={() => runScrape('bulk-meetings', { startId: 1, endId: 200, discover: true })}
@@ -217,7 +271,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('bulk-permits', { years: ['2024', '2025'] })}
+              onClick={() => runScrape('bulk-permits', { years: backfillYears })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition"
             >
@@ -226,7 +280,7 @@ export default function AdminPage() {
               ) : (
                 <Download className="w-4 h-4 mr-2" />
               )}
-              Backfill Permits (2024-2025)
+              Backfill Permits ({backfillYears[backfillYears.length - 1]}-{backfillYears[0]})
             </button>
             <button
               onClick={() => runScrape('bulk-permits', { year: currentYear })}
@@ -237,9 +291,9 @@ export default function AdminPage() {
             </button>
             <div className="flex space-x-2">
               <select className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" id="permitYear">
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
+                {recentYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
               </select>
               <select className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm" id="permitMonth">
                 {['01','02','03','04','05','06','07','08','09','10','11','12'].map(m => (
@@ -269,7 +323,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('bulk-businesses', { years: ['2024', '2025'] })}
+              onClick={() => runScrape('bulk-businesses', { years: backfillYears })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition"
             >
@@ -278,7 +332,7 @@ export default function AdminPage() {
               ) : (
                 <Download className="w-4 h-4 mr-2" />
               )}
-              Backfill Businesses (2024-2025)
+              Backfill Businesses ({backfillYears[backfillYears.length - 1]}-{backfillYears[0]})
             </button>
             <button
               onClick={() => runScrape('bulk-businesses', { years: [currentYear] })}
@@ -301,7 +355,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('generate-permit-summaries', { years: ['2024', '2025'] })}
+              onClick={() => runScrape('generate-permit-summaries', { years: backfillYears, forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
             >
@@ -310,10 +364,10 @@ export default function AdminPage() {
               ) : (
                 <Sparkles className="w-4 h-4 mr-2" />
               )}
-              Generate Permit Summaries (2024-2025)
+              Generate Permit Summaries ({backfillYears[backfillYears.length - 1]}-{backfillYears[0]})
             </button>
             <button
-              onClick={() => runScrape('generate-permit-summaries', { years: ['2020', '2021', '2022', '2023'] })}
+              onClick={() => runScrape('generate-permit-summaries', { years: historicalYears.slice(0, 4), forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition"
             >
@@ -322,10 +376,10 @@ export default function AdminPage() {
               ) : (
                 <Sparkles className="w-4 h-4 mr-2" />
               )}
-              Generate Permit Summaries (2020-2023)
+              Generate Permit Summaries (Historical)
             </button>
             <button
-              onClick={() => runScrape('generate-business-summaries', { years: ['2024', '2025'] })}
+              onClick={() => runScrape('generate-business-summaries', { years: backfillYears, forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition text-sm"
             >
@@ -334,7 +388,7 @@ export default function AdminPage() {
               ) : (
                 <Sparkles className="w-4 h-4 mr-2" />
               )}
-              Generate Business Summaries (2024-2025)
+              Generate Business Summaries ({backfillYears[backfillYears.length - 1]}-{backfillYears[0]})
             </button>
           </div>
         </div>
@@ -350,7 +404,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('generate-budget-summaries')}
+              onClick={() => runScrape('generate-budget-summaries', { forceRefresh: globalForceRefresh, limit: globalBatchLimit })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition"
             >
@@ -382,7 +436,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('generate-audit-summaries')}
+              onClick={() => runScrape('generate-audit-summaries', { forceRefresh: globalForceRefresh, limit: globalBatchLimit })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
             >
@@ -414,7 +468,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('generate-civic-summaries', { docType: 'splost' })}
+              onClick={() => runScrape('generate-civic-summaries', { docType: 'splost', forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition"
             >
@@ -426,7 +480,7 @@ export default function AdminPage() {
               Generate SPLOST Summaries
             </button>
             <button
-              onClick={() => runScrape('generate-civic-summaries', { docType: 'notice' })}
+              onClick={() => runScrape('generate-civic-summaries', { docType: 'notice', forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 transition"
             >
@@ -438,7 +492,7 @@ export default function AdminPage() {
               Generate Public Notice Summaries
             </button>
             <button
-              onClick={() => runScrape('generate-civic-summaries', { docType: 'strategic' })}
+              onClick={() => runScrape('generate-civic-summaries', { docType: 'strategic', forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition"
             >
@@ -450,7 +504,7 @@ export default function AdminPage() {
               Generate Strategic Plan Summaries
             </button>
             <button
-              onClick={() => runScrape('generate-civic-summaries', { docType: 'water-quality' })}
+              onClick={() => runScrape('generate-civic-summaries', { docType: 'water-quality', forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50 transition"
             >
@@ -489,7 +543,7 @@ export default function AdminPage() {
                 onChange={(e) => setStrategicYear(e.target.value)}
                 className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
               >
-                {['2026', '2025', '2024', '2023'].map(y => (
+                {fiscalYears.map(y => (
                   <option key={y} value={y}>FY{y}</option>
                 ))}
               </select>
@@ -537,7 +591,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('ordinances', { years: ['2025', '2024', '2023'] })}
+              onClick={() => runScrape('ordinances', { years: recentYears })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition"
             >
@@ -546,16 +600,14 @@ export default function AdminPage() {
               ) : (
                 <Download className="w-4 h-4 mr-2" />
               )}
-              Import Recent Ordinances (2023-2025)
+              Import Recent Ordinances ({recentYears[recentYears.length - 1]}-{recentYears[0]})
             </button>
             <button
-              onClick={() => runScrape('ordinances', {
-                years: ['2022', '2021', '2020', '2019', '2018', '2017', '2016', '2015', '2014', '2013', '2012', '2011', '2010', '2009']
-              })}
+              onClick={() => runScrape('ordinances', { years: historicalYears })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 transition"
             >
-              Import Historical Ordinances (2009-2022)
+              Import Historical Ordinances (2009-{historicalYears[0]})
             </button>
             <button
               onClick={() => runScrape('link-ordinances')}
@@ -583,7 +635,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('generate-ordinance-summaries', { limit: 5 })}
+              onClick={() => runScrape('generate-ordinance-summaries', { limit: globalBatchLimit, forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
             >
@@ -592,7 +644,48 @@ export default function AdminPage() {
               ) : (
                 <Sparkles className="w-4 h-4 mr-2" />
               )}
-              Generate 5 Ordinance Summaries
+              Generate Ordinance Summaries
+            </button>
+          </div>
+        </div>
+
+        {/* Resolutions */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h2 className="font-semibold text-slate-900 mb-4">Resolutions</h2>
+          <p className="text-sm text-slate-600 mb-4">
+            Extract resolutions from meeting agendas and generate AI summaries.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => runScrape('extract-resolutions')}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition"
+            >
+              {loading === 'extract-resolutions' ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              Extract All Resolutions
+            </button>
+            <button
+              onClick={() => runScrape('generate-resolution-summaries', { limit: globalBatchLimit, forceRefresh: globalForceRefresh })}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
+            >
+              {loading === 'generate-resolution-summaries' ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              Generate Resolution Summaries
+            </button>
+            <button
+              onClick={() => runScrape('generate-resolution-summaries', { limit: 100, forceRefresh: globalForceRefresh })}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition text-sm"
+            >
+              Generate All Resolution Summaries
             </button>
           </div>
         </div>
@@ -608,7 +701,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('generate-meeting-summaries', { limit: 5, status: 'upcoming', summaryType: 'agenda' })}
+              onClick={() => runScrape('generate-meeting-summaries', { limit: globalBatchLimit, status: 'upcoming', summaryType: 'agenda', forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
             >
@@ -617,14 +710,14 @@ export default function AdminPage() {
               ) : (
                 <Sparkles className="w-4 h-4 mr-2" />
               )}
-              Summarize 5 Upcoming Meetings
+              Summarize Upcoming Meetings
             </button>
             <button
-              onClick={() => runScrape('generate-meeting-summaries', { limit: 5, status: 'all', summaryType: 'agenda' })}
+              onClick={() => runScrape('generate-meeting-summaries', { limit: globalBatchLimit, status: 'all', summaryType: 'agenda', forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition"
             >
-              Summarize All Meetings (5)
+              Summarize All Agendas
             </button>
           </div>
         </div>
@@ -641,7 +734,7 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => runScrape('generate-meeting-summaries', { limit: 5, status: 'past', summaryType: 'minutes' })}
+              onClick={() => runScrape('generate-meeting-summaries', { limit: globalBatchLimit, status: 'past', summaryType: 'minutes', forceRefresh: globalForceRefresh })}
               disabled={loading !== null}
               className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
             >
@@ -650,7 +743,7 @@ export default function AdminPage() {
               ) : (
                 <Sparkles className="w-4 h-4 mr-2" />
               )}
-              Summarize 5 Past Meeting Minutes
+              Summarize Past Minutes
             </button>
           </div>
         </div>
