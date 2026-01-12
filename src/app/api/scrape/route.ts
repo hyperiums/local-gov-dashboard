@@ -526,10 +526,20 @@ Keep the summary concise (2-3 paragraphs). Use plain language that a resident wo
               );
 
               if (matchingVote) {
-                // Map result to our status
-                const status = matchingVote.result === 'passed' ? 'adopted' :
-                               matchingVote.result === 'failed' ? 'rejected' :
-                               matchingVote.result === 'tabled' ? 'tabled' : 'adopted';
+                // Determine status based on both motion type and result
+                // If motion was to table and it passed, the resolution is tabled
+                let status: string;
+                if (matchingVote.motion?.toLowerCase() === 'table' && matchingVote.result === 'passed') {
+                  status = 'tabled';
+                } else if (matchingVote.result === 'passed') {
+                  status = 'adopted';
+                } else if (matchingVote.result === 'failed') {
+                  status = 'rejected';
+                } else if (matchingVote.result === 'tabled') {
+                  status = 'tabled';
+                } else {
+                  status = 'adopted'; // fallback
+                }
 
                 updateResolutionOutcome(
                   resolution.id,
