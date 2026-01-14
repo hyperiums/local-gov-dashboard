@@ -228,18 +228,6 @@ export default function DevelopmentPage() {
     });
   }, [chartData, selectedChartYears]);
 
-  // Calculate permit type counts for selected years
-  const filteredByTypeData = useMemo(() => {
-    if (!chartData?.monthly) return chartData?.byType || [];
-    if (!selectedChartYears.length) return chartData.byType;
-
-    // We need to recalculate type counts from the yearOverYear data
-    // Since byType doesn't have year breakdown, aggregate from selected years' monthly totals
-    // For now, we'll show the type breakdown based on all data with a note
-    // A proper fix would require the API to return type data per year
-    return chartData.byType;
-  }, [chartData, selectedChartYears]);
-
   // Get unique years from permit summaries for filtering
   const availableYears = useMemo(() => {
     const years = new Set<string>();

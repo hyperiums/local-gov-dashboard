@@ -72,7 +72,6 @@ const SUMMARY_LEVEL_CONFIG: Record<SummaryLevel, { label: string; description: s
 };
 
 export default function DocumentsPage() {
-  const [documents, setDocuments] = useState<CivicDocument[]>([]);
   const [grouped, setGrouped] = useState<Record<DocType, CivicDocument[]>>({
     splost: [],
     notice: [],
@@ -97,7 +96,6 @@ export default function DocumentsPage() {
       try {
         const res = await fetch('/api/data?type=civic-documents');
         const data = await res.json();
-        setDocuments(data.documents || []);
         setGrouped(data.grouped || { splost: [], notice: [], strategic: [], 'water-quality': [] });
         setCounts(data.counts || { splost: 0, notice: 0, strategic: 0, 'water-quality': 0, total: 0 });
 

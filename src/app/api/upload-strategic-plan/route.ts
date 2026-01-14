@@ -14,7 +14,6 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const title = formData.get('title') as string || 'Strategic Plan';
     const year = formData.get('year') as string || new Date().getFullYear().toString();
     const forceRefresh = formData.get('forceRefresh') === 'true';
 

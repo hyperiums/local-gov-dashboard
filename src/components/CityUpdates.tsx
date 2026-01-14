@@ -20,7 +20,7 @@ export default function CityUpdates() {
       {/* Header */}
       <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
         <h2 className="text-lg font-semibold text-slate-900">City Updates</h2>
-        <p className="text-sm text-slate-600">What's happening in Flowery Branch</p>
+        <p className="text-sm text-slate-600">What&apos;s happening in Flowery Branch</p>
       </div>
 
       {hasContent ? (

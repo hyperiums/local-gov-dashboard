@@ -1,4 +1,4 @@
-import { getDb, getMeetings, type MeetingRow, type OrdinanceRow } from './db';
+import { getDb, type MeetingRow, type OrdinanceRow } from './db';
 
 // Types for the City Updates feature
 export interface UpcomingMeeting {
