@@ -25,13 +25,13 @@ export default function CityUpdates() {
 
       {hasContent ? (
         <div className="divide-y divide-slate-100">
-          {/* Coming Up Section */}
+          {/* Coming Up Section - includes pending legislation when there's a meeting */}
           {nextMeeting && (
-            <UpcomingMeetingSection meeting={nextMeeting} />
+            <UpcomingMeetingSection meeting={nextMeeting} pendingLegislation={pendingLegislation} />
           )}
 
-          {/* Pending Legislation Section */}
-          {pendingLegislation.length > 0 && (
+          {/* Pending Legislation Section - only show separately when no meeting */}
+          {!nextMeeting && pendingLegislation.length > 0 && (
             <PendingLegislationSection legislation={pendingLegislation} />
           )}
 
@@ -56,9 +56,25 @@ export default function CityUpdates() {
 }
 
 // Upcoming Meeting Section
-function UpcomingMeetingSection({ meeting }: { meeting: NonNullable<ReturnType<typeof getCityUpdatesData>['nextMeeting']> }) {
+function UpcomingMeetingSection({
+  meeting,
+  pendingLegislation = []
+}: {
+  meeting: NonNullable<ReturnType<typeof getCityUpdatesData>['nextMeeting']>;
+  pendingLegislation?: PendingLegislation[];
+}) {
   const countdown = getMeetingCountdown(meeting.date);
   const isUrgent = countdown === 'TODAY' || countdown === 'TOMORROW';
+
+  // Filter out agenda topics that match pending legislation to avoid redundancy
+  const filteredTopics = meeting.agendaTopics.filter(topic => {
+    return !pendingLegislation.some(leg => {
+      const pattern = leg.type === 'ordinance'
+        ? new RegExp(`Ordinance\\s*${leg.number}`, 'i')
+        : new RegExp(`Resolution\\s*${leg.number}`, 'i');
+      return pattern.test(topic);
+    });
+  });
 
   return (
     <div className="p-6">
@@ -85,12 +101,14 @@ function UpcomingMeetingSection({ meeting }: { meeting: NonNullable<ReturnType<t
               {formatDate(meeting.date, { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
 
-            {/* Agenda Topics Preview */}
-            {meeting.agendaTopics.length > 0 && (
+            {/* Non-legislation Agenda Topics Preview */}
+            {filteredTopics.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs font-medium text-slate-500 mb-1.5">On the agenda:</p>
+                <p className="text-xs font-medium text-slate-500 mb-1.5">
+                  {pendingLegislation.length > 0 ? 'Also on the agenda:' : 'On the agenda:'}
+                </p>
                 <ul className="space-y-1">
-                  {meeting.agendaTopics.map((topic, idx) => (
+                  {filteredTopics.map((topic, idx) => (
                     <li key={idx} className="text-sm text-slate-700 flex items-start">
                       <span className="text-emerald-500 mr-2">•</span>
                       <span className="line-clamp-1">{topic}</span>
@@ -100,7 +118,7 @@ function UpcomingMeetingSection({ meeting }: { meeting: NonNullable<ReturnType<t
               </div>
             )}
 
-            {meeting.agendaTopics.length === 0 && meeting.agendaCount > 0 && (
+            {filteredTopics.length === 0 && meeting.agendaCount > 0 && pendingLegislation.length === 0 && (
               <p className="text-sm text-slate-500 mt-2">
                 {meeting.agendaCount} agenda items
               </p>
@@ -125,9 +143,64 @@ function UpcomingMeetingSection({ meeting }: { meeting: NonNullable<ReturnType<t
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {meeting.agendaUrl && (
+        {/* Pending Legislation - nested inside meeting section */}
+        {pendingLegislation.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="flex items-center mb-3">
+              <Gavel className="w-4 h-4 text-amber-600 mr-2" />
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                Legislation on this agenda
+              </p>
+            </div>
+            <div className="space-y-2">
+              {pendingLegislation.map((item) => (
+                <div key={item.id} className="bg-white rounded-lg p-3 border border-slate-200">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {item.type === 'ordinance' ? (
+                          <span className="text-xs font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                            Ordinance {item.number}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">
+                            Resolution {item.number}
+                          </span>
+                        )}
+                        {item.status === 'first_reading' && (
+                          <span className="text-xs font-medium text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
+                            First Reading
+                          </span>
+                        )}
+                        {item.status === 'second_reading' && (
+                          <span className="text-xs font-medium text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                            Second Reading
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-800 mt-1 line-clamp-2">
+                        {item.title}
+                      </p>
+                      <Link
+                        href={item.type === 'ordinance'
+                          ? `/ordinances?search=${item.number}`
+                          : `/resolutions?search=${item.number}`}
+                        className="text-xs text-emerald-600 hover:text-emerald-700 mt-1.5 inline-flex items-center"
+                      >
+                        View details
+                        <ArrowRight className="w-3 h-3 ml-1" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* View Agenda button at bottom */}
+        {meeting.agendaUrl && (
+          <div className="mt-4 pt-4 border-t border-slate-200">
             <a
               href={meeting.agendaUrl}
               target="_blank"
@@ -137,15 +210,8 @@ function UpcomingMeetingSection({ meeting }: { meeting: NonNullable<ReturnType<t
               View Agenda
               <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
             </a>
-          )}
-          <Link
-            href={`/meetings`}
-            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
-          >
-            All Meetings
-            <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-          </Link>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
