@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Clock, Filter, Calendar, Scale, FileText, ChevronDown, ChevronUp, CalendarDays, ExternalLink, List, FileDown } from 'lucide-react';
 import Link from 'next/link';
 
@@ -100,6 +101,26 @@ function stripMarkdown(text: string): string {
 }
 
 export default function TimelinePage() {
+  return (
+    <Suspense fallback={<TimelineLoading />}>
+      <TimelineContent />
+    </Suspense>
+  );
+}
+
+function TimelineLoading() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="text-center py-12">
+        <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
+        <p className="text-slate-500 mt-4">Loading timeline...</p>
+      </div>
+    </div>
+  );
+}
+
+function TimelineContent() {
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<TimelineItem[]>([]);
   const [upcoming, setUpcoming] = useState<UpcomingMeeting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +129,16 @@ export default function TimelinePage() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [meetingDetails, setMeetingDetails] = useState<Record<string, MeetingDetail>>({});
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
+  const [targetDate, setTargetDate] = useState<string | null>(null);
+
+  // Handle date URL parameter
+  useEffect(() => {
+    const date = searchParams.get('date');
+    if (date) {
+      setTargetDate(date);
+      setDateRange('all'); // Ensure date is visible
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadTimeline() {
@@ -132,6 +163,18 @@ export default function TimelinePage() {
 
     loadTimeline();
   }, [dateRange, typeFilter]);
+
+  // Scroll to target date after items load
+  useEffect(() => {
+    if (targetDate && items.length > 0 && !loading) {
+      setTimeout(() => {
+        const element = document.getElementById(`date-${targetDate}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [targetDate, items, loading]);
 
   const toggleExpand = async (itemKey: string, item: TimelineItem) => {
     const newExpanded = new Set(expandedItems);
@@ -300,7 +343,11 @@ export default function TimelinePage() {
 
           <div className="space-y-8">
             {sortedDates.map((date) => (
-              <div key={date} className="relative">
+              <div
+                key={date}
+                id={`date-${date}`}
+                className={`relative ${date === targetDate ? 'ring-2 ring-emerald-400 ring-offset-4 rounded-lg p-2 -m-2' : ''}`}
+              >
                 {/* Date marker */}
                 <div className="flex items-center mb-4">
                   <div className="relative z-10 w-8 h-8 sm:w-16 sm:h-8 bg-emerald-600 rounded-full sm:rounded-lg flex items-center justify-center">
