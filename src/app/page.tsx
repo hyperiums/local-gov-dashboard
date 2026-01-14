@@ -1,4 +1,3 @@
-import { Database, Sparkles, Link2 } from 'lucide-react';
 import CityUpdates from '@/components/CityUpdates';
 import QuickLinks from '@/components/QuickLinks';
 
@@ -15,28 +14,14 @@ export default function HomePage() {
           connect over time — using only official, public information.
         </p>
 
-        {/* Condensed How It Works */}
-        <div className="flex flex-wrap justify-center items-center gap-4 text-sm text-slate-600">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-              <Database className="w-4 h-4 text-emerald-600" />
-            </div>
-            <span>Collects public data</span>
-          </div>
-          <span className="text-slate-300 hidden sm:inline">→</span>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-emerald-600" />
-            </div>
-            <span>Summarizes in plain language</span>
-          </div>
-          <span className="text-slate-300 hidden sm:inline">→</span>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-              <Link2 className="w-4 h-4 text-emerald-600" />
-            </div>
-            <span>Links to official sources</span>
-          </div>
+        {/* Meeting Info Banner */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-6 max-w-lg mx-auto">
+          <p className="text-emerald-800 font-medium text-sm sm:text-base">
+            City Council meets 1st & 3rd Thursdays at 6:00 PM
+          </p>
+          <p className="text-emerald-700 text-xs sm:text-sm mt-1">
+            City Hall, 5410 Pine Street &bull; <a href="tel:770-967-6371" className="underline hover:text-emerald-800">770-967-6371</a>
+          </p>
         </div>
       </div>
 

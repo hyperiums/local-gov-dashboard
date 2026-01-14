@@ -4,7 +4,6 @@ import {
   getCityUpdatesData,
   getMeetingCountdown,
   formatDate,
-  formatRelativeTime,
   type RecentDecision,
   type PendingLegislation,
 } from '@/lib/cityUpdates';
@@ -503,26 +502,11 @@ function QuietPeriodSection() {
 
 // Freshness Footer
 function FreshnessFooter({ freshness }: { freshness: ReturnType<typeof getCityUpdatesData>['freshness'] }) {
-  const parts: string[] = [];
-
-  if (freshness.lastMeetingDate) {
-    parts.push(`Data through ${formatDate(freshness.lastMeetingDate, { month: 'short', day: 'numeric' })}`);
-  }
-
-  if (freshness.lastDataUpdate) {
-    parts.push(`Updated ${formatRelativeTime(freshness.lastDataUpdate)}`);
-  }
-
-  if (parts.length === 0) return null;
+  if (!freshness.lastMeetingDate) return null;
 
   return (
     <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-xs text-slate-500">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <span>{parts.join(' • ')}</span>
-        {freshness.nextMeetingDate && (
-          <span>City Council meets 1st and 3rd Thursdays</span>
-        )}
-      </div>
+      <span>Data through {formatDate(freshness.lastMeetingDate, { month: 'short', day: 'numeric' })}</span>
     </div>
   );
 }
