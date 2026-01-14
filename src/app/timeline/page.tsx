@@ -346,7 +346,7 @@ function TimelineContent() {
               <div
                 key={date}
                 id={`date-${date}`}
-                className={`relative ${date === targetDate ? 'ring-2 ring-emerald-400 ring-offset-4 rounded-lg p-2 -m-2' : ''}`}
+                className={`relative ${date === targetDate ? 'border-l-4 border-emerald-500 pl-2 -ml-2' : ''}`}
               >
                 {/* Date marker */}
                 <div className="flex items-center mb-4">

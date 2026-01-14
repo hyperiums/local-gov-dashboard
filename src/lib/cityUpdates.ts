@@ -65,10 +65,11 @@ function parseLocalDate(dateStr: string): Date {
 // Get human-friendly countdown for upcoming meeting
 export function getMeetingCountdown(dateStr: string): string {
   const meetingDate = parseLocalDate(dateStr);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+  // Get current date in EST timezone (Flowery Branch is in Eastern Time)
+  const estNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  estNow.setHours(0, 0, 0, 0); // Reset to start of day for comparison
 
-  const diffTime = meetingDate.getTime() - now.getTime();
+  const diffTime = meetingDate.getTime() - estNow.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) return 'TODAY';

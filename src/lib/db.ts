@@ -983,14 +983,14 @@ export function updateResolutionOutcome(
   stmt.run(status, adoptedDate || null, id);
 }
 
-export function getResolutions(options?: { year?: string; limit?: number }): ResolutionRow[] {
+export function getResolutions(options?: { year?: string; limit?: number }): (ResolutionRow & { meeting_date: string | null })[] {
   const db = getDb();
-  let query = 'SELECT * FROM resolutions';
+  let query = 'SELECT r.*, m.date as meeting_date FROM resolutions r LEFT JOIN meetings m ON r.meeting_id = m.id';
   const params: (string | number)[] = [];
   const conditions: string[] = [];
 
   if (options?.year) {
-    conditions.push("number LIKE ?");
+    conditions.push("r.number LIKE ?");
     params.push(`${options.year.slice(-2)}-%`);
   }
 
@@ -998,14 +998,14 @@ export function getResolutions(options?: { year?: string; limit?: number }): Res
     query += ' WHERE ' + conditions.join(' AND ');
   }
 
-  query += ' ORDER BY number DESC';
+  query += ' ORDER BY r.number DESC';
 
   if (options?.limit) {
     query += ' LIMIT ?';
     params.push(options.limit);
   }
 
-  return db.prepare(query).all(...params) as ResolutionRow[];
+  return db.prepare(query).all(...params) as (ResolutionRow & { meeting_date: string | null })[];
 }
 
 export function getResolutionByNumber(number: string): ResolutionRow | undefined {

@@ -15,6 +15,7 @@ interface Resolution {
   introduced_date: string | null;
   adopted_date: string | null;
   meeting_id: string | null;
+  meeting_date: string | null;
   packet_url: string | null;
   summary: string | null;
 }
@@ -64,7 +65,7 @@ function ResolutionsContent() {
   useEffect(() => {
     if (autoExpandResolution && resolutions.length > 0) {
       const res = resolutions.find(r => r.number === autoExpandResolution);
-      const date = res?.adopted_date || res?.introduced_date;
+      const date = res?.meeting_date || res?.adopted_date || res?.introduced_date;
       if (date) {
         const year = date.substring(0, 4);
         setExpandedYears(prev => new Set([...prev, year]));
@@ -95,9 +96,9 @@ function ResolutionsContent() {
     loadResolutions();
   }, []);
 
-  // Group resolutions by year
+  // Group resolutions by year (prefer meeting_date for most recent activity)
   const resolutionsByYear = resolutions.reduce((acc, res) => {
-    const year = res.adopted_date?.substring(0, 4) || res.introduced_date?.substring(0, 4) || 'Unknown';
+    const year = res.meeting_date?.substring(0, 4) || res.adopted_date?.substring(0, 4) || res.introduced_date?.substring(0, 4) || 'Unknown';
     if (!acc[year]) acc[year] = [];
     acc[year].push(res);
     return acc;
@@ -289,7 +290,13 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
   };
 
   const statusDisplay = getStatusDisplay(resolution.status);
-  const displayDate = resolution.adopted_date || resolution.introduced_date;
+  // For timeline links, prefer meeting_date (when this resolution was last discussed)
+  const timelineDate = resolution.meeting_date || resolution.adopted_date || resolution.introduced_date;
+  // Check if we have different dates worth showing
+  const introducedDate = resolution.introduced_date;
+  const meetingDate = resolution.meeting_date;
+  const adoptedDate = resolution.adopted_date;
+  const showBothDates = meetingDate && introducedDate && meetingDate !== introducedDate;
 
   return (
     <div
@@ -317,17 +324,23 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
             <p className="text-sm text-slate-600 mt-1">{resolution.description}</p>
           )}
           <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 mt-2">
-            {displayDate && (
-              <span className="flex items-center">
-                <Calendar className="w-3 h-3 mr-1" />
-                {formatDate(displayDate)}
-              </span>
+            <Calendar className="w-3 h-3" />
+            {resolution.status === 'adopted' && adoptedDate ? (
+              <span>{formatDate(adoptedDate)}</span>
+            ) : showBothDates ? (
+              <>
+                <span>Last discussed {formatDate(meetingDate)}</span>
+                <span>•</span>
+                <span className="text-slate-400">First introduced {formatDate(introducedDate)}</span>
+              </>
+            ) : (
+              <span>{formatDate(timelineDate || '')}</span>
             )}
-            {resolution.meeting_id && (
+            {resolution.meeting_id && timelineDate && (
               <>
                 <span>•</span>
                 <Link
-                  href={`/timeline?date=${displayDate}`}
+                  href={`/timeline?date=${timelineDate}`}
                   className="text-purple-600 hover:text-purple-700 font-medium"
                 >
                   View in timeline
