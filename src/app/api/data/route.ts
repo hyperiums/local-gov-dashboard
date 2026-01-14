@@ -8,6 +8,7 @@ import {
   getAllPermits,
   getPermitSummaryStats,
   getOrdinances,
+  getPendingOrdinancesWithProgress,
   getResolutions,
   getDashboardStats,
   getRecentActivity,
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
         const status = searchParams.get('status') || undefined;
         const limit = searchParams.get('limit')
           ? parseInt(searchParams.get('limit')!)
-          : 20;
+          : undefined;  // Return all meetings by default
         const meetings = getMeetings({ status, limit });
         return NextResponse.json({ meetings });
       }
@@ -387,6 +388,11 @@ export async function GET(request: Request) {
           : 20;
         const ordinances = getOrdinances({ status, limit });
         return NextResponse.json({ ordinances });
+      }
+
+      case 'pending-ordinances': {
+        const pendingOrdinances = getPendingOrdinancesWithProgress();
+        return NextResponse.json({ ordinances: pendingOrdinances });
       }
 
       case 'resolutions': {
