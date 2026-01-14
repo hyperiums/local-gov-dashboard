@@ -62,3 +62,14 @@ export function getClearGovSpendingUrl(): string {
 export function getAllMonths(): string[] {
   return ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
 }
+
+/**
+ * Format a date string (YYYY-MM-DD) for display, avoiding timezone issues.
+ * Appends T12:00:00 to prevent UTC midnight from rolling back a day in EST.
+ */
+export function formatDate(
+  dateString: string,
+  options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' }
+): string {
+  return new Date(dateString + 'T12:00:00').toLocaleDateString('en-US', options);
+}
