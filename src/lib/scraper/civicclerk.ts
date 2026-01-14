@@ -533,7 +533,7 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
             await monthYearButton.click();
             await page.waitForTimeout(500);
           }
-        } catch (e) {
+        } catch {
           console.log('Could not open month picker, continuing with scroll navigation');
         }
 

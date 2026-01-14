@@ -51,8 +51,8 @@ export { scrapeCivicDocuments, getCivicDocumentsByType } from './civic-docs';
 export type { CivicDocType, CivicDocument } from './civic-docs';
 
 // Municode ordinances
-export { getMunicodePdfUrl, scrapeMunicodeOrdinances } from './municode';
-export type { ScrapedOrdinance } from './municode';
+export { getMunicodePdfUrl, scrapeMunicodeOrdinances, scrapeMunicodeSupplementHistory } from './municode';
+export type { ScrapedOrdinance, SupplementHistoryEntry } from './municode';
 
 // Business listings
 export { getBusinessPdfUrl, parseBusinessPdfText } from './business';

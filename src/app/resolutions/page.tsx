@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, ExternalLink, Search, ChevronDown, ChevronUp, ChevronRight, Sparkles, Calendar, Package } from 'lucide-react';
-import { getRecentYears } from '@/lib/dates';
+import { getRecentYears, formatDate } from '@/lib/dates';
 
 interface Resolution {
   id: string;
@@ -320,11 +320,7 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
             {displayDate && (
               <span className="flex items-center">
                 <Calendar className="w-3 h-3 mr-1" />
-                {new Date(displayDate).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
+                {formatDate(displayDate)}
               </span>
             )}
             {resolution.meeting_id && (

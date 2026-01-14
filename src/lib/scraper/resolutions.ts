@@ -60,8 +60,7 @@ function detectOrdinanceStatusFromAgenda(title: string): string {
 export function createOrdinanceFromAgendaItem(
   ordinanceNumber: string,
   agendaItemTitle: string,
-  meetingDate: string,
-  meetingId: string
+  meetingDate: string
 ): void {
   const title = extractOrdinanceTitleFromAgenda(agendaItemTitle);
   const status = detectOrdinanceStatusFromAgenda(agendaItemTitle);
