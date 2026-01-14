@@ -40,6 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local database (scraped data, regeneratable)
-/data/
-*.db
+# SQLite temporary files (WAL mode)
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Old/unused root db files
+/civic-data.db
+/local.db
