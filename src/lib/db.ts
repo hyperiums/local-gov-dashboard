@@ -41,6 +41,21 @@ export function getDb(): Database.Database {
   return db;
 }
 
+// Helper to safely add a column if it doesn't exist
+function addColumnIfNotExists(
+  database: Database.Database,
+  table: string,
+  column: string,
+  definition: string
+): void {
+  const columns = database.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  const exists = columns.some((col) => col.name === column);
+  if (!exists) {
+    database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    console.log(`Added column ${column} to ${table}`);
+  }
+}
+
 function initializeSchema() {
   const database = db!;
 
@@ -187,12 +202,10 @@ function initializeSchema() {
     // Column already exists, ignore error
   }
 
-  // Add outcome_verified column to resolutions table if it doesn't exist
-  try {
-    database.exec(`ALTER TABLE resolutions ADD COLUMN outcome_verified INTEGER DEFAULT 0`);
-  } catch {
-    // Column already exists, ignore error
-  }
+  // Schema migrations - safely add columns that may not exist
+  addColumnIfNotExists(database, 'resolutions', 'outcome_verified', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists(database, 'ordinances', 'disposition', 'TEXT');
+  addColumnIfNotExists(database, 'ordinances', 'minutes_url', 'TEXT');
 }
 
 // Meeting operations
@@ -402,11 +415,13 @@ export function insertOrdinance(ordinance: {
   introducedDate?: string;
   adoptedDate?: string;
   municodeUrl?: string;
+  disposition?: string;  // 'codified' | 'omit' | null
+  minutesUrl?: string;   // link to meeting minutes (for non-Municode ordinances)
 }) {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO ordinances (id, number, title, description, summary, status, introduced_date, adopted_date, municode_url, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT OR REPLACE INTO ordinances (id, number, title, description, summary, status, introduced_date, adopted_date, municode_url, disposition, minutes_url, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `);
   stmt.run(
     ordinance.id,
@@ -417,7 +432,9 @@ export function insertOrdinance(ordinance: {
     ordinance.status || 'proposed',
     ordinance.introducedDate || null,
     ordinance.adoptedDate || null,
-    ordinance.municodeUrl || null
+    ordinance.municodeUrl || null,
+    ordinance.disposition || null,
+    ordinance.minutesUrl || null
   );
 }
 
@@ -484,6 +501,258 @@ export function getOrdinances(options?: { status?: string; limit?: number }) {
   }
 
   return db.prepare(query).all(...params);
+}
+
+// Pending ordinance types
+export interface PendingOrdinanceReading {
+  action: string;
+  meeting_id: string;
+  meeting_date: string;
+  meeting_title: string;
+}
+
+export interface PendingOrdinanceNextMeeting {
+  id: string;
+  date: string;
+  title: string;
+  packet_url: string | null;
+  expected_action: string;
+}
+
+export interface PendingOrdinanceWithProgress {
+  id: string;
+  number: string;
+  title: string;
+  description: string | null;
+  summary: string | null;
+  status: string;
+  introduced_date: string | null;
+  readings: PendingOrdinanceReading[];
+  next_meeting: PendingOrdinanceNextMeeting | null;
+}
+
+// Get pending ordinances with their reading history and next scheduled action
+export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress[] {
+  const db = getDb();
+  const today = new Date().toISOString().split('T')[0];
+
+  // First, get pending ordinances from the ordinances table
+  // Exclude terminal/separate states: adopted, denied, rejected, tabled
+  const pendingOrdinances = db.prepare(`
+    SELECT o.id, o.number, o.title, o.description, o.summary, o.status, o.introduced_date
+    FROM ordinances o
+    WHERE o.status NOT IN ('adopted', 'denied', 'rejected', 'tabled') AND o.adopted_date IS NULL
+    ORDER BY CAST(o.number AS INTEGER) DESC
+  `).all() as Array<{
+    id: string;
+    number: string;
+    title: string;
+    description: string | null;
+    summary: string | null;
+    status: string;
+    introduced_date: string | null;
+  }>;
+
+  // Also find ordinances from agenda_items that don't have ordinance records yet
+  // Group by reference_number to avoid duplicates, pick the longest title (most descriptive)
+  // Only include if the most recent reading was within 60 days (older ones are likely adopted but not tracked)
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - 60);
+  const cutoffStr = cutoffDate.toISOString().split('T')[0];
+
+  const agendaOrdinances = db.prepare(`
+    SELECT
+      ai.reference_number as number,
+      (SELECT title FROM agenda_items WHERE reference_number = ai.reference_number ORDER BY LENGTH(title) DESC LIMIT 1) as title,
+      MIN(m.date) as introduced_date,
+      MAX(m.date) as last_reading_date
+    FROM agenda_items ai
+    JOIN meetings m ON m.id = ai.meeting_id
+    WHERE ai.type = 'ordinance'
+      AND ai.reference_number IS NOT NULL
+      AND ai.reference_number != ''
+      AND NOT EXISTS (SELECT 1 FROM ordinances o WHERE o.number = ai.reference_number)
+    GROUP BY ai.reference_number
+    HAVING MAX(m.date) >= ?
+    ORDER BY CAST(ai.reference_number AS INTEGER) DESC
+  `).all(cutoffStr) as Array<{
+    number: string;
+    title: string;
+    introduced_date: string;
+    last_reading_date: string;
+  }>;
+
+  // Combine both sources
+  const allPending: PendingOrdinanceWithProgress[] = [];
+
+  // Process ordinances from ordinances table
+  for (const ord of pendingOrdinances) {
+    const readings = db.prepare(`
+      SELECT om.action, om.meeting_id, m.date as meeting_date, m.title as meeting_title
+      FROM ordinance_meetings om
+      JOIN meetings m ON m.id = om.meeting_id
+      WHERE om.ordinance_id = ?
+      ORDER BY m.date ASC
+    `).all(ord.id) as PendingOrdinanceReading[];
+
+    // Find next scheduled meeting with this ordinance
+    const nextMeeting = db.prepare(`
+      SELECT m.id, m.date, m.title, m.packet_url, ai.title as item_title
+      FROM meetings m
+      JOIN agenda_items ai ON ai.meeting_id = m.id
+      WHERE ai.reference_number = ?
+        AND m.date >= ?
+      ORDER BY m.date ASC
+      LIMIT 1
+    `).get(ord.number, today) as {
+      id: string;
+      date: string;
+      title: string;
+      packet_url: string | null;
+      item_title: string;
+    } | undefined;
+
+    allPending.push({
+      ...ord,
+      readings,
+      next_meeting: nextMeeting ? {
+        id: nextMeeting.id,
+        date: nextMeeting.date,
+        title: nextMeeting.title,
+        packet_url: nextMeeting.packet_url,
+        expected_action: detectExpectedAction(nextMeeting.item_title),
+      } : null,
+    });
+  }
+
+  // Process ordinances from agenda_items that don't have records
+  for (const agendaOrd of agendaOrdinances) {
+    // Get all mentions of this ordinance from agenda items, grouped by meeting
+    const mentions = db.prepare(`
+      SELECT ai.title, m.id as meeting_id, m.date as meeting_date, m.title as meeting_title, m.packet_url
+      FROM agenda_items ai
+      JOIN meetings m ON m.id = ai.meeting_id
+      WHERE ai.reference_number = ?
+      ORDER BY m.date ASC, LENGTH(ai.title) DESC
+    `).all(agendaOrd.number) as Array<{
+      title: string;
+      meeting_id: string;
+      meeting_date: string;
+      meeting_title: string;
+      packet_url: string | null;
+    }>;
+
+    // Build readings from past mentions, deduplicating by meeting
+    const readingsByMeeting = new Map<string, PendingOrdinanceReading>();
+    let nextMeeting: PendingOrdinanceNextMeeting | null = null;
+
+    for (const mention of mentions) {
+      const action = detectActionFromTitle(mention.title);
+      if (mention.meeting_date < today) {
+        // Past meeting - add as reading (keep most significant action per meeting)
+        const existing = readingsByMeeting.get(mention.meeting_id);
+        if (!existing || actionPriority(action) > actionPriority(existing.action)) {
+          readingsByMeeting.set(mention.meeting_id, {
+            action,
+            meeting_id: mention.meeting_id,
+            meeting_date: mention.meeting_date,
+            meeting_title: mention.meeting_title,
+          });
+        }
+      } else if (!nextMeeting) {
+        // Future meeting - set as next (prefer most significant action)
+        const expectedAction = detectExpectedAction(mention.title);
+        if (!nextMeeting || actionPriority(action) > actionPriority(detectActionFromTitle(mention.title))) {
+          nextMeeting = {
+            id: mention.meeting_id,
+            date: mention.meeting_date,
+            title: mention.meeting_title,
+            packet_url: mention.packet_url,
+            expected_action: expectedAction,
+          };
+        }
+      }
+    }
+
+    const readings = Array.from(readingsByMeeting.values());
+
+    // Extract clean title from the most descriptive agenda item
+    const cleanTitle = extractOrdinanceTitle(agendaOrd.title);
+
+    allPending.push({
+      id: `pending-${agendaOrd.number}`,
+      number: agendaOrd.number,
+      title: cleanTitle,
+      description: null,
+      summary: null,
+      status: determineStatusFromReadings(readings),
+      introduced_date: agendaOrd.introduced_date,
+      readings,
+      next_meeting: nextMeeting,
+    });
+  }
+
+  // Sort by ordinance number descending
+  allPending.sort((a, b) => parseInt(b.number) - parseInt(a.number));
+
+  return allPending;
+}
+
+// Helper to detect action from agenda item title
+function detectActionFromTitle(title: string): string {
+  const lower = title.toLowerCase();
+  if (lower.includes('second reading')) return 'second_reading';
+  if (lower.includes('first reading')) return 'first_reading';
+  if (lower.includes('adopt')) return 'adopted';
+  if (lower.includes('public hearing')) return 'public_hearing';
+  return 'discussed';
+}
+
+// Helper to rank action priority (higher = more significant)
+function actionPriority(action: string): number {
+  const priorities: Record<string, number> = {
+    'adopted': 5,
+    'second_reading': 4,
+    'first_reading': 3,
+    'public_hearing': 2,
+    'discussed': 1,
+  };
+  return priorities[action] || 0;
+}
+
+// Helper to detect expected action for display
+function detectExpectedAction(title: string): string {
+  const lower = title.toLowerCase();
+  if (lower.includes('second reading')) return 'Second Reading';
+  if (lower.includes('first reading')) return 'First Reading';
+  if (lower.includes('adopt')) return 'Adoption Vote';
+  if (lower.includes('public hearing')) return 'Public Hearing';
+  return 'Discussion';
+}
+
+// Helper to determine status from readings
+function determineStatusFromReadings(readings: PendingOrdinanceReading[]): string {
+  const actions = new Set(readings.map(r => r.action));
+  if (actions.has('second_reading')) return 'second_reading';
+  if (actions.has('first_reading')) return 'first_reading';
+  return 'proposed';
+}
+
+// Helper to extract clean ordinance title
+function extractOrdinanceTitle(rawTitle: string): string {
+  // Remove common prefixes like "Consider First Reading of Ordinance 773 to"
+  let title = rawTitle
+    .replace(/^consider\s+(the\s+)?(first|second)\s+reading\s+of\s+/i, '')
+    .replace(/^ordinance\s+\d+\s+(to\s+|for\s+|-\s*)?/i, '')
+    .trim();
+
+  // If we stripped too much, use original
+  if (title.length < 10) {
+    title = rawTitle;
+  }
+
+  // Capitalize first letter
+  return title.charAt(0).toUpperCase() + title.slice(1);
 }
 
 // Summary operations
@@ -638,6 +907,8 @@ export interface OrdinanceRow {
   introduced_date: string | null;
   adopted_date: string | null;
   municode_url: string | null;
+  disposition: string | null;  // 'codified' | 'omit' | null
+  minutes_url: string | null;
   summary: string | null;
   created_at: string;
   updated_at: string;
