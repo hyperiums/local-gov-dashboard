@@ -260,15 +260,18 @@ export default function DevelopmentPage() {
             Track building permits, new construction, and business growth
           </p>
         </div>
-        <a
-          href="https://www.flowerybranchga.org/government/departments/community_development.php"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
-        >
-          City Permits
-          <ExternalLink className="w-4 h-4 ml-2" />
-        </a>
+        <div className="text-right">
+          <a
+            href="https://www.flowerybranchga.org/departments/community_development/forms.php"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+          >
+            City Permits
+            <ExternalLink className="w-4 h-4 ml-2" />
+          </a>
+          <p className="text-xs text-slate-500 mt-1">Search &quot;permit&quot; to filter forms</p>
+        </div>
       </div>
 
       {/* Building Activity Charts Section - Collapsible */}
