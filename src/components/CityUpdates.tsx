@@ -2,11 +2,11 @@ import Link from 'next/link';
 import { Calendar, Scale, FileText, Clock, AlertCircle, ExternalLink, ArrowRight, Building2, Gavel } from 'lucide-react';
 import {
   getCityUpdatesData,
-  getMeetingCountdown,
   formatDate,
   type RecentDecision,
   type PendingLegislation,
 } from '@/lib/cityUpdates';
+import { MeetingCountdownBadge } from './MeetingCountdownBadge';
 
 export default function CityUpdates() {
   const data = getCityUpdatesData();
@@ -62,9 +62,6 @@ function UpcomingMeetingSection({
   meeting: NonNullable<ReturnType<typeof getCityUpdatesData>['nextMeeting']>;
   pendingLegislation?: PendingLegislation[];
 }) {
-  const countdown = getMeetingCountdown(meeting.date);
-  const isUrgent = countdown === 'TODAY' || countdown === 'TOMORROW';
-
   // Filter out agenda topics that match pending legislation to avoid redundancy
   const filteredTopics = meeting.agendaTopics.filter(topic => {
     return !pendingLegislation.some(leg => {
@@ -82,18 +79,12 @@ function UpcomingMeetingSection({
         <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Coming Up</h3>
       </div>
 
-      <div className={`rounded-lg p-4 ${isUrgent ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50'}`}>
+      <div className="rounded-lg p-4 bg-emerald-50 border border-emerald-200">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center flex-wrap gap-2 mb-1">
               <h4 className="font-semibold text-slate-900">{meeting.title}</h4>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                isUrgent
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-200 text-slate-700'
-              }`}>
-                {countdown}
-              </span>
+              <MeetingCountdownBadge dateStr={meeting.date} />
             </div>
 
             <p className="text-sm text-slate-600 mb-2">
