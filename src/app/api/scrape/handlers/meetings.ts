@@ -11,6 +11,7 @@ import {
   extractResolutionsFromAgendaItems,
   fetchCivicClerkResolutionAttachments,
   createOrdinanceFromAgendaItem,
+  fetchVoteOutcomesFromOverview,
 } from '@/lib/scraper';
 import { analyzePdf } from '@/lib/summarize';
 import {
@@ -295,18 +296,46 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
   // Step 2: For past meetings, scrape agenda items
   const today = new Date();
   const pastMeetings = meetings.filter(m => new Date(m.date) < today);
-  const agendaResults = [];
+  const agendaResults: {
+    eventId: number;
+    date?: string;
+    success: boolean;
+    agendaItemCount?: number;
+    skipped?: boolean;
+    error?: string;
+  }[] = [];
 
   console.log(`Scraping agenda items for ${pastMeetings.length} past meetings...`);
 
+  const db = getDb();
+
   for (const meeting of pastMeetings) {
+    const meetingId = `civicclerk-${meeting.eventId}`;
+
+    // Skip if agenda items already exist (unless forceRefresh is true)
+    const existingCount = (db.prepare(
+      'SELECT COUNT(*) as count FROM agenda_items WHERE meeting_id = ?'
+    ).get(meetingId) as { count: number }).count;
+
+    if (existingCount > 0 && !forceRefresh) {
+      agendaResults.push({
+        eventId: meeting.eventId,
+        date: meeting.date,
+        success: true,
+        agendaItemCount: existingCount,
+        skipped: true,
+      });
+      console.log(`  Event ${meeting.eventId}: Skipped (${existingCount} existing items)`);
+      continue;
+    }
+
     try {
       const { agendaItems } = await scrapeCivicClerkMeetingDetails(meeting.eventId);
 
       for (const item of agendaItems) {
         insertAgendaItem({
           id: `civicclerk-${meeting.eventId}-item-${item.orderNum}`,
-          meetingId: `civicclerk-${meeting.eventId}`,
+          meetingId: meetingId,
           orderNum: item.orderNum,
           title: item.title,
           type: item.type,
@@ -319,6 +348,7 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
         date: meeting.date,
         success: true,
         agendaItemCount: agendaItems.length,
+        skipped: false,
       });
       console.log(`  Event ${meeting.eventId}: ${agendaItems.length} agenda items`);
     } catch (error) {
@@ -346,6 +376,87 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
   console.log('Extracting resolutions from agenda items...');
   const resolutionsExtracted = extractResolutionsFromAgendaItems();
   console.log(`Extracted ${resolutionsExtracted} resolutions`);
+
+  // Step 5.5: Fetch vote outcomes for meetings with unverified items
+  // Must run AFTER resolution extraction to avoid INSERT OR REPLACE overwriting updates
+  console.log('Checking for vote outcome updates...');
+  let resolutionsUpdated = 0;
+  let ordinancesUpdated = 0;
+
+  for (const meeting of pastMeetings) {
+    const meetingId = `civicclerk-${meeting.eventId}`;
+
+    // Check what needs updating for this meeting
+    const unverifiedResolutions = (db.prepare(
+      'SELECT COUNT(*) as count FROM resolutions WHERE meeting_id = ? AND outcome_verified = 0'
+    ).get(meetingId) as { count: number }).count;
+
+    const proposedOrdinances = (db.prepare(`
+      SELECT COUNT(*) as count FROM ordinance_meetings om
+      JOIN ordinances o ON o.id = om.ordinance_id
+      WHERE om.meeting_id = ? AND o.status = 'proposed'
+    `).get(meetingId) as { count: number }).count;
+
+    if (unverifiedResolutions === 0 && proposedOrdinances === 0) continue;
+
+    console.log(`  Event ${meeting.eventId}: ${unverifiedResolutions} unverified resolutions, ${proposedOrdinances} proposed ordinances`);
+    const voteOutcomes = await fetchVoteOutcomesFromOverview(meeting.eventId);
+
+    if (voteOutcomes.length === 0) {
+      console.log(`    No vote outcomes found on overview page`);
+      continue;
+    }
+
+    console.log(`    Found ${voteOutcomes.length} vote outcomes`);
+
+    for (const vote of voteOutcomes) {
+      // Check for resolution votes
+      if (vote.itemTitle.toLowerCase().includes('resolution')) {
+        const resMatch = vote.itemTitle.match(/resolution\s+([\d-]+)/i);
+        if (resMatch) {
+          const resNumber = resMatch[1];
+          const status = vote.result === 'passed' ? 'adopted' :
+                         vote.result === 'failed' ? 'rejected' : 'tabled';
+          const result = db.prepare(`
+            UPDATE resolutions SET status = ?, outcome_verified = 1,
+              adopted_date = CASE WHEN ? = 'adopted' THEN ? ELSE adopted_date END
+            WHERE number = ? AND outcome_verified = 0
+          `).run(status, status, meeting.date, resNumber);
+
+          if (result.changes > 0) {
+            console.log(`    ✓ Resolution ${resNumber}: ${vote.result} → status=${status}`);
+            resolutionsUpdated++;
+          } else {
+            console.log(`    - Resolution ${resNumber}: ${vote.result} (no update needed)`);
+          }
+        }
+      }
+
+      // Check for second reading ordinance votes
+      if (vote.result === 'passed' &&
+          vote.itemTitle.toLowerCase().includes('second reading') &&
+          vote.itemTitle.toLowerCase().includes('ordinance')) {
+        const ordMatch = vote.itemTitle.match(/ordinance\s+(\d+)/i);
+        if (ordMatch) {
+          const ordNumber = ordMatch[1];
+          const result = db.prepare(`
+            UPDATE ordinances SET status = 'adopted', adopted_date = ?
+            WHERE number = ? AND status = 'proposed'
+          `).run(meeting.date, ordNumber);
+
+          if (result.changes > 0) {
+            console.log(`    ✓ Ordinance ${ordNumber}: second reading passed → status=adopted`);
+            ordinancesUpdated++;
+          } else {
+            console.log(`    - Ordinance ${ordNumber}: second reading passed (no update needed)`);
+          }
+        }
+      }
+    }
+  }
+
+  const votesUpdated = resolutionsUpdated + ordinancesUpdated;
+  console.log(`Vote outcomes: ${resolutionsUpdated} resolutions updated, ${ordinancesUpdated} ordinances updated`);
 
   // Step 6: Auto-generate summaries for past meetings with agenda items
   // Respects batchLimit to prevent timeout issues
@@ -424,19 +535,79 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
   const minutesGenerated = summaryResults.filter(r => r.minutes === 'generated').length;
   console.log(`Generated ${agendasGenerated} agenda summaries, ${minutesGenerated} minutes summaries`);
 
+  // Step 6.5: Generate agenda summaries for upcoming meetings
+  // Agendas are published before meetings, so we can summarize them early
+  const upcomingMeetings = meetings
+    .filter(m => new Date(m.date) >= today)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Soonest first
+
+  const upcomingNeedingSummaries = upcomingMeetings.filter(meeting => {
+    const meetingId = `civicclerk-${meeting.eventId}`;
+    const existing = getMeetingById(meetingId) as MeetingRow | undefined;
+    return meeting.agendaUrl && !existing?.agenda_summary;
+  });
+
+  let upcomingAgendasGenerated = 0;
+  let upcomingNoPdf = 0;
+  const upcomingLimit = (batchLimit as number) || 5;
+
+  if (upcomingNeedingSummaries.length > 0) {
+    console.log(`\n=== Step 6.5: Upcoming Meeting Agenda Summaries ===`);
+    console.log(`Found ${upcomingMeetings.length} upcoming meetings, ${upcomingNeedingSummaries.length} need agenda summaries`);
+    console.log(`Processing up to ${upcomingLimit} meetings (soonest first)...`);
+
+    for (const meeting of upcomingNeedingSummaries.slice(0, upcomingLimit)) {
+      const meetingId = `civicclerk-${meeting.eventId}`;
+      try {
+        console.log(`  ${meeting.date} (${meetingId}): Fetching agenda PDF...`);
+        const agendaPdf = await fetchCivicClerkAgendaPdf(meeting.eventId);
+
+        if (agendaPdf) {
+          console.log(`  ${meeting.date} (${meetingId}): Analyzing agenda...`);
+          const summary = await analyzePdf(`${meetingId}-agenda`, 'agenda', agendaPdf, {});
+          updateMeetingAgendaSummary(meetingId, summary);
+          upcomingAgendasGenerated++;
+          console.log(`  ${meeting.date} (${meetingId}): ✓ Generated agenda summary`);
+        } else {
+          upcomingNoPdf++;
+          console.log(`  ${meeting.date} (${meetingId}): No PDF available yet`);
+        }
+      } catch (error) {
+        console.error(`  ${meeting.date} (${meetingId}): ✗ Error -`, error);
+      }
+    }
+
+    console.log(`Upcoming agenda summaries: ${upcomingAgendasGenerated} generated, ${upcomingNoPdf} no PDF available`);
+  } else if (upcomingMeetings.length > 0) {
+    console.log(`\n=== Step 6.5: Upcoming Meeting Agenda Summaries ===`);
+    console.log(`All ${upcomingMeetings.length} upcoming meetings already have agenda summaries`);
+  }
+
+  // Calculate agenda scraping breakdown
+  const skippedMeetings = agendaResults.filter(r => r.skipped).length;
+  const scrapedMeetings = agendaResults.filter(r => r.success && !r.skipped).length;
+  const failedMeetings = agendaResults.filter(r => !r.success).length;
+
   return NextResponse.json({
     success: true,
     meetingsFound: meetings.length,
     meetingsImported: meetingResults.filter(r => r.success).length,
     pastMeetingsProcessed: pastMeetings.length,
     agendaItemsImported: totalAgendaItems,
+    agendaScraping: {
+      scraped: scrapedMeetings,
+      skipped: skippedMeetings,
+      failed: failedMeetings,
+    },
     ordinancesLinked: linkResult.linked,
     ordinanceDatesUpdated: datesUpdated,
     ordinancesNotFound: linkResult.notFound,
     resolutionsExtracted,
+    votesUpdated,
     summariesGenerated: {
       agendas: agendasGenerated,
       minutes: minutesGenerated,
+      upcomingAgendas: upcomingAgendasGenerated,
       total: meetingsToSummarize.length,
     },
     agendaResults,
