@@ -12,7 +12,7 @@ export default function Header() {
   const dropdownButtonRef = useRef<HTMLButtonElement>(null);
 
   const navLinks = [
-    { href: '/timeline', label: 'Timeline', icon: Clock },
+    { href: '/timeline', label: 'Civic Timeline', icon: Clock },
     { href: '/meetings', label: 'Meetings', icon: Calendar },
     { href: '/development', label: 'Development', icon: Building2 },
     { href: '/budget', label: 'Budget', icon: BarChart3 },
@@ -92,20 +92,17 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
-            <Link
-              href="/timeline"
-              className="flex items-center space-x-1 text-white hover:text-white/80 transition"
-            >
-              <Clock className="w-4 h-4" />
-              <span>Timeline</span>
-            </Link>
-            <Link
-              href="/meetings"
-              className="flex items-center space-x-1 text-white hover:text-white/80 transition"
-            >
-              <Calendar className="w-4 h-4" />
-              <span>Meetings</span>
-            </Link>
+            {/* First two nav links */}
+            {navLinks.slice(0, 2).map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="flex items-center space-x-1 text-white hover:text-white/80 transition"
+              >
+                <link.icon className="w-4 h-4" />
+                <span>{link.label}</span>
+              </Link>
+            ))}
 
             {/* Legislation Dropdown */}
             <div
@@ -146,27 +143,17 @@ export default function Header() {
               )}
             </div>
 
-            <Link
-              href="/development"
-              className="flex items-center space-x-1 text-white hover:text-white/80 transition"
-            >
-              <Building2 className="w-4 h-4" />
-              <span>Development</span>
-            </Link>
-            <Link
-              href="/budget"
-              className="flex items-center space-x-1 text-white hover:text-white/80 transition"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Budget</span>
-            </Link>
-            <Link
-              href="/documents"
-              className="flex items-center space-x-1 text-white hover:text-white/80 transition"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Documents</span>
-            </Link>
+            {/* Remaining nav links */}
+            {navLinks.slice(2).map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="flex items-center space-x-1 text-white hover:text-white/80 transition"
+              >
+                <link.icon className="w-4 h-4" />
+                <span>{link.label}</span>
+              </Link>
+            ))}
 
             {/* Theme Toggle */}
             <div className="ml-2 bg-white/10 rounded-lg">
