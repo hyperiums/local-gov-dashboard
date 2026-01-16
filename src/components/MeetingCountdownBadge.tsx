@@ -39,7 +39,7 @@ export function MeetingCountdownBadge({ dateStr }: { dateStr: string }) {
 
   return (
     <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-      isUrgent ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+      isUrgent ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
     }`}>
       {countdown}
     </span>

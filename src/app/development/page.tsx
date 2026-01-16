@@ -252,11 +252,11 @@ export default function DevelopmentPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center">
-            <Building2 className="w-8 h-8 mr-3 text-emerald-500" />
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center">
+            <Building2 className="w-8 h-8 mr-3 text-emerald-500" aria-hidden="true" />
             Development & Construction
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Track building permits, new construction, and business growth
           </p>
         </div>
@@ -270,16 +270,16 @@ export default function DevelopmentPage() {
             City Permits
             <ExternalLink className="w-4 h-4 ml-2" />
           </a>
-          <p className="text-xs text-slate-500 mt-1">Search &quot;permit&quot; to filter forms</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Search &quot;permit&quot; to filter forms</p>
         </div>
       </div>
 
       {/* Building Activity Charts Section - Collapsible */}
       {chartData && chartData.monthly.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 overflow-hidden">
           <button
             onClick={() => setChartsExpanded(!chartsExpanded)}
-            className="w-full flex items-center p-6 hover:bg-slate-50 transition"
+            className="w-full flex items-center p-6 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
           >
             {chartsExpanded ? (
               <ChevronDown className="w-5 h-5 text-slate-400 mr-2" />
@@ -287,8 +287,8 @@ export default function DevelopmentPage() {
               <ChevronRight className="w-5 h-5 text-slate-400 mr-2" />
             )}
             <TrendingUp className="w-5 h-5 text-emerald-500 mr-2" />
-            <h2 className="text-lg font-semibold text-slate-900">Building Activity</h2>
-            <span className="ml-auto text-sm text-slate-500">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Building Activity</h2>
+            <span className="ml-auto text-sm text-slate-500 dark:text-slate-400">
               {chartData.totals.permits.toLocaleString()} permits across {chartData.totals.months} months
             </span>
           </button>
@@ -296,9 +296,9 @@ export default function DevelopmentPage() {
           {chartsExpanded && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 pt-0">
             {/* Monthly Permit Counts */}
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
-                <BarChart3 className="w-4 h-4 mr-2 text-slate-500" />
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center">
+                <BarChart3 className="w-4 h-4 mr-2 text-slate-500 dark:text-slate-400" />
                 Monthly Permits Over Time
               </h3>
               <div className="h-64">
@@ -330,8 +330,8 @@ export default function DevelopmentPage() {
             </div>
 
             {/* Permit Type Breakdown */}
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-slate-700 mb-3">Permits by Type <span className="text-slate-400 font-normal">(all years)</span></h3>
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Permits by Type <span className="text-slate-400 font-normal">(all years)</span></h3>
               <div className="h-64 flex items-center">
                 <ResponsiveContainer width="50%" height="100%">
                   <PieChart>
@@ -361,8 +361,8 @@ export default function DevelopmentPage() {
                         className="w-3 h-3 rounded-sm mr-2 flex-shrink-0"
                         style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                       />
-                      <span className="text-slate-600 truncate capitalize">{item.type}</span>
-                      <span className="ml-auto text-slate-500 font-medium">{item.count.toLocaleString()}</span>
+                      <span className="text-slate-600 dark:text-slate-400 truncate capitalize">{item.type}</span>
+                      <span className="ml-auto text-slate-500 dark:text-slate-400 font-medium">{item.count.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -370,9 +370,9 @@ export default function DevelopmentPage() {
             </div>
 
             {/* Year-over-Year Comparison */}
-            <div className="bg-slate-50 rounded-lg p-4 lg:col-span-2">
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 lg:col-span-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                <h3 className="text-sm font-medium text-slate-700">Year-over-Year Comparison</h3>
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Year-over-Year Comparison</h3>
                 <div className="flex flex-wrap gap-1">
                   {chartData.years.map((year) => (
                     <button
@@ -384,8 +384,8 @@ export default function DevelopmentPage() {
                       }}
                       className={`px-2 py-1 text-xs rounded transition ${
                         selectedChartYears.includes(year)
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                          ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500'
                       }`}
                     >
                       {year}
@@ -430,14 +430,14 @@ export default function DevelopmentPage() {
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
-        <div className="flex border-b border-slate-200">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6">
+        <div className="flex border-b border-slate-200 dark:border-slate-700">
           <button
             onClick={() => handleTabChange('permits')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition ${
               activeTab === 'permits'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-900/30'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
             }`}
           >
             Building Permits ({permitSummaries.length} months)
@@ -446,8 +446,8 @@ export default function DevelopmentPage() {
             onClick={() => handleTabChange('businesses')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition ${
               activeTab === 'businesses'
-                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-900/30'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
             }`}
           >
             New Businesses ({businessSummaries.length} months)
@@ -458,15 +458,15 @@ export default function DevelopmentPage() {
         <div className="p-4">
           {/* Year filter - only show for permits tab */}
           {activeTab === 'permits' && availableYears.length > 1 && (
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
-              <span className="text-sm text-slate-600">Filter by year:</span>
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100 dark:border-slate-700">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Filter by year:</span>
               <div className="flex flex-wrap gap-1">
                 <button
                   onClick={() => setFilterYear('all')}
                   className={`px-3 py-1 text-sm rounded transition ${
                     filterYear === 'all'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   All ({permitSummaries.length})
@@ -479,8 +479,8 @@ export default function DevelopmentPage() {
                       onClick={() => setFilterYear(year)}
                       className={`px-3 py-1 text-sm rounded transition ${
                         filterYear === year
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                       }`}
                     >
                       {year} ({count})
@@ -491,26 +491,26 @@ export default function DevelopmentPage() {
             </div>
           )}
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-slate-500 mt-4">Loading development data...</p>
+            <div className="text-center py-12" role="status" aria-live="polite">
+              <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto" aria-hidden="true"></div>
+              <p className="text-slate-500 dark:text-slate-400 mt-4">Loading development data...</p>
             </div>
           ) : currentSummaries.length > 0 ? (
             <div className="space-y-3">
               {currentSummaries.map((item) => (
-                <div key={item.month} className="border border-slate-200 rounded-lg overflow-hidden">
+                <div key={item.month} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                   <button
                     onClick={() => toggleMonth(item.month)}
-                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition"
+                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
                   >
                     <div className="flex items-center">
                       {expandedMonths.has(item.month) ? (
-                        <ChevronDown className="w-4 h-4 text-slate-500 mr-2" />
+                        <ChevronDown className="w-4 h-4 text-slate-500 dark:text-slate-400 mr-2" />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-slate-500 mr-2" />
+                        <ChevronRight className="w-4 h-4 text-slate-500 dark:text-slate-400 mr-2" />
                       )}
-                      <span className="font-medium text-slate-900">{formatMonth(item.month)}</span>
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">
+                      <span className="font-medium text-slate-900 dark:text-slate-100">{formatMonth(item.month)}</span>
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">
                         <Sparkles className="w-3 h-3 mr-1" />
                         AI Summary
                       </span>
@@ -520,7 +520,7 @@ export default function DevelopmentPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition"
+                      className="inline-flex items-center px-3 py-1 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded transition"
                     >
                       <FileText className="w-4 h-4 mr-1" />
                       View Report
@@ -528,8 +528,8 @@ export default function DevelopmentPage() {
                     </a>
                   </button>
                   {expandedMonths.has(item.month) && (
-                    <div className="p-4 bg-white border-t border-slate-200">
-                      <div className="prose prose-sm prose-slate max-w-none">
+                    <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+                      <div className="prose prose-sm prose-slate dark:prose-invert max-w-none">
                         <SummaryContent summary={item.summary} />
                       </div>
                       <p className="text-xs text-slate-400 mt-4 italic">
@@ -547,9 +547,9 @@ export default function DevelopmentPage() {
       </div>
 
       {/* Info Box */}
-      <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">About This Data</h3>
-        <p className="text-sm text-blue-800">
+      <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">About This Data</h3>
+        <p className="text-sm text-blue-800 dark:text-blue-200">
           Monthly permit and business reports are sourced from official City of Flowery Branch PDF documents.
           AI summaries help highlight key information, but always refer to the official reports for complete details.
           For permit applications or questions, contact the Community Development department.
@@ -573,7 +573,7 @@ function SummaryContent({ summary }: { summary: string }) {
         if (trimmed.startsWith('### ')) {
           const text = trimmed.slice(4);
           return (
-            <h4 key={i} className="font-semibold text-slate-900 mt-4 first:mt-0">
+            <h4 key={i} className="font-semibold text-slate-900 dark:text-slate-100 mt-4 first:mt-0">
               {text}
             </h4>
           );
@@ -583,7 +583,7 @@ function SummaryContent({ summary }: { summary: string }) {
         if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
           const text = trimmed.slice(2, -2);
           return (
-            <h4 key={i} className="font-semibold text-slate-900 mt-3 first:mt-0">
+            <h4 key={i} className="font-semibold text-slate-900 dark:text-slate-100 mt-3 first:mt-0">
               {text}
             </h4>
           );
@@ -595,7 +595,7 @@ function SummaryContent({ summary }: { summary: string }) {
           // Handle inline bold
           const parts = text.split(/\*\*([^*]+)\*\*/g);
           return (
-            <p key={i} className="text-sm text-slate-700 pl-4">
+            <p key={i} className="text-sm text-slate-700 dark:text-slate-300 pl-4">
               • {parts.map((part, j) =>
                 j % 2 === 1 ? (
                   <strong key={j} className="font-semibold">{part}</strong>
@@ -610,7 +610,7 @@ function SummaryContent({ summary }: { summary: string }) {
         // Regular text with potential inline bold
         const parts = trimmed.split(/\*\*([^*]+)\*\*/g);
         return (
-          <p key={i} className="text-sm text-slate-700">
+          <p key={i} className="text-sm text-slate-700 dark:text-slate-300">
             {parts.map((part, j) =>
               j % 2 === 1 ? (
                 <strong key={j} className="font-semibold">{part}</strong>
@@ -628,15 +628,15 @@ function SummaryContent({ summary }: { summary: string }) {
 function EmptyState({ type }: { type: 'permits' | 'businesses' }) {
   return (
     <div className="text-center py-12">
-      <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-      <h3 className="text-lg font-semibold text-slate-900 mb-2">
+      <Building2 className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
         No {type === 'permits' ? 'permit' : 'business'} summaries yet
       </h3>
-      <p className="text-slate-500 mb-4">
+      <p className="text-slate-500 dark:text-slate-400 mb-4">
         AI summaries for monthly {type === 'permits' ? 'permit' : 'business'} reports haven&apos;t been generated yet.
       </p>
       <p className="text-sm text-slate-400">
-        Use the <a href="/admin" className="text-emerald-600 hover:underline">admin panel</a> to generate summaries.
+        Use the <a href="/admin" className="text-emerald-600 dark:text-emerald-400 hover:underline">admin panel</a> to generate summaries.
       </p>
     </div>
   );

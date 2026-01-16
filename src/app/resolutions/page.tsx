@@ -33,7 +33,7 @@ function ResolutionsLoading() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="text-center py-12">
         <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto"></div>
-        <p className="text-slate-500 mt-4">Loading resolutions...</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-4">Loading resolutions...</p>
       </div>
     </div>
   );
@@ -135,11 +135,11 @@ function ResolutionsContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center">
-            <FileText className="w-8 h-8 mr-3 text-purple-500" />
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center">
+            <FileText className="w-8 h-8 mr-3 text-purple-500" aria-hidden="true" />
             City Resolutions
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Browse resolutions passed by Flowery Branch City Council
           </p>
         </div>
@@ -155,22 +155,23 @@ function ResolutionsContent() {
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-6">
         <div className="relative">
-          <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+          <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" aria-hidden="true" />
           <input
             type="text"
             placeholder="Search by resolution number or title..."
+            aria-label="Search resolutions"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
           />
         </div>
       </div>
 
       {/* Info Box */}
-      <div className="bg-purple-50 rounded-xl p-6 border border-purple-200 mb-6">
-        <p className="text-sm text-purple-800">
+      <div className="bg-purple-50 dark:bg-purple-900/30 rounded-xl p-6 border border-purple-200 dark:border-purple-800 mb-6">
+        <p className="text-sm text-purple-800 dark:text-purple-200">
           <strong>About Resolutions:</strong> Unlike ordinances (which establish ongoing laws), resolutions
           are formal expressions of the City Council&apos;s opinion, will, or intent. They are often used for
           approving contracts, recognizing achievements, or authorizing specific actions. Full resolution
@@ -182,18 +183,18 @@ function ResolutionsContent() {
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-slate-500 mt-4">Loading resolutions...</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-4">Loading resolutions...</p>
         </div>
       ) : resolutions.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">No resolutions found</h3>
-          <p className="text-slate-500 mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
+          <FileText className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No resolutions found</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-4">
             Resolutions haven&apos;t been extracted yet.
           </p>
           <p className="text-sm text-slate-400">
             Visit the{' '}
-            <a href="/admin" className="text-purple-600 hover:underline">
+            <a href="/admin" className="text-purple-600 dark:text-purple-400 hover:underline">
               admin panel
             </a>{' '}
             to extract resolutions from meeting agendas, or browse the{' '}
@@ -201,7 +202,7 @@ function ResolutionsContent() {
               href="https://flowerybranchga.portal.civicclerk.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-purple-600 hover:underline"
+              className="text-purple-600 dark:text-purple-400 hover:underline"
             >
               CivicClerk Portal
             </a>
@@ -210,13 +211,13 @@ function ResolutionsContent() {
         </div>
       ) : filteredResolutions ? (
         // Search Results
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 bg-slate-50">
-            <h2 className="font-semibold text-slate-900">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+            <h2 className="font-semibold text-slate-900 dark:text-slate-100">
               Search Results ({filteredResolutions.length} found)
             </h2>
           </div>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
             {filteredResolutions.map((res) => (
               <ResolutionRow
                 key={res.id}
@@ -232,11 +233,11 @@ function ResolutionsContent() {
           {years.map((year) => (
             <div
               key={year}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden"
             >
               <button
                 onClick={() => toggleYear(year)}
-                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition"
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
               >
                 <div className="flex items-center">
                   {expandedYears.has(year) ? (
@@ -244,14 +245,14 @@ function ResolutionsContent() {
                   ) : (
                     <ChevronRight className="w-5 h-5 text-slate-400 mr-2" />
                   )}
-                  <h2 className="text-lg font-semibold text-slate-900">{year}</h2>
-                  <span className="ml-3 text-sm text-slate-500">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{year}</h2>
+                  <span className="ml-3 text-sm text-slate-500 dark:text-slate-400">
                     {resolutionsByYear[year].length} resolution{resolutionsByYear[year].length !== 1 ? 's' : ''}
                   </span>
                 </div>
               </button>
               {expandedYears.has(year) && (
-                <div className="border-t border-slate-200 divide-y divide-slate-100">
+                <div className="border-t border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
                   {resolutionsByYear[year]
                     .sort((a, b) => {
                       // Sort by number descending (e.g., 26-001 > 25-015)
@@ -280,13 +281,13 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
   // Get status display info
   const getStatusDisplay = (status: string) => {
     const statusMap: Record<string, { label: string; color: string }> = {
-      'adopted': { label: 'Adopted', color: 'bg-emerald-100 text-emerald-700' },
-      'proposed': { label: 'Proposed', color: 'bg-blue-100 text-blue-700' },
-      'pending_minutes': { label: 'Pending Minutes', color: 'bg-amber-100 text-amber-700' },
-      'tabled': { label: 'Tabled', color: 'bg-slate-100 text-slate-700' },
-      'rejected': { label: 'Rejected', color: 'bg-red-100 text-red-700' },
+      'adopted': { label: 'Adopted', color: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' },
+      'proposed': { label: 'Proposed', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' },
+      'pending_minutes': { label: 'Pending Minutes', color: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300' },
+      'tabled': { label: 'Tabled', color: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300' },
+      'rejected': { label: 'Rejected', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
     };
-    return statusMap[status] || { label: status, color: 'bg-slate-100 text-slate-600' };
+    return statusMap[status] || { label: status, color: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400' };
   };
 
   const statusDisplay = getStatusDisplay(resolution.status);
@@ -301,29 +302,29 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
   return (
     <div
       id={`resolution-${resolution.number}`}
-      className={`p-4 hover:bg-slate-50 transition ${autoExpand ? 'bg-purple-50 ring-2 ring-purple-200' : ''}`}
+      className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition ${autoExpand ? 'bg-purple-50 dark:bg-purple-900/30 ring-2 ring-purple-200 dark:ring-purple-800' : ''}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
           <div className="flex items-center flex-wrap gap-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300">
               #{resolution.number}
             </span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.color}`}>
               {statusDisplay.label}
             </span>
-            <h3 className="font-medium text-slate-900">{resolution.title}</h3>
+            <h3 className="font-medium text-slate-900 dark:text-slate-100">{resolution.title}</h3>
             {resolution.summary && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">
                 <Sparkles className="w-3 h-3 mr-1" />
                 AI Summary
               </span>
             )}
           </div>
           {resolution.description && (
-            <p className="text-sm text-slate-600 mt-1">{resolution.description}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{resolution.description}</p>
           )}
-          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 mt-2">
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-2">
             <Calendar className="w-3 h-3" />
             {resolution.status === 'adopted' && adoptedDate ? (
               <span>{formatDate(adoptedDate)}</span>
@@ -341,7 +342,7 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
                 <span>•</span>
                 <Link
                   href={`/timeline?date=${timelineDate}`}
-                  className="text-purple-600 hover:text-purple-700 font-medium"
+                  className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-medium"
                 >
                   View in timeline
                 </Link>
@@ -353,7 +354,7 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
           {resolution.summary && (
             <button
               onClick={() => setShowSummary(!showSummary)}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm text-slate-600 transition border border-slate-200"
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-300 transition border border-slate-200 dark:border-slate-600"
             >
               <Sparkles className="w-4 h-4 text-purple-500" />
               {showSummary ? 'Hide AI Summary' : 'Show AI Summary'}
@@ -363,17 +364,17 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
 
           {/* AI Summary - collapsible */}
           {showSummary && resolution.summary && (
-            <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
-              <div className="flex items-center text-xs text-purple-700 mb-2">
+            <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-100 dark:border-purple-800">
+              <div className="flex items-center text-xs text-purple-700 dark:text-purple-300 mb-2">
                 <Sparkles className="w-3 h-3 mr-1" />
                 AI-Generated Summary
               </div>
-              <div className="text-sm text-slate-700 space-y-2">
+              <div className="text-sm text-slate-700 dark:text-slate-300 space-y-2">
                 {resolution.summary.split('\n').map((paragraph, i) => {
                   // Handle bold text with ** markers
                   const formatted = paragraph.replace(
                     /\*\*([^*]+)\*\*/g,
-                    '<strong class="font-semibold text-slate-900">$1</strong>'
+                    '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>'
                   );
                   return (
                     <p
@@ -384,7 +385,7 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
                   );
                 })}
               </div>
-              <p className="text-xs text-slate-500 mt-2 italic">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
                 This summary was generated by AI. Refer to the official meeting packet for authoritative information.
               </p>
             </div>
@@ -395,7 +396,7 @@ function ResolutionRow({ resolution, autoExpand = false }: { resolution: Resolut
             href={resolution.packet_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 sm:mt-0 sm:ml-4 inline-flex items-center px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-700 transition shrink-0"
+            className="mt-3 sm:mt-0 sm:ml-4 inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 transition shrink-0"
           >
             <Package className="w-3.5 h-3.5 mr-1.5" />
             <span className="hidden sm:inline">Meeting Packet</span>

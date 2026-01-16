@@ -51,7 +51,7 @@ function MeetingsLoading() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="text-center py-12">
         <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
-        <p className="text-slate-500 mt-4">Loading meetings...</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-4">Loading meetings...</p>
       </div>
     </div>
   );
@@ -169,11 +169,11 @@ function MeetingsContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center">
-            <Calendar className="w-8 h-8 mr-3 text-emerald-500" />
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center">
+            <Calendar className="w-8 h-8 mr-3 text-emerald-500" aria-hidden="true" />
             City Council Meetings
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Browse past and upcoming city council meetings
           </p>
         </div>
@@ -189,19 +189,20 @@ function MeetingsContent() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center space-x-4">
-            <Filter className="w-5 h-5 text-slate-400" />
-            <div className="flex space-x-2">
+            <Filter className="w-5 h-5 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+            <div className="flex space-x-2" role="group" aria-label="Filter meetings">
               {(['all', 'upcoming', 'past'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
+                  aria-pressed={filter === f}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                     filter === f
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -212,10 +213,11 @@ function MeetingsContent() {
           {/* Jump to Month dropdown */}
           {monthOptions.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Jump to:</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">Jump to:</span>
               <select
                 onChange={(e) => handleJumpToMonth(e.target.value)}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                aria-label="Jump to month"
+                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 defaultValue=""
               >
                 <option value="">Select month...</option>
@@ -230,35 +232,35 @@ function MeetingsContent() {
 
       {/* Meetings List - Grouped by Year */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-slate-500 mt-4">Loading meetings...</p>
+        <div className="text-center py-12" role="status" aria-live="polite">
+          <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto" aria-hidden="true"></div>
+          <p className="text-slate-500 dark:text-slate-400 mt-4">Loading meetings...</p>
         </div>
       ) : years.length > 0 ? (
         <div className="space-y-4">
           {years.map((year) => (
             <div
               key={year}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden"
             >
               <button
                 onClick={() => toggleYear(year)}
-                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition"
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
               >
                 <div className="flex items-center">
                   {expandedYears.has(year) ? (
-                    <ChevronDown className="w-5 h-5 text-slate-400 mr-2" />
+                    <ChevronDown className="w-5 h-5 text-slate-400 dark:text-slate-500 mr-2" />
                   ) : (
-                    <ChevronRight className="w-5 h-5 text-slate-400 mr-2" />
+                    <ChevronRight className="w-5 h-5 text-slate-400 dark:text-slate-500 mr-2" />
                   )}
-                  <h2 className="text-lg font-semibold text-slate-900">{year}</h2>
-                  <span className="ml-3 text-sm text-slate-500">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{year}</h2>
+                  <span className="ml-3 text-sm text-slate-500 dark:text-slate-400">
                     {meetingsByYear[year].length} meeting{meetingsByYear[year].length !== 1 ? 's' : ''}
                   </span>
                 </div>
               </button>
               {expandedYears.has(year) && (
-                <div className="border-t border-slate-200 p-4">
+                <div className="border-t border-slate-200 dark:border-slate-700 p-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     {meetingsByYear[year]
                       .sort((a, b) => b.date.localeCompare(a.date))
@@ -277,28 +279,28 @@ function MeetingsContent() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">No meetings found</h3>
-          <p className="text-slate-500 mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
+          <Calendar className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No meetings found</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-4">
             {filter === 'upcoming'
               ? 'No upcoming meetings in the database.'
               : filter === 'past'
               ? 'No past meetings in the database.'
               : 'No meetings have been added yet.'}
           </p>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-400 dark:text-slate-500">
             Visit the{' '}
             <a
               href="https://flowerybranchga.portal.civicclerk.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-emerald-600 hover:underline"
+              className="text-emerald-600 dark:text-emerald-400 hover:underline"
             >
               CivicClerk Portal
             </a>{' '}
             for the official meeting schedule, or use the{' '}
-            <a href="/admin" className="text-emerald-600 hover:underline">
+            <a href="/admin" className="text-emerald-600 dark:text-emerald-400 hover:underline">
               admin panel
             </a>{' '}
             to import data.
@@ -307,9 +309,9 @@ function MeetingsContent() {
       )}
 
       {/* Info Box */}
-      <div className="mt-8 bg-blue-50 rounded-xl p-6 border border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">About This Data</h3>
-        <p className="text-sm text-blue-800">
+      <div className="mt-8 bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">About This Data</h3>
+        <p className="text-sm text-blue-800 dark:text-blue-200">
           Meeting information is sourced from the official Flowery Branch CivicClerk portal.
           City Council meetings typically occur on the 1st and 3rd Thursday of each month at 6:00 PM
           at City Hall (5410 Pine Street). AI-generated summaries are provided for convenience
@@ -386,37 +388,37 @@ function MeetingWithOrdinances({ meeting, highlighted, expandOrdinances }: {
   // Map action types to display labels and colors
   const getActionDisplay = (action: string | null) => {
     const actionMap: Record<string, { label: string; color: string }> = {
-      'introduced': { label: 'Introduced', color: 'bg-blue-100 text-blue-700' },
-      'first_reading': { label: 'First Reading', color: 'bg-yellow-100 text-yellow-700' },
-      'second_reading': { label: 'Second Reading', color: 'bg-orange-100 text-orange-700' },
-      'adopted': { label: 'Adopted', color: 'bg-emerald-100 text-emerald-700' },
-      'tabled': { label: 'Tabled', color: 'bg-slate-200 text-slate-700' },
-      'amended': { label: 'Amended', color: 'bg-purple-100 text-purple-700' },
-      'discussed': { label: 'Discussed', color: 'bg-slate-200 text-slate-700' },
-      'denied': { label: 'Denied', color: 'bg-red-100 text-red-700' },
-      'rejected': { label: 'Rejected', color: 'bg-red-100 text-red-700' },
+      'introduced': { label: 'Introduced', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' },
+      'first_reading': { label: 'First Reading', color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' },
+      'second_reading': { label: 'Second Reading', color: 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300' },
+      'adopted': { label: 'Adopted', color: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' },
+      'tabled': { label: 'Tabled', color: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' },
+      'amended': { label: 'Amended', color: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' },
+      'discussed': { label: 'Discussed', color: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' },
+      'denied': { label: 'Denied', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
+      'rejected': { label: 'Rejected', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
     };
-    return actionMap[action || 'discussed'] || { label: action || 'Discussed', color: 'bg-slate-200 text-slate-700' };
+    return actionMap[action || 'discussed'] || { label: action || 'Discussed', color: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' };
   };
 
   // Map resolution status to display style
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'adopted':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300';
       case 'rejected':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300';
       case 'tabled':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300';
       default:
-        return 'bg-slate-200 text-slate-700';
+        return 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
     }
   };
 
   return (
     <div
       id={`meeting-${meeting.id}`}
-      className={`flex flex-col ${highlighted ? 'ring-2 ring-emerald-500 ring-offset-2 rounded-xl' : ''}`}
+      className={`flex flex-col ${highlighted ? 'ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-900 rounded-xl' : ''}`}
     >
       <MeetingCard meeting={meeting} showSummary />
 
@@ -425,59 +427,59 @@ function MeetingWithOrdinances({ meeting, highlighted, expandOrdinances }: {
         {/* Ordinances Toggle Button */}
         <button
           onClick={toggleOrdinances}
-          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 rounded-lg text-sm text-slate-600 transition border border-slate-200 shadow-sm"
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-400 transition border border-slate-200 dark:border-slate-700 shadow-sm"
         >
-          <Scale className="w-4 h-4 text-emerald-500" />
+          <Scale className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           {showOrdinances ? 'Hide Ordinances' : 'Ordinances'}
         </button>
 
         {/* Resolutions Toggle Button */}
         <button
           onClick={toggleResolutions}
-          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 rounded-lg text-sm text-slate-600 transition border border-slate-200 shadow-sm"
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-400 transition border border-slate-200 dark:border-slate-700 shadow-sm"
         >
-          <FileText className="w-4 h-4 text-blue-500" />
+          <FileText className="w-4 h-4 text-blue-500 dark:text-blue-400" />
           {showResolutions ? 'Hide Resolutions' : 'Resolutions'}
         </button>
       </div>
 
       {/* Ordinances Section */}
       {showOrdinances && (
-        <div className="mt-2 bg-white rounded-lg border border-slate-200 shadow-sm p-4">
-          <div className="flex items-center text-sm font-medium text-slate-700 mb-3">
-            <Scale className="w-4 h-4 mr-2 text-emerald-500" />
+        <div className="mt-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-4">
+          <div className="flex items-center text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+            <Scale className="w-4 h-4 mr-2 text-emerald-500 dark:text-emerald-400" />
             Ordinances Discussed
           </div>
 
           {loadingOrdinances ? (
-            <div className="flex items-center text-sm text-slate-500">
+            <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
               <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full mr-2"></div>
               Loading...
             </div>
           ) : ordinances.length > 0 ? (
             <div className="space-y-2">
               {ordinances.map((ord) => (
-                <div key={ord.id} className="flex items-start justify-between p-2 bg-slate-50 rounded-lg">
+                <div key={ord.id} className="flex items-start justify-between p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                   <Link
                     href={`/ordinances?expand=${ord.number}`}
-                    className="flex-1 hover:bg-slate-100 rounded transition -m-2 p-2"
+                    className="flex-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition -m-2 p-2"
                   >
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
                         #{ord.number}
                       </span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${getActionDisplay(ord.action).color}`}>
                         {getActionDisplay(ord.action).label}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-700 mt-1">{ord.title}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">{ord.title}</p>
                   </Link>
                   {ord.municode_url && (
                     <a
                       href={ord.municode_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-2 p-1.5 text-slate-400 hover:text-emerald-600 transition shrink-0"
+                      className="ml-2 p-1.5 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition shrink-0"
                       title="View official text on Municode"
                     >
                       <ExternalLink className="w-4 h-4" />
@@ -487,21 +489,21 @@ function MeetingWithOrdinances({ meeting, highlighted, expandOrdinances }: {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">No ordinances were discussed at this meeting.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">No ordinances were discussed at this meeting.</p>
           )}
         </div>
       )}
 
       {/* Resolutions Section */}
       {showResolutions && (
-        <div className="mt-2 bg-white rounded-lg border border-slate-200 shadow-sm p-4">
-          <div className="flex items-center text-sm font-medium text-slate-700 mb-3">
-            <FileText className="w-4 h-4 mr-2 text-blue-500" />
+        <div className="mt-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-4">
+          <div className="flex items-center text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+            <FileText className="w-4 h-4 mr-2 text-blue-500 dark:text-blue-400" />
             Resolutions
           </div>
 
           {loadingResolutions ? (
-            <div className="flex items-center text-sm text-slate-500">
+            <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
               <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full mr-2"></div>
               Loading...
             </div>
@@ -511,22 +513,22 @@ function MeetingWithOrdinances({ meeting, highlighted, expandOrdinances }: {
                 <Link
                   key={res.id}
                   href={`/resolutions?expand=${res.number}`}
-                  className="block p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition"
+                  className="block p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
                       #{res.number}
                     </span>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs capitalize ${getStatusStyle(res.status)}`}>
                       {res.status}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-700 mt-1">{res.title}</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">{res.title}</p>
                 </Link>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">No resolutions were passed at this meeting.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">No resolutions were passed at this meeting.</p>
           )}
         </div>
       )}

@@ -15,26 +15,26 @@ interface StatCardProps {
 
 export default function StatCard({ title, value, subtitle, icon, trend, href }: StatCardProps) {
   const content = (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">{value}</p>
-          {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
+          <p className="text-3xl font-bold text-slate-900 dark:text-slate-100 mt-1">{value}</p>
+          {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>}
           {trend && (
             <div className="flex items-center mt-2">
               <span
                 className={`text-sm font-medium ${
-                  trend.positive ? 'text-emerald-600' : 'text-red-600'
+                  trend.positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                 }`}
               >
                 {trend.positive ? '+' : ''}{trend.value}%
               </span>
-              <span className="text-sm text-slate-400 ml-1">{trend.label}</span>
+              <span className="text-sm text-slate-400 dark:text-slate-500 ml-1">{trend.label}</span>
             </div>
           )}
         </div>
-        <div className="p-3 bg-slate-100 rounded-lg text-slate-600">{icon}</div>
+        <div className="p-3 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-400">{icon}</div>
       </div>
     </div>
   );

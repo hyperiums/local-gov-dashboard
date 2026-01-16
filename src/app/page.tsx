@@ -6,21 +6,21 @@ export default function HomePage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Hero Section with How It Works */}
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3">
+        <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-3">
           Stay Informed About Flowery Branch
         </h1>
-        <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-8">
+        <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-8">
           Understand what your local government is doing, why it matters, and how decisions
           connect over time — using only official, public information.
         </p>
 
         {/* Meeting Info Banner */}
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-6 max-w-lg mx-auto">
-          <p className="text-emerald-800 font-medium text-sm sm:text-base">
+        <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 mb-6 max-w-lg mx-auto">
+          <p className="text-emerald-800 dark:text-emerald-300 font-medium text-sm sm:text-base">
             City Council meets 1st & 3rd Thursdays at 6:00 PM
           </p>
-          <p className="text-emerald-700 text-xs sm:text-sm mt-1">
-            City Hall, 5410 Pine Street &bull; <a href="tel:770-967-6371" className="underline hover:text-emerald-800">770-967-6371</a>
+          <p className="text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm mt-1">
+            City Hall, 5410 Pine Street &bull; <a href="tel:770-967-6371" className="underline hover:text-emerald-800 dark:hover:text-emerald-300">770-967-6371</a>
           </p>
         </div>
       </div>

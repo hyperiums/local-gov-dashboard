@@ -64,20 +64,20 @@ interface MeetingDetail {
 const TYPE_CONFIG: Record<TimelineItemType, { label: string; color: string; bgColor: string; icon: typeof Calendar }> = {
   meeting: {
     label: 'Meeting',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-100',
+    color: 'text-blue-700 dark:text-blue-300',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/50',
     icon: Calendar,
   },
   ordinance: {
     label: 'Ordinance',
-    color: 'text-amber-700',
-    bgColor: 'bg-amber-100',
+    color: 'text-amber-700 dark:text-amber-300',
+    bgColor: 'bg-amber-100 dark:bg-amber-900/50',
     icon: Scale,
   },
   document: {
     label: 'Document',
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-100',
+    color: 'text-purple-700 dark:text-purple-300',
+    bgColor: 'bg-purple-100 dark:bg-purple-900/50',
     icon: FileText,
   },
 };
@@ -113,7 +113,7 @@ function TimelineLoading() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="text-center py-12">
         <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
-        <p className="text-slate-500 mt-4">Loading timeline...</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-4">Loading timeline...</p>
       </div>
     </div>
   );
@@ -222,38 +222,38 @@ function TimelineContent() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 flex items-center">
-          <Clock className="w-8 h-8 mr-3 text-emerald-500" />
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center">
+          <Clock className="w-8 h-8 mr-3 text-emerald-500" aria-hidden="true" />
           Civic Timeline
         </h1>
-        <p className="text-slate-600 mt-1">
+        <p className="text-slate-600 dark:text-slate-400 mt-1">
           Recent civic activity in Flowery Branch
         </p>
       </div>
 
       {/* Upcoming Meetings Section */}
       {upcoming.length > 0 && (
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-4 mb-6">
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-xl border border-emerald-200 dark:border-emerald-800 p-4 mb-6">
           <div className="flex items-center mb-3">
-            <CalendarDays className="w-5 h-5 text-emerald-600 mr-2" />
-            <h2 className="font-semibold text-emerald-900">Upcoming Meetings</h2>
+            <CalendarDays className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mr-2" />
+            <h2 className="font-semibold text-emerald-900 dark:text-emerald-100">Upcoming Meetings</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {upcoming.map((meeting) => (
               <Link
                 key={meeting.id}
                 href="/meetings"
-                className="bg-white rounded-lg p-3 border border-emerald-100 hover:border-emerald-300 hover:shadow-sm transition"
+                className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-emerald-100 dark:border-emerald-800/50 hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-sm transition"
               >
-                <div className="text-sm font-medium text-emerald-700">
+                <div className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
                   {parseLocalDate(meeting.date).toLocaleDateString('en-US', {
                     weekday: 'short',
                     month: 'short',
                     day: 'numeric',
                   })}
                 </div>
-                <div className="text-slate-900 font-medium mt-1">{meeting.title}</div>
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-slate-900 dark:text-slate-100 font-medium mt-1">{meeting.title}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {meeting.agendaCount > 0
                     ? `${meeting.agendaCount} agenda items`
                     : 'Agenda not yet available'}
@@ -265,11 +265,11 @@ function TimelineContent() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex items-center">
             <Filter className="w-5 h-5 text-slate-400 mr-2" />
-            <span className="text-sm font-medium text-slate-700">Filters:</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Filters:</span>
           </div>
 
           {/* Date Range Filter */}
@@ -280,8 +280,8 @@ function TimelineContent() {
                 onClick={() => setDateRange(option.value)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                   dateRange === option.value
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                 }`}
               >
                 {option.label}
@@ -289,7 +289,7 @@ function TimelineContent() {
             ))}
           </div>
 
-          <div className="hidden sm:block w-px h-6 bg-slate-200" />
+          <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-600" />
 
           {/* Type Filter */}
           <div className="flex flex-wrap gap-2">
@@ -297,8 +297,8 @@ function TimelineContent() {
               onClick={() => setTypeFilter('all')}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                 typeFilter === 'all'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
             >
               All Types
@@ -313,7 +313,7 @@ function TimelineContent() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex items-center ${
                     typeFilter === type
                       ? `${config.bgColor} ${config.color}`
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   <Icon className="w-4 h-4 mr-1" />
@@ -327,19 +327,19 @@ function TimelineContent() {
 
       {/* Recent Activity Header */}
       <div className="flex items-center mb-4">
-        <h2 className="text-lg font-semibold text-slate-800">Recent Activity</h2>
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Recent Activity</h2>
       </div>
 
       {/* Timeline */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-slate-500 mt-4">Loading timeline...</p>
+        <div className="text-center py-12" role="status" aria-live="polite">
+          <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto" aria-hidden="true"></div>
+          <p className="text-slate-500 dark:text-slate-400 mt-4">Loading timeline...</p>
         </div>
       ) : items.length > 0 ? (
         <div className="relative">
           {/* Vertical line */}
-          <div className="absolute left-4 sm:left-8 top-0 bottom-0 w-0.5 bg-slate-200" />
+          <div className="absolute left-4 sm:left-8 top-0 bottom-0 w-0.5 bg-slate-200 dark:bg-slate-700" />
 
           <div className="space-y-8">
             {sortedDates.map((date) => (
@@ -358,7 +358,7 @@ function TimelineContent() {
                       {parseLocalDate(date).getDate()}
                     </span>
                   </div>
-                  <div className="ml-4 text-sm text-slate-500">
+                  <div className="ml-4 text-sm text-slate-500 dark:text-slate-400">
                     {parseLocalDate(date).toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
@@ -381,8 +381,8 @@ function TimelineContent() {
                     return (
                       <div
                         key={itemKey}
-                        className={`bg-white rounded-xl shadow-sm border transition ${
-                          isExpanded ? 'border-emerald-300 shadow-md' : 'border-slate-200 hover:border-slate-300'
+                        className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border transition ${
+                          isExpanded ? 'border-emerald-300 dark:border-emerald-700 shadow-md' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                         }`}
                       >
                         {/* Header - clickable to expand */}
@@ -398,26 +398,26 @@ function TimelineContent() {
                                   {config.label}
                                 </span>
                                 {item.metadata?.ordinanceNumber && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
                                     #{item.metadata.ordinanceNumber}
                                   </span>
                                 )}
                                 {item.metadata?.meetingType && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 capitalize">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 capitalize">
                                     {item.metadata.meetingType.replace('_', ' ')}
                                   </span>
                                 )}
                                 {item.metadata?.documentType && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 uppercase">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 uppercase">
                                     {item.metadata.documentType}
                                   </span>
                                 )}
                               </div>
-                              <h3 className="font-medium text-slate-900">
+                              <h3 className="font-medium text-slate-900 dark:text-slate-100">
                                 {item.title}
                               </h3>
                               {!isExpanded && item.description && (
-                                <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
                                   {stripMarkdown(item.description)}
                                 </p>
                               )}
@@ -434,7 +434,7 @@ function TimelineContent() {
 
                         {/* Expanded Content */}
                         {isExpanded && (
-                          <div className="px-4 pb-4 border-t border-slate-100">
+                          <div className="px-4 pb-4 border-t border-slate-100 dark:border-slate-700">
                             {item.type === 'meeting' && (
                               <MeetingExpandedContent
                                 item={item}
@@ -459,10 +459,10 @@ function TimelineContent() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <Clock className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">No activity found</h3>
-          <p className="text-slate-500 mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
+          <Clock className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No activity found</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-4">
             {typeFilter !== 'all'
               ? `No ${TYPE_CONFIG[typeFilter].label.toLowerCase()}s found for the selected time period.`
               : 'No civic activity found for the selected time period.'}
@@ -474,9 +474,9 @@ function TimelineContent() {
       )}
 
       {/* Info Box */}
-      <div className="mt-8 bg-blue-50 rounded-xl p-6 border border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">About This Page</h3>
-        <p className="text-sm text-blue-800">
+      <div className="mt-8 bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">About This Page</h3>
+        <p className="text-sm text-blue-800 dark:text-blue-200">
           Stay informed about Flowery Branch government activity. Click on any item to see more details,
           agenda items, and links to official sources. The upcoming meetings section shows when you can
           attend or watch the next public meetings.
@@ -500,7 +500,7 @@ function MeetingExpandedContent({
 
   if (isLoading) {
     return (
-      <div className="pt-4 flex items-center text-sm text-slate-500">
+      <div className="pt-4 flex items-center text-sm text-slate-500 dark:text-slate-400">
         <div className="animate-spin w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full mr-2"></div>
         Loading details...
       </div>
@@ -520,7 +520,7 @@ function MeetingExpandedContent({
             href={item.metadata.agendaUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm hover:bg-blue-100 transition"
+            className="inline-flex items-center px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
           >
             <List className="w-4 h-4 mr-1.5" />
             View Agenda/Minutes
@@ -532,13 +532,13 @@ function MeetingExpandedContent({
       {/* Agenda Items */}
       {agendaItems.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-slate-700 mb-2 flex items-center">
+          <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center">
             <List className="w-4 h-4 mr-1.5" />
             Agenda Items ({agendaItems.length})
           </h4>
           <ul className="space-y-1.5">
             {displayedAgenda.map((agenda, idx) => (
-              <li key={agenda.id} className="text-sm text-slate-600 flex">
+              <li key={agenda.id} className="text-sm text-slate-600 dark:text-slate-400 flex">
                 <span className="text-slate-400 mr-2 flex-shrink-0">{idx + 1}.</span>
                 <span>{agenda.title}</span>
               </li>
@@ -547,7 +547,7 @@ function MeetingExpandedContent({
           {agendaItems.length > 5 && (
             <button
               onClick={() => setShowAllAgenda(!showAllAgenda)}
-              className="mt-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+              className="mt-2 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
             >
               {showAllAgenda ? 'Show less' : `Show all ${agendaItems.length} items`}
             </button>
@@ -558,7 +558,7 @@ function MeetingExpandedContent({
       {/* Related Ordinances */}
       {relatedOrdinances.length > 0 && (
         <div>
-          <h4 className="text-sm font-medium text-slate-700 mb-2 flex items-center">
+          <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center">
             <Scale className="w-4 h-4 mr-1.5" />
             Related Ordinances
           </h4>
@@ -567,13 +567,13 @@ function MeetingExpandedContent({
               <li key={ord.id} className="text-sm flex items-center">
                 <Link
                   href={`/ordinances?search=${ord.number}`}
-                  className="text-amber-600 font-medium mr-2 hover:text-amber-700 hover:underline"
+                  className="text-amber-600 dark:text-amber-400 font-medium mr-2 hover:text-amber-700 dark:hover:text-amber-300 hover:underline"
                 >
                   #{ord.number}
                 </Link>
-                <span className="text-slate-600 truncate flex-1">{ord.title}</span>
+                <span className="text-slate-600 dark:text-slate-400 truncate flex-1">{ord.title}</span>
                 {ord.action && (
-                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded ml-2 capitalize">
+                  <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded ml-2 capitalize">
                     {ord.action.replace('_', ' ')}
                   </span>
                 )}
@@ -595,7 +595,7 @@ function OrdinanceExpandedContent({ item }: { item: TimelineItem }) {
         {item.metadata?.ordinanceNumber && (
           <Link
             href={`/ordinances?search=${item.metadata.ordinanceNumber}`}
-            className="inline-flex items-center px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-sm hover:bg-slate-200 transition"
+            className="inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition"
           >
             <Scale className="w-4 h-4 mr-1.5" />
             View Details
@@ -606,7 +606,7 @@ function OrdinanceExpandedContent({ item }: { item: TimelineItem }) {
             href={item.metadata.municodeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-sm hover:bg-amber-100 transition"
+            className="inline-flex items-center px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg text-sm hover:bg-amber-100 dark:hover:bg-amber-900/50 transition"
           >
             <Scale className="w-4 h-4 mr-1.5" />
             View on Municode
@@ -617,12 +617,12 @@ function OrdinanceExpandedContent({ item }: { item: TimelineItem }) {
 
       {/* Full Description/Summary */}
       {item.fullDescription && (
-        <div className="text-sm text-slate-600 space-y-2">
+        <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
           {item.fullDescription.split('\n').filter(p => p.trim()).map((paragraph, idx) => {
             // Handle bold text with ** markers
             const formatted = paragraph.replace(
               /\*\*([^*]+)\*\*/g,
-              '<strong class="font-semibold text-slate-800">$1</strong>'
+              '<strong class="font-semibold text-slate-800 dark:text-slate-200">$1</strong>'
             );
             return (
               <p
@@ -648,7 +648,7 @@ function DocumentExpandedContent({ item }: { item: TimelineItem }) {
             href={item.metadata.pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm hover:bg-purple-100 transition"
+            className="inline-flex items-center px-3 py-1.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-sm hover:bg-purple-100 dark:hover:bg-purple-900/50 transition"
           >
             <FileDown className="w-4 h-4 mr-1.5" />
             Download PDF
@@ -659,12 +659,12 @@ function DocumentExpandedContent({ item }: { item: TimelineItem }) {
 
       {/* Full Description/Summary */}
       {item.fullDescription && (
-        <div className="text-sm text-slate-600 space-y-2">
+        <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
           {item.fullDescription.split('\n').filter(p => p.trim()).slice(0, 10).map((paragraph, idx) => {
             // Handle bold text with ** markers
             const formatted = paragraph.replace(
               /\*\*([^*]+)\*\*/g,
-              '<strong class="font-semibold text-slate-800">$1</strong>'
+              '<strong class="font-semibold text-slate-800 dark:text-slate-200">$1</strong>'
             );
             return (
               <p

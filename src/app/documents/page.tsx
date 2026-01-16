@@ -168,11 +168,11 @@ export default function DocumentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center">
-            <FileText className="w-8 h-8 mr-3 text-emerald-500" />
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center">
+            <FileText className="w-8 h-8 mr-3 text-emerald-500" aria-hidden="true" />
             City Documents
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Official city reports, notices, and public documents
           </p>
         </div>
@@ -191,14 +191,14 @@ export default function DocumentsPage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center ${
                 activeTab === type
                   ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
               }`}
             >
               <TypeIcon className="w-4 h-4 mr-2" />
               {typeConfig.label}
               {count > 0 && (
                 <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                  activeTab === type ? 'bg-emerald-500' : 'bg-slate-300'
+                  activeTab === type ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
                 }`}>
                   {count}
                 </span>
@@ -209,20 +209,20 @@ export default function DocumentsPage() {
       </div>
 
       {/* Content */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
-        <div className="p-4 border-b border-slate-200">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center">
             <Icon className="w-5 h-5 text-emerald-500 mr-2" />
-            <h2 className="font-semibold text-slate-900">{config.label}</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-slate-100">{config.label}</h2>
           </div>
-          <p className="text-sm text-slate-500 mt-1">{config.description}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{config.description}</p>
         </div>
 
         <div className="p-4">
           {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-slate-500 mt-4">Loading documents...</p>
+            <div className="text-center py-12" role="status" aria-live="polite">
+              <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto" aria-hidden="true"></div>
+              <p className="text-slate-500 dark:text-slate-400 mt-4">Loading documents...</p>
             </div>
           ) : currentDocs.length > 0 ? (
             <div className="space-y-3">
@@ -234,11 +234,11 @@ export default function DocumentsPage() {
                 const hasBrief = !!doc.summaryLevels?.brief;
 
                 return (
-                  <div key={docKey} className="border border-slate-200 rounded-lg overflow-hidden">
+                  <div key={docKey} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                     {/* Collapsed header with headline preview */}
                     <button
                       onClick={() => toggleDoc(docKey)}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition"
+                      className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
                     >
                       <div className="flex items-center text-left flex-1 min-w-0">
                         {isExpanded ? (
@@ -248,18 +248,18 @@ export default function DocumentsPage() {
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center flex-wrap gap-2">
-                            <span className="font-medium text-slate-900">{doc.title}</span>
+                            <span className="font-medium text-slate-900 dark:text-slate-100">{doc.title}</span>
                             {doc.date && (
-                              <span className="text-sm text-slate-500">({doc.date})</span>
+                              <span className="text-sm text-slate-500 dark:text-slate-400">({doc.date})</span>
                             )}
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">
                               <Sparkles className="w-3 h-3 mr-1" />
                               AI Summary
                             </span>
                           </div>
                           {/* Show headline in collapsed state */}
                           {!isExpanded && hasHeadline && (
-                            <p className="text-sm text-slate-600 mt-1 truncate">
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 truncate">
                               {doc.summaryLevels.headline}
                             </p>
                           )}
@@ -271,7 +271,7 @@ export default function DocumentsPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition flex-shrink-0 ml-2"
+                          className="inline-flex items-center px-3 py-1 text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded transition flex-shrink-0 ml-2"
                         >
                           <FileText className="w-4 h-4 mr-1" />
                           View Document
@@ -282,11 +282,11 @@ export default function DocumentsPage() {
 
                     {/* Expanded content with summary level toggle */}
                     {isExpanded && (
-                      <div className="p-4 bg-white border-t border-slate-200">
+                      <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
                         {/* Summary level toggle */}
-                        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                          <span className="text-xs text-slate-500 font-medium">Detail:</span>
-                          <div className="flex rounded-lg overflow-hidden border border-slate-200">
+                        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-slate-700">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Detail:</span>
+                          <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
                             {(['headline', 'brief', 'detailed'] as SummaryLevel[]).map((level) => {
                               const levelConfig = SUMMARY_LEVEL_CONFIG[level];
                               const LevelIcon = levelConfig.icon;
@@ -309,8 +309,8 @@ export default function DocumentsPage() {
                                     isActive
                                       ? 'bg-emerald-600 text-white'
                                       : isAvailable
-                                        ? 'bg-white text-slate-600 hover:bg-slate-50'
-                                        : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                        ? 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-500 cursor-not-allowed'
                                   }`}
                                   title={isAvailable ? levelConfig.description : 'Not available for this document'}
                                 >
@@ -323,7 +323,7 @@ export default function DocumentsPage() {
                         </div>
 
                         {/* Summary content */}
-                        <div className="prose prose-sm prose-slate max-w-none">
+                        <div className="prose prose-sm prose-slate dark:prose-invert max-w-none">
                           <SummaryContent summary={getSummaryText(doc, currentLevel)} />
                         </div>
 
@@ -343,9 +343,9 @@ export default function DocumentsPage() {
       </div>
 
       {/* Info Box */}
-      <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">About These Documents</h3>
-        <div className="text-sm text-blue-800 space-y-2">
+      <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">About These Documents</h3>
+        <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
           <p>
             <strong>SPLOST Reports</strong> show how Special Purpose Local Option Sales Tax funds
             are being spent on capital improvements and infrastructure.
@@ -379,7 +379,7 @@ function SummaryContent({ summary }: { summary: string }) {
         if (trimmed.startsWith('### ')) {
           const text = trimmed.slice(4);
           return (
-            <h4 key={i} className="font-semibold text-slate-900 mt-4 first:mt-0">
+            <h4 key={i} className="font-semibold text-slate-900 dark:text-slate-100 mt-4 first:mt-0">
               {text}
             </h4>
           );
@@ -389,7 +389,7 @@ function SummaryContent({ summary }: { summary: string }) {
         if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
           const text = trimmed.slice(2, -2);
           return (
-            <h4 key={i} className="font-semibold text-slate-900 mt-3 first:mt-0">
+            <h4 key={i} className="font-semibold text-slate-900 dark:text-slate-100 mt-3 first:mt-0">
               {text}
             </h4>
           );
@@ -400,7 +400,7 @@ function SummaryContent({ summary }: { summary: string }) {
           const text = trimmed.replace(/^[•\-*]\s*/, '');
           const parts = text.split(/\*\*([^*]+)\*\*/g);
           return (
-            <p key={i} className="text-sm text-slate-700 pl-4">
+            <p key={i} className="text-sm text-slate-700 dark:text-slate-300 pl-4">
               • {parts.map((part, j) =>
                 j % 2 === 1 ? (
                   <strong key={j} className="font-semibold">{part}</strong>
@@ -415,7 +415,7 @@ function SummaryContent({ summary }: { summary: string }) {
         // Regular text with potential inline bold
         const parts = trimmed.split(/\*\*([^*]+)\*\*/g);
         return (
-          <p key={i} className="text-sm text-slate-700">
+          <p key={i} className="text-sm text-slate-700 dark:text-slate-300">
             {parts.map((part, j) =>
               j % 2 === 1 ? (
                 <strong key={j} className="font-semibold">{part}</strong>
@@ -436,15 +436,15 @@ function EmptyState({ type }: { type: DocType }) {
 
   return (
     <div className="text-center py-12">
-      <Icon className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-      <h3 className="text-lg font-semibold text-slate-900 mb-2">
+      <Icon className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
         No {config.label.toLowerCase()} summaries yet
       </h3>
-      <p className="text-slate-500 mb-4">
+      <p className="text-slate-500 dark:text-slate-400 mb-4">
         AI summaries for {config.label.toLowerCase()} haven&apos;t been generated yet.
       </p>
       <p className="text-sm text-slate-400">
-        Use the <a href="/admin" className="text-emerald-600 hover:underline">admin panel</a> to generate summaries.
+        Use the <a href="/admin" className="text-emerald-600 dark:text-emerald-400 hover:underline">admin panel</a> to generate summaries.
       </p>
     </div>
   );

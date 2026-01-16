@@ -39,19 +39,19 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
           <div className="flex items-center justify-center mb-6">
-            <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-              <Lock className="w-6 h-6 text-emerald-600" />
+            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center">
+              <Lock className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">
+          <h1 className="text-2xl font-bold text-center text-slate-900 dark:text-slate-100 mb-2">
             Admin Access
           </h1>
-          <p className="text-sm text-slate-600 text-center mb-6">
+          <p className="text-sm text-slate-600 dark:text-slate-400 text-center mb-6">
             Enter your admin password to continue
           </p>
 
@@ -62,14 +62,14 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 autoFocus
                 disabled={loading}
               />
             </div>
 
             {error && (
-              <div className="mb-4 flex items-center text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+              <div className="mb-4 flex items-center text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-3 py-2 rounded-lg">
                 <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
                 {error}
               </div>
@@ -89,7 +89,7 @@ function LoginForm() {
           </form>
         </div>
 
-        <p className="text-xs text-center text-slate-500 mt-4">
+        <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-4">
           Flowery Branch Citizen Dashboard - Admin Panel
         </p>
       </div>
@@ -100,7 +100,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     }>

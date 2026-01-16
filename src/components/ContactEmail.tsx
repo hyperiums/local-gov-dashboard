@@ -8,7 +8,7 @@ export default function ContactEmail() {
   return (
     <button
       onClick={handleClick}
-      className="text-sm text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer text-left"
+      className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline cursor-pointer text-left"
     >
       hello@charlesthompson.me
     </button>

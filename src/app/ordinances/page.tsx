@@ -44,7 +44,7 @@ function OrdinancesLoading() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="text-center py-12">
         <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
-        <p className="text-slate-500 mt-4">Loading ordinances...</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-4">Loading ordinances...</p>
       </div>
     </div>
   );
@@ -179,11 +179,11 @@ function OrdinancesContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center">
-            <Scale className="w-8 h-8 mr-3 text-emerald-500" />
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center">
+            <Scale className="w-8 h-8 mr-3 text-emerald-500" aria-hidden="true" />
             City Ordinances
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Browse adopted ordinances from Flowery Branch
           </p>
         </div>
@@ -199,24 +199,25 @@ function OrdinancesContent() {
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-6">
         <div className="relative">
-          <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+          <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" aria-hidden="true" />
           <input
             type="text"
             placeholder="Search by ordinance number or title..."
+            aria-label="Search ordinances"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           />
         </div>
       </div>
 
       {/* Search Results Banner */}
       {searchTerm && !loading && (
-        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 mb-6">
+        <div className="bg-emerald-50 dark:bg-emerald-900/30 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800 mb-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-emerald-800">
+            <p className="text-sm text-emerald-800 dark:text-emerald-200">
               <strong>{totalMatches}</strong> result{totalMatches !== 1 ? 's' : ''} for &quot;{searchTerm}&quot;
               {filteredPending.length > 0 && <span className="ml-2">• {filteredPending.length} pending</span>}
               {filteredAdopted.length > 0 && <span className="ml-2">• {filteredAdopted.length} adopted</span>}
@@ -225,7 +226,7 @@ function OrdinancesContent() {
             </p>
             <button
               onClick={() => setSearchTerm('')}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+              className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium"
             >
               Clear search
             </button>
@@ -242,8 +243,8 @@ function OrdinancesContent() {
       )}
 
       {/* Info Box */}
-      <div className="bg-blue-50 rounded-xl p-6 border border-blue-200 mb-6">
-        <p className="text-sm text-blue-800">
+      <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800 mb-6">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
           <strong>About This Data:</strong> Pending legislation is sourced from City Council meeting
           agendas. Adopted ordinances link to the official Municode Library where the City of
           Flowery Branch maintains its Code of Ordinances.
@@ -252,20 +253,20 @@ function OrdinancesContent() {
 
       {/* Loading State */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-slate-500 mt-4">Loading ordinances...</p>
+        <div className="text-center py-12" role="status" aria-live="polite">
+          <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto" aria-hidden="true"></div>
+          <p className="text-slate-500 dark:text-slate-400 mt-4">Loading ordinances...</p>
         </div>
       ) : ordinances.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <Scale className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">No ordinances found</h3>
-          <p className="text-slate-500 mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-12 text-center">
+          <Scale className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No ordinances found</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-4">
             Ordinances haven&apos;t been imported yet.
           </p>
           <p className="text-sm text-slate-400">
             Visit the{' '}
-            <a href="/admin" className="text-emerald-600 hover:underline">
+            <a href="/admin" className="text-emerald-600 dark:text-emerald-400 hover:underline">
               admin panel
             </a>{' '}
             to import ordinances from Municode, or browse the{' '}
@@ -273,7 +274,7 @@ function OrdinancesContent() {
               href="https://librarystage.municode.com/ga/flowery_branch/ordinances/code_of_ordinances"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-emerald-600 hover:underline"
+              className="text-emerald-600 dark:text-emerald-400 hover:underline"
             >
               official Municode library
             </a>
@@ -286,11 +287,11 @@ function OrdinancesContent() {
           {years.map((year) => (
             <div
               key={year}
-              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+              className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden"
             >
               <button
                 onClick={() => toggleYear(year)}
-                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition"
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
               >
                 <div className="flex items-center">
                   {expandedYears.has(year) ? (
@@ -298,14 +299,14 @@ function OrdinancesContent() {
                   ) : (
                     <ChevronRight className="w-5 h-5 text-slate-400 mr-2" />
                   )}
-                  <h2 className="text-lg font-semibold text-slate-900">{year}</h2>
-                  <span className="ml-3 text-sm text-slate-500">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{year}</h2>
+                  <span className="ml-3 text-sm text-slate-500 dark:text-slate-400">
                     {ordinancesByYear[year].length} ordinance{ordinancesByYear[year].length !== 1 ? 's' : ''}
                   </span>
                 </div>
               </button>
               {expandedYears.has(year) && (
-                <div className="border-t border-slate-200 divide-y divide-slate-100">
+                <div className="border-t border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
                   {ordinancesByYear[year]
                     .sort((a, b) => parseInt(b.number) - parseInt(a.number))
                     .map((ord) => (
@@ -384,50 +385,50 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
   // Map action types to display labels and colors
   const getActionDisplay = (action: string | null) => {
     const actionMap: Record<string, { label: string; color: string }> = {
-      'introduced': { label: 'Introduced', color: 'bg-blue-100 text-blue-700' },
-      'first_reading': { label: 'First Reading', color: 'bg-yellow-100 text-yellow-700' },
-      'second_reading': { label: 'Second Reading', color: 'bg-orange-100 text-orange-700' },
-      'adopted': { label: 'Adopted', color: 'bg-emerald-100 text-emerald-700' },
-      'tabled': { label: 'Tabled', color: 'bg-slate-100 text-slate-700' },
-      'amended': { label: 'Amended', color: 'bg-purple-100 text-purple-700' },
-      'discussed': { label: 'Discussed', color: 'bg-slate-100 text-slate-600' },
-      'denied': { label: 'Denied', color: 'bg-red-100 text-red-700' },
-      'rejected': { label: 'Rejected', color: 'bg-red-100 text-red-700' },
+      'introduced': { label: 'Introduced', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' },
+      'first_reading': { label: 'First Reading', color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' },
+      'second_reading': { label: 'Second Reading', color: 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300' },
+      'adopted': { label: 'Adopted', color: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' },
+      'tabled': { label: 'Tabled', color: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300' },
+      'amended': { label: 'Amended', color: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' },
+      'discussed': { label: 'Discussed', color: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400' },
+      'denied': { label: 'Denied', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
+      'rejected': { label: 'Rejected', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
     };
-    return actionMap[action || 'discussed'] || { label: action || 'Discussed', color: 'bg-slate-100 text-slate-600' };
+    return actionMap[action || 'discussed'] || { label: action || 'Discussed', color: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400' };
   };
 
   return (
     <div
       id={`ordinance-${ordinance.number}`}
-      className={`p-4 hover:bg-slate-50 transition ${autoExpand ? 'bg-emerald-50 ring-2 ring-emerald-200' : ''}`}
+      className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition ${autoExpand ? 'bg-emerald-50 dark:bg-emerald-900/30 ring-2 ring-emerald-200 dark:ring-emerald-800' : ''}`}
     >
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1">
           <div className="flex items-center flex-wrap gap-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
               #{ordinance.number}
             </span>
-            <h3 className="font-medium text-slate-900">{ordinance.title}</h3>
+            <h3 className="font-medium text-slate-900 dark:text-slate-100">{ordinance.title}</h3>
             {ordinance.disposition === 'omit' && (
               <span
-                className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 cursor-help"
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 cursor-help"
                 title="Administrative ordinance - one-time action not added to the permanent Municipal Code"
               >
                 Administrative
               </span>
             )}
             {ordinance.summary && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">
                 <Sparkles className="w-3 h-3 mr-1" />
                 AI Summary
               </span>
             )}
           </div>
           {ordinance.description && (
-            <p className="text-sm text-slate-600 mt-1">{ordinance.description}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{ordinance.description}</p>
           )}
-          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 mt-2">
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-2">
             <span className="capitalize">{ordinance.status}</span>
             {ordinance.adopted_date && (
               <>
@@ -443,7 +444,7 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
             <span>•</span>
             <button
               onClick={toggleMeetingHistory}
-              className="text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center"
+              className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium inline-flex items-center"
             >
               <Clock className="w-3 h-3 mr-1" />
               {showMeetingHistory ? 'Hide Meeting History' : 'Meeting History'}
@@ -454,7 +455,7 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
           {ordinance.summary && (
             <button
               onClick={() => setShowSummary(!showSummary)}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm text-slate-600 transition border border-slate-200"
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-300 transition border border-slate-200 dark:border-slate-600"
             >
               <Sparkles className="w-4 h-4 text-purple-500" />
               {showSummary ? 'Hide AI Summary' : 'Show AI Summary'}
@@ -464,17 +465,17 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
 
           {/* AI Summary - collapsible */}
           {showSummary && ordinance.summary && (
-            <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
-              <div className="flex items-center text-xs text-purple-700 mb-2">
+            <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-100 dark:border-purple-800">
+              <div className="flex items-center text-xs text-purple-700 dark:text-purple-300 mb-2">
                 <Sparkles className="w-3 h-3 mr-1" />
                 AI-Generated Summary
               </div>
-              <div className="text-sm text-slate-700 space-y-2">
+              <div className="text-sm text-slate-700 dark:text-slate-300 space-y-2">
                 {ordinance.summary.split('\n').map((paragraph, i) => {
                   // Handle bold text with ** markers
                   const formatted = paragraph.replace(
                     /\*\*([^*]+)\*\*/g,
-                    '<strong class="font-semibold text-slate-900">$1</strong>'
+                    '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>'
                   );
                   return (
                     <p
@@ -485,7 +486,7 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
                   );
                 })}
               </div>
-              <p className="text-xs text-slate-500 mt-2 italic">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
                 This summary was generated by AI from the official ordinance PDF.
                 Always refer to the official Municode document for authoritative information.
               </p>
@@ -494,13 +495,13 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
 
           {/* Meeting History - collapsible */}
           {showMeetingHistory && (
-            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-              <div className="flex items-center text-xs text-blue-700 mb-2 font-medium">
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800">
+              <div className="flex items-center text-xs text-blue-700 dark:text-blue-300 mb-2 font-medium">
                 <Calendar className="w-3 h-3 mr-1" />
                 Meeting History
               </div>
               {loadingMeetings ? (
-                <div className="flex items-center text-sm text-slate-500">
+                <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
                   <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full mr-2"></div>
                   Loading...
                 </div>
@@ -514,13 +515,13 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
                         <div className="flex flex-col items-center mr-3">
                           <div className={`w-2.5 h-2.5 rounded-full ${index === meetings.length - 1 ? 'bg-emerald-500' : 'bg-blue-400'}`}></div>
                           {index < meetings.length - 1 && (
-                            <div className="w-0.5 h-4 bg-blue-200 mt-0.5"></div>
+                            <div className="w-0.5 h-4 bg-blue-200 dark:bg-blue-700 mt-0.5"></div>
                           )}
                         </div>
                         <div className="flex-1 flex items-center flex-wrap gap-2">
                           <Link
                             href={`/meetings?expand=${meeting.id}&section=ordinances`}
-                            className="text-slate-600 hover:text-emerald-600 hover:underline"
+                            className="text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
                           >
                             {formatDate(meeting.date)}
                           </Link>
@@ -533,14 +534,14 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
                   })}
                 </div>
               ) : (
-                <div className="text-sm text-slate-500">
+                <div className="text-sm text-slate-500 dark:text-slate-400">
                   <p className="mb-2">No meeting record in our database.</p>
                   <div className="flex items-center gap-3">
                     <a
                       href="https://flowerybranchga.portal.civicclerk.com"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center text-blue-600 hover:text-blue-700"
+                      className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
                     >
                       Search CivicClerk
                       <ExternalLink className="w-3 h-3 ml-1" />
@@ -550,7 +551,7 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
                         href={ordinance.municode_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center text-emerald-600 hover:text-emerald-700"
+                        className="inline-flex items-center text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
                       >
                         View on Municode
                         <ExternalLink className="w-3 h-3 ml-1" />
@@ -569,7 +570,7 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
               href={ordinance.minutes_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 sm:mt-0 sm:ml-4 inline-flex items-center px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-700 transition shrink-0"
+              className="mt-3 sm:mt-0 sm:ml-4 inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 transition shrink-0"
             >
               <FileText className="w-3.5 h-3.5 mr-1.5" />
               <span className="hidden sm:inline">View Minutes</span>
@@ -577,7 +578,7 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
               <ExternalLink className="w-3 h-3 ml-1" />
             </a>
           ) : (
-            <span className="mt-3 sm:mt-0 sm:ml-4 inline-flex items-center px-3 py-1.5 bg-slate-50 rounded-lg text-sm text-slate-400 shrink-0">
+            <span className="mt-3 sm:mt-0 sm:ml-4 inline-flex items-center px-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-sm text-slate-400 shrink-0">
               <span className="hidden sm:inline">No Municode page</span>
               <span className="sm:hidden">Admin</span>
             </span>
@@ -587,7 +588,7 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
             href={ordinance.municode_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 sm:mt-0 sm:ml-4 inline-flex items-center px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-700 transition shrink-0"
+            className="mt-3 sm:mt-0 sm:ml-4 inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 transition shrink-0"
           >
             <span className="hidden sm:inline">View on Municode</span>
             <span className="sm:hidden">Municode</span>
@@ -604,16 +605,16 @@ function PendingLegislationSection({ ordinances, autoExpand }: { ordinances: Pen
   if (ordinances.length === 0) return null;
 
   return (
-    <div className="bg-amber-50 rounded-xl shadow-sm border border-amber-200 p-6 mb-6">
+    <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 p-6 mb-6">
       <div className="flex items-center mb-4">
-        <FileText className="w-5 h-5 text-amber-600 mr-2" />
-        <h2 className="text-lg font-semibold text-slate-900">Pending Legislation</h2>
-        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 text-amber-800">
+        <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2" />
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Pending Legislation</h2>
+        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200">
           {ordinances.length} in progress
         </span>
       </div>
 
-      <p className="text-sm text-amber-800 mb-4">
+      <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
         These ordinances are currently being considered by City Council. They require multiple
         readings before adoption and may change during the review process.
       </p>
@@ -644,11 +645,11 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
   const getStatusDisplay = (status: string) => {
     switch (status) {
       case 'first_reading':
-        return { label: 'First Reading Complete', color: 'bg-yellow-100 text-yellow-800' };
+        return { label: 'First Reading Complete', color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' };
       case 'second_reading':
-        return { label: 'Awaiting Adoption', color: 'bg-orange-100 text-orange-800' };
+        return { label: 'Awaiting Adoption', color: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200' };
       default:
-        return { label: 'Introduced', color: 'bg-blue-100 text-blue-800' };
+        return { label: 'Introduced', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' };
     }
   };
 
@@ -657,20 +658,20 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
   return (
     <div
       id={`ordinance-${ordinance.number}`}
-      className={`bg-white rounded-lg p-4 border border-amber-100 shadow-sm ${highlighted ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}
+      className={`bg-white dark:bg-slate-800 rounded-lg p-4 border border-amber-100 dark:border-amber-800/50 shadow-sm ${highlighted ? 'ring-2 ring-amber-400 dark:ring-amber-500 ring-offset-2 dark:ring-offset-slate-900' : ''}`}
     >
       {/* Header with ordinance number and title */}
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200">
               #{ordinance.number}
             </span>
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.color}`}>
               {statusDisplay.label}
             </span>
           </div>
-          <h3 className="font-medium text-slate-900 mt-2">{ordinance.title}</h3>
+          <h3 className="font-medium text-slate-900 dark:text-slate-100 mt-2">{ordinance.title}</h3>
         </div>
       </div>
 
@@ -681,9 +682,9 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
 
       {/* Next Action */}
       {ordinance.next_meeting && (
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center text-sm text-blue-800">
+            <div className="flex items-center text-sm text-blue-800 dark:text-blue-200">
               <Calendar className="w-4 h-4 mr-2 shrink-0" />
               <span className="font-medium">Next:</span>
               <span className="ml-1">{ordinance.next_meeting.expected_action}</span>
@@ -701,7 +702,7 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
                 href={ordinance.next_meeting.packet_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
               >
                 <FileText className="w-3.5 h-3.5 mr-1" />
                 View Packet
@@ -714,14 +715,14 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
 
       {/* Past Readings */}
       {ordinance.readings.length > 0 && (
-        <div className="mt-3 text-xs text-slate-500">
+        <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
           <span className="font-medium">History:</span>{' '}
           {ordinance.readings.map((r, i) => (
             <span key={r.meeting_id}>
               {i > 0 && ' → '}
               <Link
                 href={`/meetings?expand=${r.meeting_id}&section=ordinances`}
-                className="hover:text-emerald-600 hover:underline"
+                className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
               >
                 {r.action.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} (
                 {new Date(r.meeting_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
@@ -736,7 +737,7 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
         <>
           <button
             onClick={() => setShowSummary(!showSummary)}
-            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm text-slate-600 transition border border-slate-200"
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-300 transition border border-slate-200 dark:border-slate-600"
           >
             <Sparkles className="w-4 h-4 text-purple-500" />
             {showSummary ? 'Hide Summary' : 'What would this change?'}
@@ -744,11 +745,11 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
           </button>
 
           {showSummary && (
-            <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
-              <div className="text-sm text-slate-700 whitespace-pre-wrap">
+            <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-100 dark:border-purple-800">
+              <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                 {ordinance.summary}
               </div>
-              <p className="text-xs text-slate-500 mt-2 italic">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
                 AI-generated summary. View the meeting packet for official language.
               </p>
             </div>
@@ -777,13 +778,13 @@ function ProgressTimeline({ completedActions }: { completedActions: Set<string> 
                   ${isCompleted
                     ? 'bg-emerald-500 text-white'
                     : isNext
-                      ? 'bg-amber-500 text-white ring-2 ring-amber-200'
-                      : 'bg-slate-200 text-slate-500'}
+                      ? 'bg-amber-500 text-white ring-2 ring-amber-200 dark:ring-amber-700'
+                      : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400'}
                 `}
               >
                 {isCompleted ? <Check className="w-3.5 h-3.5" /> : index + 1}
               </div>
-              <span className={`mt-1 text-xs whitespace-nowrap ${isCompleted ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
+              <span className={`mt-1 text-xs whitespace-nowrap ${isCompleted ? 'text-slate-700 dark:text-slate-200 font-medium' : 'text-slate-400'}`}>
                 {step.label}
               </span>
             </div>
@@ -791,7 +792,7 @@ function ProgressTimeline({ completedActions }: { completedActions: Set<string> 
             {/* Connector line */}
             {index < PROGRESS_STEPS.length - 1 && (
               <div className={`flex-1 h-0.5 mx-1 ${
-                isCompleted ? 'bg-emerald-300' : 'bg-slate-200'
+                isCompleted ? 'bg-emerald-300 dark:bg-emerald-600' : 'bg-slate-200 dark:bg-slate-600'
               }`} />
             )}
           </div>
@@ -808,10 +809,10 @@ function TabledLegislationSection({ ordinances, autoExpand, forceExpand }: { ord
   if (ordinances.length === 0) return null;
 
   return (
-    <div className="mt-6 bg-amber-50 rounded-xl shadow-sm border border-amber-200 overflow-hidden">
+    <div className="mt-6 bg-amber-50 dark:bg-amber-900/30 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-amber-100 transition"
+        className="w-full flex items-center justify-between p-4 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition"
       >
         <div className="flex items-center">
           {isExpanded ? (
@@ -820,19 +821,19 @@ function TabledLegislationSection({ ordinances, autoExpand, forceExpand }: { ord
             <ChevronRight className="w-5 h-5 text-amber-500 mr-2" />
           )}
           <PauseCircle className="w-5 h-5 text-amber-500 mr-2" />
-          <h2 className="text-lg font-semibold text-amber-800">Tabled Legislation</h2>
-          <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 text-amber-700">
+          <h2 className="text-lg font-semibold text-amber-800 dark:text-amber-200">Tabled Legislation</h2>
+          <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-200">
             {ordinances.length}
           </span>
         </div>
       </button>
 
       {isExpanded && (
-        <div className="border-t border-amber-200">
-          <p className="px-4 py-3 text-sm text-amber-700 bg-amber-100 border-b border-amber-200">
+        <div className="border-t border-amber-200 dark:border-amber-800">
+          <p className="px-4 py-3 text-sm text-amber-700 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/50 border-b border-amber-200 dark:border-amber-800">
             These ordinances were tabled (postponed) and may be revisited in a future meeting.
           </p>
-          <div className="divide-y divide-amber-100 bg-white">
+          <div className="divide-y divide-amber-100 dark:divide-slate-700 bg-white dark:bg-slate-800">
             {ordinances.map((ord) => (
               <TabledOrdinanceRow
                 key={ord.id}
@@ -877,20 +878,20 @@ function TabledOrdinanceRow({ ordinance, highlighted }: { ordinance: Ordinance; 
   return (
     <div
       id={`ordinance-${ordinance.number}`}
-      className={`p-4 hover:bg-amber-50 transition ${highlighted ? 'bg-amber-100 ring-2 ring-amber-300' : ''}`}
+      className={`p-4 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition ${highlighted ? 'bg-amber-100 dark:bg-amber-900/50 ring-2 ring-amber-300 dark:ring-amber-600' : ''}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center flex-wrap gap-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200">
               #{ordinance.number}
             </span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-200 text-amber-800">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200">
               Tabled
             </span>
-            <h3 className="font-medium text-slate-700">{ordinance.title}</h3>
+            <h3 className="font-medium text-slate-700 dark:text-slate-200">{ordinance.title}</h3>
           </div>
-          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 mt-2">
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-2">
             {loadingMeetings ? (
               <span className="flex items-center">
                 <div className="animate-spin w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full mr-1"></div>
@@ -901,7 +902,7 @@ function TabledOrdinanceRow({ ordinance, highlighted }: { ordinance: Ordinance; 
                 <span>Tabled:</span>
                 <Link
                   href={`/meetings?expand=${tablingMeeting.id}&section=ordinances`}
-                  className="text-amber-700 hover:text-amber-800 hover:underline"
+                  className="text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-amber-200 hover:underline"
                 >
                   {formatDate(tablingMeeting.date)}
                 </Link>
@@ -923,10 +924,10 @@ function DeniedLegislationSection({ ordinances, autoExpand, forceExpand }: { ord
   if (ordinances.length === 0) return null;
 
   return (
-    <div className="mt-6 bg-slate-50 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="mt-6 bg-slate-50 dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-slate-100 transition"
+        className="w-full flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
       >
         <div className="flex items-center">
           {isExpanded ? (
@@ -935,19 +936,19 @@ function DeniedLegislationSection({ ordinances, autoExpand, forceExpand }: { ord
             <ChevronRight className="w-5 h-5 text-slate-400 mr-2" />
           )}
           <XCircle className="w-5 h-5 text-slate-400 mr-2" />
-          <h2 className="text-lg font-semibold text-slate-700">Denied/Rejected Legislation</h2>
-          <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-600">
+          <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200">Denied/Rejected Legislation</h2>
+          <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
             {ordinances.length}
           </span>
         </div>
       </button>
 
       {isExpanded && (
-        <div className="border-t border-slate-200">
-          <p className="px-4 py-3 text-sm text-slate-500 bg-slate-100 border-b border-slate-200">
+        <div className="border-t border-slate-200 dark:border-slate-700">
+          <p className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
             These ordinances were considered but not adopted by City Council.
           </p>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
             {ordinances.map((ord) => (
               <DeniedOrdinanceRow
                 key={ord.id}
@@ -994,20 +995,20 @@ function DeniedOrdinanceRow({ ordinance, highlighted }: { ordinance: Ordinance; 
   return (
     <div
       id={`ordinance-${ordinance.number}`}
-      className={`p-4 hover:bg-slate-50 transition ${highlighted ? 'bg-red-50 ring-2 ring-red-200' : ''}`}
+      className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition ${highlighted ? 'bg-red-50 dark:bg-red-900/30 ring-2 ring-red-200 dark:ring-red-800' : ''}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center flex-wrap gap-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300">
               #{ordinance.number}
             </span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300">
               Denied
             </span>
-            <h3 className="font-medium text-slate-700">{ordinance.title}</h3>
+            <h3 className="font-medium text-slate-700 dark:text-slate-200">{ordinance.title}</h3>
           </div>
-          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 mt-2">
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-2">
             {loadingMeetings ? (
               <span className="flex items-center">
                 <div className="animate-spin w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full mr-1"></div>
@@ -1018,7 +1019,7 @@ function DeniedOrdinanceRow({ ordinance, highlighted }: { ordinance: Ordinance; 
                 <span>Denied:</span>
                 <Link
                   href={`/meetings?expand=${denialMeeting.id}&section=ordinances`}
-                  className="text-slate-600 hover:text-red-600 hover:underline"
+                  className="text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:underline"
                 >
                   {formatDate(denialMeeting.date)}
                 </Link>
