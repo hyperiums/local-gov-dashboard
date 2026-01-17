@@ -319,29 +319,32 @@ export async function GET(request: Request) {
         const docType = searchParams.get('docType'); // Optional filter by type
         const summaryLevel = searchParams.get('summaryLevel'); // Optional: 'headline', 'brief', 'detailed'
 
-        let query = `
-          SELECT entity_type as type, entity_id as id, content as summary, metadata
-          FROM summaries
-          WHERE entity_type IN ('splost', 'notice', 'strategic', 'water-quality')
-            AND summary_type = 'pdf-analysis'
-        `;
-
-        if (docType && ['splost', 'notice', 'strategic', 'water-quality'].includes(docType)) {
-          query = `
-            SELECT entity_type as type, entity_id as id, content as summary, metadata
-            FROM summaries
-            WHERE entity_type = '${docType}' AND summary_type = 'pdf-analysis'
-          `;
-        }
-
-        query += ' ORDER BY entity_type, entity_id DESC';
-
-        const rawDocuments = db.prepare(query).all() as {
+        const validDocTypes = ['splost', 'notice', 'strategic', 'water-quality'];
+        let rawDocuments: {
           type: string;
           id: string;
           summary: string;
           metadata: string | null;
         }[];
+
+        if (docType && validDocTypes.includes(docType)) {
+          // Use parameterized query for single doc type
+          rawDocuments = db.prepare(`
+            SELECT entity_type as type, entity_id as id, content as summary, metadata
+            FROM summaries
+            WHERE entity_type = ? AND summary_type = 'pdf-analysis'
+            ORDER BY entity_type, entity_id DESC
+          `).all(docType) as typeof rawDocuments;
+        } else {
+          // Query all doc types
+          rawDocuments = db.prepare(`
+            SELECT entity_type as type, entity_id as id, content as summary, metadata
+            FROM summaries
+            WHERE entity_type IN ('splost', 'notice', 'strategic', 'water-quality')
+              AND summary_type = 'pdf-analysis'
+            ORDER BY entity_type, entity_id DESC
+          `).all() as typeof rawDocuments;
+        }
 
         // Parse metadata and include all summary levels
         const documents = rawDocuments.map(d => {

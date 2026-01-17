@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Calendar, MapPin, FileText, ExternalLink, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { formatAndSanitize } from '@/lib/sanitize';
 
 interface MeetingCardProps {
   meeting: {
@@ -21,30 +22,23 @@ interface MeetingCardProps {
   showSummary?: boolean;
 }
 
-// Simple markdown renderer for summaries
+// Simple markdown renderer for summaries (with XSS sanitization)
 function renderMarkdown(text: string) {
   return text.split('\n').map((line, i) => {
-    // Handle bold text with ** markers
-    const formattedLine = line.replace(
-      /\*\*([^*]+)\*\*/g,
-      '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>'
-    );
-
     // Handle bullet points
     if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
       const bulletContent = line.trim().replace(/^[•-]\s*/, '');
-      const formattedBullet = bulletContent.replace(
-        /\*\*([^*]+)\*\*/g,
-        '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>'
-      );
       return (
         <li
           key={i}
           className="ml-4 text-sm text-slate-700 dark:text-slate-300"
-          dangerouslySetInnerHTML={{ __html: formattedBullet }}
+          dangerouslySetInnerHTML={{ __html: formatAndSanitize(bulletContent) }}
         />
       );
     }
+
+    // Handle bold text with ** markers
+    const formattedLine = formatAndSanitize(line);
 
     // Regular line (might be a header or paragraph)
     if (formattedLine.includes('<strong')) {

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Clock, Filter, Calendar, Scale, FileText, ChevronDown, ChevronUp, CalendarDays, ExternalLink, List, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { cityName } from '@/lib/city-config-client';
+import { formatAndSanitize } from '@/lib/sanitize';
 
 type TimelineItemType = 'meeting' | 'ordinance' | 'document';
 type DateRange = 'month' | 'quarter' | 'year' | 'all';
@@ -619,19 +620,12 @@ function OrdinanceExpandedContent({ item }: { item: TimelineItem }) {
       {/* Full Description/Summary */}
       {item.fullDescription && (
         <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
-          {item.fullDescription.split('\n').filter(p => p.trim()).map((paragraph, idx) => {
-            // Handle bold text with ** markers
-            const formatted = paragraph.replace(
-              /\*\*([^*]+)\*\*/g,
-              '<strong class="font-semibold text-slate-800 dark:text-slate-200">$1</strong>'
-            );
-            return (
-              <p
-                key={idx}
-                dangerouslySetInnerHTML={{ __html: formatted }}
-              />
-            );
-          })}
+          {item.fullDescription.split('\n').filter(p => p.trim()).map((paragraph, idx) => (
+            <p
+              key={idx}
+              dangerouslySetInnerHTML={{ __html: formatAndSanitize(paragraph) }}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -661,19 +655,12 @@ function DocumentExpandedContent({ item }: { item: TimelineItem }) {
       {/* Full Description/Summary */}
       {item.fullDescription && (
         <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
-          {item.fullDescription.split('\n').filter(p => p.trim()).slice(0, 10).map((paragraph, idx) => {
-            // Handle bold text with ** markers
-            const formatted = paragraph.replace(
-              /\*\*([^*]+)\*\*/g,
-              '<strong class="font-semibold text-slate-800 dark:text-slate-200">$1</strong>'
-            );
-            return (
-              <p
-                key={idx}
-                dangerouslySetInnerHTML={{ __html: formatted }}
-              />
-            );
-          })}
+          {item.fullDescription.split('\n').filter(p => p.trim()).slice(0, 10).map((paragraph, idx) => (
+            <p
+              key={idx}
+              dangerouslySetInnerHTML={{ __html: formatAndSanitize(paragraph) }}
+            />
+          ))}
         </div>
       )}
     </div>

@@ -5,13 +5,23 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { cityName } from '@/lib/city-config-client';
 
+// Validate redirect URL is a safe local path
+function getSafeRedirect(redirect: string | null): string {
+  if (!redirect) return '/admin';
+  // Must start with a single slash and not be a protocol-relative URL (//)
+  if (redirect.startsWith('/') && !redirect.startsWith('//')) {
+    return redirect;
+  }
+  return '/admin';
+}
+
 function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/admin';
+  const redirect = getSafeRedirect(searchParams.get('redirect'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
