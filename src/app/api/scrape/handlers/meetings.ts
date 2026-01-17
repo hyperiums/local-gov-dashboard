@@ -379,14 +379,36 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
 
   // Step 5.5: Fetch vote outcomes for meetings with unverified items
   // Must run AFTER resolution extraction to avoid INSERT OR REPLACE overwriting updates
+  // Check ALL past meetings in the database, not just newly discovered ones
   console.log('Checking for vote outcome updates...');
   let resolutionsUpdated = 0;
   let ordinancesUpdated = 0;
 
-  for (const meeting of pastMeetings) {
-    const meetingId = `civicclerk-${meeting.eventId}`;
+  // Get all past meetings from database that might need vote outcome processing
+  const allPastMeetings = db.prepare(`
+    SELECT DISTINCT m.id,
+           CAST(REPLACE(m.id, 'civicclerk-', '') AS INTEGER) as eventId,
+           m.date
+    FROM meetings m
+    WHERE m.status = 'past'
+      AND m.id LIKE 'civicclerk-%'
+      AND (
+        EXISTS (SELECT 1 FROM resolutions r WHERE r.meeting_id = m.id AND r.outcome_verified = 0)
+        OR EXISTS (
+          SELECT 1 FROM ordinance_meetings om
+          JOIN ordinances o ON o.id = om.ordinance_id
+          WHERE om.meeting_id = m.id AND o.status = 'proposed'
+        )
+      )
+    ORDER BY m.date DESC
+  `).all() as { id: string; eventId: number; date: string }[];
 
-    // Check what needs updating for this meeting
+  console.log(`  Found ${allPastMeetings.length} meetings needing vote outcome checks`);
+
+  for (const meeting of allPastMeetings) {
+    const meetingId = meeting.id;
+
+    // Get counts for logging (we already know this meeting needs processing from the query)
     const unverifiedResolutions = (db.prepare(
       'SELECT COUNT(*) as count FROM resolutions WHERE meeting_id = ? AND outcome_verified = 0'
     ).get(meetingId) as { count: number }).count;
@@ -397,9 +419,7 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
       WHERE om.meeting_id = ? AND o.status = 'proposed'
     `).get(meetingId) as { count: number }).count;
 
-    if (unverifiedResolutions === 0 && proposedOrdinances === 0) continue;
-
-    console.log(`  Event ${meeting.eventId}: ${unverifiedResolutions} unverified resolutions, ${proposedOrdinances} proposed ordinances`);
+    console.log(`  Event ${meeting.eventId} (${meeting.date}): ${unverifiedResolutions} unverified resolutions, ${proposedOrdinances} proposed ordinances`);
     const voteOutcomes = await fetchVoteOutcomesFromOverview(meeting.eventId);
 
     if (voteOutcomes.length === 0) {
@@ -410,6 +430,8 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
     console.log(`    Found ${voteOutcomes.length} vote outcomes`);
 
     for (const vote of voteOutcomes) {
+      console.log(`    Processing vote: "${vote.itemTitle.slice(0, 80)}..." motion=${vote.motion} result=${vote.result}`);
+
       // Check for resolution votes
       if (vote.itemTitle.toLowerCase().includes('resolution')) {
         const resMatch = vote.itemTitle.match(/resolution\s+([\d-]+)/i);
@@ -432,23 +454,61 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
         }
       }
 
-      // Check for second reading ordinance votes
-      if (vote.result === 'passed' &&
-          vote.itemTitle.toLowerCase().includes('second reading') &&
-          vote.itemTitle.toLowerCase().includes('ordinance')) {
+      // Check for ordinance votes (any reading, any result)
+      if (vote.itemTitle.toLowerCase().includes('ordinance')) {
         const ordMatch = vote.itemTitle.match(/ordinance\s+(\d+)/i);
         if (ordMatch) {
           const ordNumber = ordMatch[1];
-          const result = db.prepare(`
-            UPDATE ordinances SET status = 'adopted', adopted_date = ?
-            WHERE number = ? AND status = 'proposed'
-          `).run(meeting.date, ordNumber);
 
-          if (result.changes > 0) {
-            console.log(`    ✓ Ordinance ${ordNumber}: second reading passed → status=adopted`);
-            ordinancesUpdated++;
+          // Determine the actual outcome based on motion type AND result
+          let action: string;
+          let newStatus: string | null = null;
+
+          if (vote.motion?.toLowerCase() === 'deny' && vote.result === 'passed') {
+            // Motion to deny passed = ordinance denied
+            action = 'denied';
+            newStatus = 'denied';
+          } else if (vote.motion?.toLowerCase() === 'approve' && vote.result === 'passed') {
+            // Motion to approve passed
+            if (vote.itemTitle.toLowerCase().includes('second reading')) {
+              action = 'adopted';
+              newStatus = 'adopted';
+            } else {
+              action = 'first_reading_passed';
+            }
+          } else if (vote.result === 'failed') {
+            action = 'failed';
+          } else if (vote.result === 'tabled') {
+            action = 'tabled';
+            newStatus = 'tabled';
           } else {
-            console.log(`    - Ordinance ${ordNumber}: second reading passed (no update needed)`);
+            action = 'voted'; // Generic fallback
+          }
+
+          // Update ordinance_meetings.action
+          const omResult = db.prepare(`
+            UPDATE ordinance_meetings SET action = ?
+            WHERE meeting_id = ? AND ordinance_id IN (
+              SELECT id FROM ordinances WHERE number = ? OR number LIKE ?
+            )
+          `).run(action, meetingId, ordNumber, `%${ordNumber}`);
+
+          // Update ordinances.status if terminal action
+          if (newStatus) {
+            const ordResult = db.prepare(`
+              UPDATE ordinances SET status = ?,
+                adopted_date = CASE WHEN ? = 'adopted' THEN ? ELSE adopted_date END
+              WHERE (number = ? OR number LIKE ?) AND status = 'proposed'
+            `).run(newStatus, newStatus, meeting.date, ordNumber, `%${ordNumber}`);
+
+            if (ordResult.changes > 0) {
+              console.log(`    ✓ Ordinance ${ordNumber}: ${vote.motion} ${vote.result} → status=${newStatus}`);
+              ordinancesUpdated++;
+            }
+          }
+
+          if (omResult.changes > 0) {
+            console.log(`    ✓ Ordinance ${ordNumber}: action updated to ${action}`);
           }
         }
       }

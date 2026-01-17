@@ -949,23 +949,49 @@ export function insertResolution(resolution: {
   outcomeVerified?: boolean;
 }) {
   const db = getDb();
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO resolutions (id, number, title, description, status, introduced_date, adopted_date, meeting_id, packet_url, summary, outcome_verified, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `);
-  stmt.run(
-    resolution.id,
-    resolution.number,
-    resolution.title,
-    resolution.description || null,
-    resolution.status || 'pending_minutes',
-    resolution.introducedDate || null,
-    resolution.adoptedDate || null,
-    resolution.meetingId || null,
-    resolution.packetUrl || null,
-    resolution.summary || null,
-    resolution.outcomeVerified ? 1 : 0
-  );
+
+  // Check if resolution already exists with verified outcome
+  const existing = db.prepare(
+    'SELECT outcome_verified, status, adopted_date, summary FROM resolutions WHERE id = ?'
+  ).get(resolution.id) as { outcome_verified: number; status: string; adopted_date: string | null; summary: string | null } | undefined;
+
+  if (existing?.outcome_verified) {
+    // Resolution exists with verified outcome - only update non-outcome fields
+    // Preserve: status, adopted_date, outcome_verified, summary
+    const stmt = db.prepare(`
+      UPDATE resolutions
+      SET title = ?, description = ?, introduced_date = ?, meeting_id = ?, packet_url = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `);
+    stmt.run(
+      resolution.title,
+      resolution.description || null,
+      resolution.introducedDate || null,
+      resolution.meetingId || null,
+      resolution.packetUrl || null,
+      resolution.id
+    );
+  } else {
+    // New resolution or unverified - full insert/replace
+    // Preserve existing summary if no new one is provided
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO resolutions (id, number, title, description, status, introduced_date, adopted_date, meeting_id, packet_url, summary, outcome_verified, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `);
+    stmt.run(
+      resolution.id,
+      resolution.number,
+      resolution.title,
+      resolution.description || null,
+      resolution.status || 'pending_minutes',
+      resolution.introducedDate || null,
+      resolution.adoptedDate || null,
+      resolution.meetingId || null,
+      resolution.packetUrl || null,
+      resolution.summary || existing?.summary || null,
+      resolution.outcomeVerified ? 1 : 0
+    );
+  }
 }
 
 // Update resolution status and mark as verified from minutes
