@@ -1,4 +1,5 @@
 import { getDb, type MeetingRow, type OrdinanceRow } from './db';
+import { cityTimezone } from './city-config-client';
 
 // Types for the City Updates feature
 export interface UpcomingMeeting {
@@ -65,11 +66,11 @@ function parseLocalDate(dateStr: string): Date {
 // Get human-friendly countdown for upcoming meeting
 export function getMeetingCountdown(dateStr: string): string {
   const meetingDate = parseLocalDate(dateStr);
-  // Get current date in EST timezone (Flowery Branch is in Eastern Time)
-  const estNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  estNow.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+  // Get current date in the city's timezone
+  const localNow = new Date(new Date().toLocaleString('en-US', { timeZone: cityTimezone }));
+  localNow.setHours(0, 0, 0, 0); // Reset to start of day for comparison
 
-  const diffTime = meetingDate.getTime() - estNow.getTime();
+  const diffTime = meetingDate.getTime() - localNow.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) return 'TODAY';

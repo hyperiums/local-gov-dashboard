@@ -1,6 +1,8 @@
+import { cityName } from '../city-config-client';
+
 export const strategicPrompt = `Analyze this city strategic plan and provide a citizen-friendly summary.
 
-**Title:** [Extract the official document title, e.g., "City of Flowery Branch Strategic Plan FY2025"]
+**Title:** [Extract the official document title, e.g., "City of ${cityName} Strategic Plan FY2025"]
 
 **Vision & Goals**
 • What is the city working toward?

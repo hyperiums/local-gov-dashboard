@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Sparkles, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { cityName } from '@/lib/city-config-client';
 
 interface WeeklySummaryProps {
   initialSummary?: string;
@@ -45,7 +46,7 @@ export default function WeeklySummary({ initialSummary }: WeeklySummaryProps) {
       >
         <div className="flex items-center space-x-3">
           <Sparkles className="w-5 h-5" />
-          <h2 className="text-lg font-semibold">This Week in Flowery Branch</h2>
+          <h2 className="text-lg font-semibold">This Week in {cityName}</h2>
         </div>
         <div className="flex items-center space-x-2">
           <button
@@ -85,7 +86,7 @@ export default function WeeklySummary({ initialSummary }: WeeklySummaryProps) {
           ) : (
             <div className="bg-white/10 rounded-lg p-6 text-center">
               <p className="text-white/80 mb-4">
-                Get an AI-generated summary of what happened in Flowery Branch this week.
+                Get an AI-generated summary of what happened in {cityName} this week.
               </p>
               <button
                 onClick={generateSummary}

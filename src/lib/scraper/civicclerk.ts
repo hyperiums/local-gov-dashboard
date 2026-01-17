@@ -1,5 +1,6 @@
 // CivicClerk portal scraping - meetings, agendas, minutes, resolutions
 import { DATA_SOURCES } from '../types';
+import { cityAddress } from '../city-config-client';
 import { extractAgendaItemsFromPdf } from '../summarize';
 import {
   ScrapedMeeting,
@@ -62,7 +63,7 @@ export async function scrapeCivicClerkMeetingDetails(eventId: number): Promise<{
               ? 'City Council Meeting'
               : 'City Meeting',
             type: 'city_council',
-            location: '5410 Pine Street, Flowery Branch, GA 30542',
+            location: cityAddress,
             civicClerkEventId: eventId,
             agendaUrl: url,
             packetUrl: url,
@@ -99,7 +100,7 @@ export async function scrapeCivicClerkMeetingDetails(eventId: number): Promise<{
         date: dateStr,
         title,
         type,
-        location: '5410 Pine Street, Flowery Branch, GA 30542',
+        location: cityAddress,
         civicClerkEventId: eventId,
         agendaUrl: url,
         packetUrl: url,
@@ -730,7 +731,7 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
               eventId,
               date: dateStr,
               title,
-              location: '5410 Pine Street, Flowery Branch, GA 30542',
+              location: cityAddress,
               type,
               agendaUrl: eventUrl,
               minutesUrl: hasMinutes

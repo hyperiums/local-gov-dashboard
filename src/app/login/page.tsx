@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { cityName } from '@/lib/city-config-client';
 
 function LoginForm() {
   const [password, setPassword] = useState('');
@@ -90,7 +91,7 @@ function LoginForm() {
         </div>
 
         <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-4">
-          Flowery Branch Citizen Dashboard - Admin Panel
+          {cityName} Citizen Dashboard - Admin Panel
         </p>
       </div>
     </div>

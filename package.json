@@ -1,7 +1,23 @@
 {
-  "name": "flowerybranch.charlesthompson.me",
+  "name": "local-gov-dashboard",
   "version": "0.1.0",
-  "private": true,
+  "description": "Open-source civic transparency dashboard for local government data",
+  "license": "MIT",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charlesthompson3/local-gov-dashboard.git"
+  },
+  "author": "Charles Thompson <hello@charlesthompson.me>",
+  "homepage": "https://github.com/charlesthompson3/local-gov-dashboard#readme",
+  "keywords": [
+    "civic-tech",
+    "local-government",
+    "transparency",
+    "city-council",
+    "open-data",
+    "nextjs"
+  ],
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build",

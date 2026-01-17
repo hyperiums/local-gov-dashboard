@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Scale, ExternalLink, Search, ChevronDown, ChevronUp, ChevronRight, Sparkles, Calendar, Clock, FileText, Check, XCircle, PauseCircle } from 'lucide-react';
 import { getRecentYears, formatDate } from '@/lib/dates';
+import { cityName, municodeUrl, civicClerkUrl } from '@/lib/city-config-client';
 import type { PendingOrdinanceWithProgress } from '@/lib/db';
 
 interface Ordinance {
@@ -184,11 +185,11 @@ function OrdinancesContent() {
             City Ordinances
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Browse adopted ordinances from Flowery Branch
+            Browse adopted ordinances from {cityName}
           </p>
         </div>
         <a
-          href="https://librarystage.municode.com/ga/flowery_branch/ordinances/code_of_ordinances"
+          href={`${municodeUrl}/ordinances/code_of_ordinances`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
@@ -246,8 +247,7 @@ function OrdinancesContent() {
       <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800 mb-6">
         <p className="text-sm text-blue-800 dark:text-blue-200">
           <strong>About This Data:</strong> Pending legislation is sourced from City Council meeting
-          agendas. Adopted ordinances link to the official Municode Library where the City of
-          Flowery Branch maintains its Code of Ordinances.
+          agendas. Adopted ordinances link to the official Municode Library where the City of {cityName} maintains its Code of Ordinances.
         </p>
       </div>
 
@@ -271,7 +271,7 @@ function OrdinancesContent() {
             </a>{' '}
             to import ordinances from Municode, or browse the{' '}
             <a
-              href="https://librarystage.municode.com/ga/flowery_branch/ordinances/code_of_ordinances"
+              href={`${municodeUrl}/ordinances/code_of_ordinances`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-emerald-600 dark:text-emerald-400 hover:underline"
@@ -538,7 +538,7 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
                   <p className="mb-2">No meeting record in our database.</p>
                   <div className="flex items-center gap-3">
                     <a
-                      href="https://flowerybranchga.portal.civicclerk.com"
+                      href={civicClerkUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"

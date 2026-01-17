@@ -1,4 +1,6 @@
-export const permitPrompt = `Analyze this Flowery Branch monthly permit report PDF.
+import { cityName } from '../city-config-client';
+
+export const permitPrompt = `Analyze this ${cityName} monthly permit report PDF.
 
 CRITICAL: If the PDF is empty, corrupted, or unreadable, respond with: "Unable to read permit data from this document."
 

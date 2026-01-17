@@ -7,6 +7,7 @@ import {
   type PendingLegislation,
 } from '@/lib/cityUpdates';
 import { MeetingCountdownBadge } from './MeetingCountdownBadge';
+import { civicClerkUrl, cityName } from '@/lib/city-config-client';
 
 export default function CityUpdates() {
   const data = getCityUpdatesData();
@@ -19,7 +20,7 @@ export default function CityUpdates() {
       {/* Header */}
       <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">City Updates</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">What&apos;s happening in Flowery Branch</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">What&apos;s happening in {cityName}</p>
       </div>
 
       {hasContent ? (
@@ -478,7 +479,7 @@ function QuietPeriodSection() {
         </Link>
         <span className="text-slate-300 dark:text-slate-600">|</span>
         <a
-          href="https://flowerybranchga.portal.civicclerk.com"
+          href={civicClerkUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-medium inline-flex items-center"

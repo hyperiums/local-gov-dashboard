@@ -1,4 +1,5 @@
 // Business listing PDF scraping and parsing
+import { cityWebsiteUrl } from '../city-config-client';
 import { MONTH_NAMES, ALT_MONTH_NAMES } from './utils';
 
 // Get business listing PDF URL for a given month
@@ -7,9 +8,9 @@ export function getBusinessPdfUrl(year: string, month: string): string[] {
   const altNames = ALT_MONTH_NAMES[month] || [];
 
   const urls = [
-    `https://www.flowerybranchga.org/${monthName}${year}businesslisting.pdf`,
+    `${cityWebsiteUrl}/${monthName}${year}businesslisting.pdf`,
     ...altNames.map(
-      (name) => `https://www.flowerybranchga.org/${name}${year}businesslisting.pdf`
+      (name) => `${cityWebsiteUrl}/${name}${year}businesslisting.pdf`
     ),
   ];
 

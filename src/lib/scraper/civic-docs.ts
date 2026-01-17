@@ -1,4 +1,5 @@
 // Civic document scraping (SPLOST, notices, strategic plans, water quality)
+import { cityWebsiteUrl } from '../city-config-client';
 import { DATA_SOURCES } from '../types';
 import { fetchHtml } from './utils';
 
@@ -76,7 +77,7 @@ export async function scrapeCivicDocuments(
 
         if (!url.startsWith('http')) {
           const path = url.startsWith('/') ? url : `/${url}`;
-          url = `https://www.flowerybranchga.org${path}`;
+          url = `${cityWebsiteUrl}${path}`;
         }
 
         const cleanUrl = url.split('?')[0];

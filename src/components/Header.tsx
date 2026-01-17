@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Calendar, FileText, Building2, Scale, BarChart3, Clock, ChevronDown, Gavel, X, Menu } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { cityName } from '@/lib/city-config-client';
 
 export default function Header() {
   const [legislationDropdownOpen, setLegislationDropdownOpen] = useState(false);
@@ -82,10 +83,10 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center border border-white/30">
-              <span className="text-xl font-bold">FB</span>
+              <span className="text-xl font-bold">{cityName.split(' ').map(w => w[0]).join('')}</span>
             </div>
             <div>
-              <span className="text-lg font-semibold block">Flowery Branch</span>
+              <span className="text-lg font-semibold block">{cityName}</span>
               <span className="text-xs text-emerald-100">Informed Citizen Dashboard</span>
             </div>
           </Link>

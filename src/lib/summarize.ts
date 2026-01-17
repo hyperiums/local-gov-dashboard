@@ -2,6 +2,7 @@
 import OpenAI from 'openai';
 import { getSummary, saveSummary } from './db';
 import { TONE_GUIDELINES, PDF_ANALYSIS_PROMPTS } from './prompts';
+import { cityName, cityState } from './city-config-client';
 
 // Initialize OpenAI client (requires OPENAI_API_KEY env var)
 function getClient(): OpenAI {
@@ -32,7 +33,7 @@ export async function summarizeMeetingAgenda(
     messages: [
       {
         role: 'system',
-        content: `You are summarizing city council meeting agendas for residents of Flowery Branch, Georgia.
+        content: `You are summarizing city council meeting agendas for residents of ${cityName}, ${cityState}.
 Your goal is to help citizens understand what their local government is considering, in plain language.
 
 Rules:
@@ -80,7 +81,7 @@ export async function summarizeMeetingMinutes(
     messages: [
       {
         role: 'system',
-        content: `You are summarizing city council meeting minutes for residents of Flowery Branch, Georgia.
+        content: `You are summarizing city council meeting minutes for residents of ${cityName}, ${cityState}.
 Your goal is to help citizens understand what decisions were made, in plain language.
 
 Rules:
@@ -129,7 +130,7 @@ export async function explainOrdinance(
     messages: [
       {
         role: 'system',
-        content: `You are explaining a city ordinance to residents of Flowery Branch, Georgia.
+        content: `You are explaining a city ordinance to residents of ${cityName}, ${cityState}.
 Your goal is to help citizens understand what this law does and how it affects them.
 
 Rules:
@@ -161,7 +162,7 @@ Provide:
   return summary;
 }
 
-// Generate a "This Week in Flowery Branch" summary
+// Generate a weekly summary for the city
 export async function generateWeeklySummary(
   weekData: {
     meetings: { title: string; date: string; summary?: string }[];
@@ -186,7 +187,7 @@ export async function generateWeeklySummary(
     messages: [
       {
         role: 'system',
-        content: `You are writing a friendly, informative weekly update for residents of Flowery Branch, Georgia.
+        content: `You are writing a friendly, informative weekly update for residents of ${cityName}, ${cityState}.
 Your goal is to help citizens stay informed about their local government in 2 minutes or less.
 ${TONE_GUIDELINES}`,
       },
@@ -297,7 +298,7 @@ export async function summarizePermitActivity(
     messages: [
       {
         role: 'system',
-        content: `You are summarizing monthly building permit activity for Flowery Branch, Georgia.
+        content: `You are summarizing monthly building permit activity for ${cityName}, ${cityState}.
 Your goal is to help residents understand development trends in their community.
 ${TONE_GUIDELINES}`,
       },
@@ -338,7 +339,7 @@ export async function welcomeNewBusinesses(
     messages: [
       {
         role: 'system',
-        content: `You are providing civic context about new business registrations in Flowery Branch, Georgia.
+        content: `You are providing civic context about new business registrations in ${cityName}, ${cityState}.
 Your goal is to help residents understand what business registration means and what new businesses are opening.
 ${TONE_GUIDELINES}`,
       },
@@ -426,7 +427,7 @@ export async function analyzePdf(
     messages: [
       {
         role: 'system',
-        content: `You are analyzing an official document for residents of Flowery Branch, Georgia.
+        content: `You are analyzing an official document for residents of ${cityName}, ${cityState}.
 Your goal is to read the document carefully and provide an accurate, helpful summary.
 
 ACCURACY IS CRITICAL:
@@ -501,7 +502,7 @@ export async function analyzeOrdinanceImage(
     messages: [
       {
         role: 'system',
-        content: `You are analyzing a scanned city ordinance document for residents of Flowery Branch, Georgia.
+        content: `You are analyzing a scanned city ordinance document for residents of ${cityName}, ${cityState}.
 Your goal is to read the document and provide a clear, helpful summary.
 ${TONE_GUIDELINES}`,
       },
@@ -580,7 +581,7 @@ export async function generateHeadline(
       {
         role: 'system',
         content: `You are condensing a civic document summary into a single headline sentence.
-Your goal is to capture the most important point for residents of Flowery Branch, Georgia.
+Your goal is to capture the most important point for residents of ${cityName}, ${cityState}.
 
 Rules:
 - Write exactly ONE sentence
@@ -628,7 +629,7 @@ export async function generateBriefSummary(
       {
         role: 'system',
         content: `You are condensing a civic document summary into a brief overview.
-Your goal is to provide key points for residents of Flowery Branch, Georgia.
+Your goal is to provide key points for residents of ${cityName}, ${cityState}.
 
 Rules:
 - Keep the summary to approximately 150 words
@@ -890,7 +891,7 @@ Describe what this resolution would do IF adopted. Do not attribute positions to
     messages: [
       {
         role: 'system',
-        content: `You are summarizing a city council resolution for residents of Flowery Branch, Georgia.
+        content: `You are summarizing a city council resolution for residents of ${cityName}, ${cityState}.
 Your goal is to explain what this resolution does in plain language.
 
 ${TONE_GUIDELINES}`,
@@ -1008,7 +1009,7 @@ export async function generateOrdinanceSummaryFromText(
     messages: [
       {
         role: 'system',
-        content: `You are summarizing a city ordinance for residents of Flowery Branch, Georgia.
+        content: `You are summarizing a city ordinance for residents of ${cityName}, ${cityState}.
 Your goal is to explain what this ordinance does in plain language.
 
 ${TONE_GUIDELINES}`,

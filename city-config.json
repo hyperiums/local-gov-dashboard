@@ -1,0 +1,22 @@
+{
+  "city": {
+    "name": "Flowery Branch",
+    "state": "Georgia",
+    "stateAbbrev": "GA",
+    "address": "5410 Pine Street, Flowery Branch, GA 30542",
+    "phone": "770-967-6371",
+    "meetingSchedule": "1st & 3rd Thursdays at 6:00 PM",
+    "timezone": "America/New_York"
+  },
+  "urls": {
+    "civicClerk": "https://flowerybranchga.portal.civicclerk.com",
+    "cityWebsite": "https://www.flowerybranchga.org",
+    "municode": "https://library.municode.com/ga/flowery_branch",
+    "municodeProductId": "14328",
+    "clearGovBudget": "https://city-flowery-branch-ga-budget-book.cleargov.com/5302/introduction/transmittal-letter",
+    "clearGovSpending": "https://cleargov.com/georgia/hall/city/flowery-branch"
+  },
+  "contact": {
+    "email": "hello@charlesthompson.me"
+  }
+}

@@ -1,18 +1,23 @@
 import { ExternalLink } from 'lucide-react';
 import { getClearGovSpendingUrl } from '@/lib/dates';
+import {
+  civicClerkUrl,
+  municodeUrl,
+  cityWebsiteUrl,
+} from '@/lib/city-config-client';
 
 function getLinks() {
   return [
     {
       title: 'CivicClerk Portal',
       description: 'Official agendas & minutes',
-      url: 'https://flowerybranchga.portal.civicclerk.com',
+      url: civicClerkUrl,
       color: 'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-blue-200 dark:border-blue-800',
     },
     {
       title: 'City Code (Municode)',
       description: 'Official ordinances',
-      url: 'https://library.municode.com/ga/flowery_branch/codes/code_of_ordinances',
+      url: `${municodeUrl}/codes/code_of_ordinances`,
       color: 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 border-purple-200 dark:border-purple-800',
     },
     {
@@ -24,7 +29,7 @@ function getLinks() {
     {
       title: 'City Website',
       description: 'Official city portal',
-      url: 'https://www.flowerybranchga.org',
+      url: cityWebsiteUrl,
       color: 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-800',
     },
   ];

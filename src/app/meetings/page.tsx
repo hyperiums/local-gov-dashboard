@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Calendar, Filter, ExternalLink, Scale, FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import MeetingCard from '@/components/MeetingCard';
 import { getRecentYears } from '@/lib/dates';
+import { civicClerkUrl, cityAddress, meetingSchedule } from '@/lib/city-config-client';
 
 interface Meeting {
   id: string;
@@ -178,7 +179,7 @@ function MeetingsContent() {
           </p>
         </div>
         <a
-          href="https://flowerybranchga.portal.civicclerk.com"
+          href={civicClerkUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
@@ -292,7 +293,7 @@ function MeetingsContent() {
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Visit the{' '}
             <a
-              href="https://flowerybranchga.portal.civicclerk.com"
+              href={civicClerkUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-emerald-600 dark:text-emerald-400 hover:underline"
@@ -312,9 +313,9 @@ function MeetingsContent() {
       <div className="mt-8 bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
         <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">About This Data</h3>
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          Meeting information is sourced from the official Flowery Branch CivicClerk portal.
-          City Council meetings typically occur on the 1st and 3rd Thursday of each month at 6:00 PM
-          at City Hall (5410 Pine Street). AI-generated summaries are provided for convenience
+          Meeting information is sourced from the official CivicClerk portal.
+          City Council meetings typically occur {meetingSchedule}
+          at City Hall ({cityAddress}). AI-generated summaries are provided for convenience
           but should not replace reading the official documents.
         </p>
       </div>

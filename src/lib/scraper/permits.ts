@@ -1,4 +1,5 @@
 // Permit PDF scraping and parsing
+import { cityWebsiteUrl } from '../city-config-client';
 import { MONTH_NAMES, ALT_MONTH_NAMES } from './utils';
 
 // Get permit PDF URL for a given month
@@ -6,21 +7,20 @@ export function getPermitPdfUrl(year: string, month: string): string[] {
   const monthName = MONTH_NAMES[month];
   const altNames = ALT_MONTH_NAMES[month] || [];
   const monthLower = monthName.toLowerCase();
-  const basePath =
-    'https://www.flowerybranchga.org/Documents/Departments/Community%20Development/Monthly%20Permit%20Statistics';
+  const basePath = `${cityWebsiteUrl}/Documents/Departments/Community%20Development/Monthly%20Permit%20Statistics`;
 
   const urls: string[] = [];
 
   // Root level - "permitlisting" format (2024+)
-  urls.push(`https://www.flowerybranchga.org/${monthName}${year}permitlisting.pdf`);
+  urls.push(`${cityWebsiteUrl}/${monthName}${year}permitlisting.pdf`);
   altNames.forEach((name) =>
-    urls.push(`https://www.flowerybranchga.org/${name}${year}permitlisting.pdf`)
+    urls.push(`${cityWebsiteUrl}/${name}${year}permitlisting.pdf`)
   );
 
   // Root level - "permit" format (2020 and some others)
-  urls.push(`https://www.flowerybranchga.org/${monthName}${year}permit.pdf`);
+  urls.push(`${cityWebsiteUrl}/${monthName}${year}permit.pdf`);
   altNames.forEach((name) =>
-    urls.push(`https://www.flowerybranchga.org/${name}${year}permit.pdf`)
+    urls.push(`${cityWebsiteUrl}/${name}${year}permit.pdf`)
   );
 
   // Documents folder - "permitlisting" format (2023)

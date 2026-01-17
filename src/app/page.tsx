@@ -1,5 +1,11 @@
 import CityUpdates from '@/components/CityUpdates';
 import QuickLinks from '@/components/QuickLinks';
+import {
+  cityName,
+  cityAddress,
+  cityPhone,
+  meetingSchedule,
+} from '@/lib/city-config-client';
 
 export default function HomePage() {
   return (
@@ -7,7 +13,7 @@ export default function HomePage() {
       {/* Hero Section with How It Works */}
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-3">
-          Stay Informed About Flowery Branch
+          Stay Informed About {cityName}
         </h1>
         <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-8">
           Understand what your local government is doing, why it matters, and how decisions
@@ -17,10 +23,10 @@ export default function HomePage() {
         {/* Meeting Info Banner */}
         <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 mb-6 max-w-lg mx-auto">
           <p className="text-emerald-800 dark:text-emerald-300 font-medium text-sm sm:text-base">
-            City Council meets 1st & 3rd Thursdays at 6:00 PM
+            City Council meets {meetingSchedule}
           </p>
           <p className="text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm mt-1">
-            City Hall, 5410 Pine Street &bull; <a href="tel:770-967-6371" className="underline hover:text-emerald-800 dark:hover:text-emerald-300">770-967-6371</a>
+            City Hall, {cityAddress} &bull; <a href={`tel:${cityPhone}`} className="underline hover:text-emerald-800 dark:hover:text-emerald-300">{cityPhone}</a>
           </p>
         </div>
       </div>

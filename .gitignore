@@ -49,3 +49,9 @@ next-env.d.ts
 # Old/unused root db files
 /civic-data.db
 /local.db
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# IDE
+.idea/

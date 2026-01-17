@@ -1,4 +1,6 @@
 // Municode ordinance scraping
+import { municodeUrl, cityConfig } from '../city-config-client';
+
 export interface ScrapedOrdinance {
   number: string;
   year: string;
@@ -16,11 +18,10 @@ export interface SupplementHistoryEntry {
   supplementNumber?: string;
 }
 
-// Municode PDF URL pattern - productId 14328 is Flowery Branch
-const MUNICODE_PRODUCT_ID = '14328';
-
+// Municode PDF URL pattern - productId loaded from city-config.json
 export function getMunicodePdfUrl(nodeId: string): string {
-  return `https://mcclibraryfunctions.azurewebsites.us/api/ordinanceDownload/${MUNICODE_PRODUCT_ID}/${nodeId}/pdf`;
+  const productId = cityConfig.urls.municodeProductId;
+  return `https://mcclibraryfunctions.azurewebsites.us/api/ordinanceDownload/${productId}/${nodeId}/pdf`;
 }
 
 // Scrape Municode ordinances using Playwright (headless browser)
@@ -29,8 +30,7 @@ export async function scrapeMunicodeOrdinances(
   years?: string[]
 ): Promise<ScrapedOrdinance[]> {
   const ordinances: ScrapedOrdinance[] = [];
-  const baseUrl =
-    'https://library.municode.com/ga/flowery_branch/ordinances/code_of_ordinances';
+  const baseUrl = `${municodeUrl}/ordinances/code_of_ordinances`;
 
   const { chromium } = await import('playwright');
 
@@ -145,7 +145,7 @@ export async function scrapeMunicodeOrdinances(
 // URL: https://library.municode.com/ga/flowery_branch/codes/code_of_ordinances?nodeId=SUHITA
 export async function scrapeMunicodeSupplementHistory(): Promise<SupplementHistoryEntry[]> {
   const entries: SupplementHistoryEntry[] = [];
-  const url = 'https://library.municode.com/ga/flowery_branch/codes/code_of_ordinances?nodeId=SUHITA';
+  const url = `${municodeUrl}/codes/code_of_ordinances?nodeId=SUHITA`;
 
   const { chromium } = await import('playwright');
 

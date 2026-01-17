@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, ExternalLink, FileText, Sparkles, ChevronDown, ChevronRight, ClipboardCheck } from 'lucide-react';
 import { getClearGovSpendingUrl } from '@/lib/dates';
+import { cityName, clearGovSpendingBaseUrl } from '@/lib/city-config-client';
 
 interface BudgetSummary {
   fiscalYear: string;
@@ -75,7 +76,7 @@ export default function BudgetPage() {
             City Budget & Finances
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Annual budgets and financial reports for Flowery Branch
+            Annual budgets and financial reports for {cityName}
           </p>
         </div>
         <a
@@ -266,7 +267,7 @@ export default function BudgetPage() {
           <p>
             For interactive budget exploration and detailed spending data, visit{' '}
             <a
-              href="https://cleargov.com/georgia/hall/city/flowery-branch"
+              href={clearGovSpendingBaseUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 dark:text-blue-400 hover:underline"

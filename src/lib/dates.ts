@@ -1,5 +1,7 @@
 // Dynamic date utilities to avoid hardcoded years
 
+import { clearGovSpendingBaseUrl } from './city-config-client';
+
 /**
  * Get the current fiscal year (July 1 - June 30)
  * Returns the ending year of the fiscal year (e.g., FY2025 = July 2024 - June 2025)
@@ -53,7 +55,7 @@ export function getHistoricalYears(startYear: number = 2009, excludeRecent: numb
  * Get ClearGov spending URL with current year
  */
 export function getClearGovSpendingUrl(): string {
-  return `https://cleargov.com/georgia/hall/city/flowery-branch/${getCurrentYear()}/native/expenditures`;
+  return `${clearGovSpendingBaseUrl}/${getCurrentYear()}/native/expenditures`;
 }
 
 /**

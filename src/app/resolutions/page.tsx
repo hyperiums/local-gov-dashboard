@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, ExternalLink, Search, ChevronDown, ChevronUp, ChevronRight, Sparkles, Calendar, Package } from 'lucide-react';
 import { getRecentYears, formatDate } from '@/lib/dates';
+import { civicClerkUrl, cityName } from '@/lib/city-config-client';
 
 interface Resolution {
   id: string;
@@ -140,11 +141,11 @@ function ResolutionsContent() {
             City Resolutions
           </h1>
           <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Browse resolutions passed by Flowery Branch City Council
+            Browse resolutions passed by {cityName} City Council
           </p>
         </div>
         <a
-          href="https://flowerybranchga.portal.civicclerk.com"
+          href={civicClerkUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
@@ -199,7 +200,7 @@ function ResolutionsContent() {
             </a>{' '}
             to extract resolutions from meeting agendas, or browse the{' '}
             <a
-              href="https://flowerybranchga.portal.civicclerk.com"
+              href={civicClerkUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-purple-600 dark:text-purple-400 hover:underline"

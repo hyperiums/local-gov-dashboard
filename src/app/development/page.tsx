@@ -17,6 +17,7 @@ import {
   Line,
   Legend,
 } from 'recharts';
+import { cityWebsiteUrl, cityName } from '@/lib/city-config-client';
 
 interface MonthlySummary {
   month: string;
@@ -48,7 +49,7 @@ function getPermitPdfUrl(month: string): string {
   if (match) {
     const [, year, monthNum] = match;
     const monthName = MONTH_NAMES[monthNum] || 'Jan';
-    return `https://www.flowerybranchga.org/${monthName}${year}permitlisting.pdf`;
+    return `${cityWebsiteUrl}/${monthName}${year}permitlisting.pdf`;
   }
 
   // Handle formats like "jan-2025-permits"
@@ -61,10 +62,10 @@ function getPermitPdfUrl(month: string): string {
       Jan: 'Jan', Feb: 'Feb', Mar: 'Mar', Apr: 'Apr', May: 'May', Jun: 'June',
       Jul: 'July', Aug: 'Aug', Sep: 'Sept', Oct: 'Oct', Nov: 'Nov', Dec: 'Dec'
     };
-    return `https://www.flowerybranchga.org/${pdfMonthNames[monthName] || monthName}${yearMatch[1]}permitlisting.pdf`;
+    return `${cityWebsiteUrl}/${pdfMonthNames[monthName] || monthName}${yearMatch[1]}permitlisting.pdf`;
   }
 
-  return `https://www.flowerybranchga.org/permits`;
+  return `${cityWebsiteUrl}/permits`;
 }
 
 function getBusinessPdfUrl(month: string): string {
@@ -73,7 +74,7 @@ function getBusinessPdfUrl(month: string): string {
   if (match) {
     const [, year, monthNum] = match;
     const monthName = MONTH_NAMES[monthNum] || 'Jan';
-    return `https://www.flowerybranchga.org/${monthName}${year}businesslisting.pdf`;
+    return `${cityWebsiteUrl}/${monthName}${year}businesslisting.pdf`;
   }
 
   // Handle formats like "jan-2025-businesses"
@@ -85,10 +86,10 @@ function getBusinessPdfUrl(month: string): string {
       Jan: 'Jan', Feb: 'Feb', Mar: 'Mar', Apr: 'Apr', May: 'May', Jun: 'June',
       Jul: 'July', Aug: 'Aug', Sep: 'Sept', Oct: 'Oct', Nov: 'Nov', Dec: 'Dec'
     };
-    return `https://www.flowerybranchga.org/${pdfMonthNames[monthName] || monthName}${yearMatch[1]}businesslisting.pdf`;
+    return `${cityWebsiteUrl}/${pdfMonthNames[monthName] || monthName}${yearMatch[1]}businesslisting.pdf`;
   }
 
-  return `https://www.flowerybranchga.org/business`;
+  return `${cityWebsiteUrl}/business`;
 }
 
 export default function DevelopmentPage() {
@@ -262,7 +263,7 @@ export default function DevelopmentPage() {
         </div>
         <div className="text-right">
           <a
-            href="https://www.flowerybranchga.org/departments/community_development/forms.php"
+            href={`${cityWebsiteUrl}/departments/community_development/forms.php`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
@@ -550,7 +551,7 @@ export default function DevelopmentPage() {
       <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
         <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">About This Data</h3>
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          Monthly permit and business reports are sourced from official City of Flowery Branch PDF documents.
+          Monthly permit and business reports are sourced from official City of {cityName} PDF documents.
           AI summaries help highlight key information, but always refer to the official reports for complete details.
           For permit applications or questions, contact the Community Development department.
         </p>

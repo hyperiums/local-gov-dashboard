@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { Database, Download, RefreshCw, CheckCircle, XCircle, AlertCircle, Sparkles, Upload, LogOut, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getRecentYears, getRecentFiscalYears, getHistoricalYears, getCurrentYear } from '@/lib/dates';
+import { cityWebsiteUrl } from '@/lib/city-config-client';
 
 interface ScrapeResult {
   success: boolean;
@@ -497,7 +498,7 @@ export default function AdminPage() {
           </h2>
           <p className="text-sm text-slate-600 mb-4">
             Strategic plans are hosted on ClearGov and must be manually exported as PDF.
-            Visit the <a href="https://www.flowerybranchga.org/departments/finance/fy2025_strategic_plan.php" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">strategic plan page</a>, click &quot;PDF&quot; tab, enter your email, and upload the generated PDF here.
+            Visit the <a href={`${cityWebsiteUrl}/departments/finance/fy2025_strategic_plan.php`} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">strategic plan page</a>, click &quot;PDF&quot; tab, enter your email, and upload the generated PDF here.
           </p>
           <div className="space-y-3">
             <input

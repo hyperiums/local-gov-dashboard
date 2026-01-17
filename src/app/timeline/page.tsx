@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Clock, Filter, Calendar, Scale, FileText, ChevronDown, ChevronUp, CalendarDays, ExternalLink, List, FileDown } from 'lucide-react';
 import Link from 'next/link';
+import { cityName } from '@/lib/city-config-client';
 
 type TimelineItemType = 'meeting' | 'ordinance' | 'document';
 type DateRange = 'month' | 'quarter' | 'year' | 'all';
@@ -227,7 +228,7 @@ function TimelineContent() {
           Civic Timeline
         </h1>
         <p className="text-slate-600 dark:text-slate-400 mt-1">
-          Recent civic activity in Flowery Branch
+          Recent civic activity in {cityName}
         </p>
       </div>
 
@@ -477,7 +478,7 @@ function TimelineContent() {
       <div className="mt-8 bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
         <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">About This Page</h3>
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          Stay informed about Flowery Branch government activity. Click on any item to see more details,
+          Stay informed about {cityName} government activity. Click on any item to see more details,
           agenda items, and links to official sources. The upcoming meetings section shows when you can
           attend or watch the next public meetings.
         </p>

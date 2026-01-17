@@ -19,6 +19,7 @@ import {
   updateResolutionOutcome,
   getDb,
 } from '@/lib/db';
+import { cityName } from '@/lib/city-config-client';
 import { formatError, extractEventId, type HandlerParams } from './shared';
 
 export async function handleExtractResolutions() {
@@ -294,7 +295,7 @@ export async function handleGenerateResolutionSummaries(params: HandlerParams) {
           ? `\nNote: This is a draft document. Signature lines are templates, not endorsements.\nDescribe what this resolution would do IF adopted. Do not attribute positions to officials.\n`
           : '';
 
-        const customPrompt = `You are analyzing resolution documents from Flowery Branch City Council.
+        const customPrompt = `You are analyzing resolution documents from ${cityName} City Council.
 
 Resolution ${res.number}: "${res.title}"
 Status: ${res.status.toUpperCase()}${isProposed ? ' (not yet voted on)' : ''}

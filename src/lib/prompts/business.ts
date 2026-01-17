@@ -1,4 +1,6 @@
-export const businessPrompt = `Analyze this Flowery Branch new business registration listing PDF.
+import { cityName } from '../city-config-client';
+
+export const businessPrompt = `Analyze this ${cityName} new business registration listing PDF.
 
 CRITICAL: If the PDF is empty, corrupted, or unreadable, respond with: "Unable to read business data from this document."
 

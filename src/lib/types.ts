@@ -1,4 +1,12 @@
-// Core data types for Flowery Branch Civic Dashboard
+// Core data types for Civic Dashboard
+
+import {
+  civicClerkUrl,
+  cityWebsiteUrl,
+  municodeUrl,
+  clearGovBudgetUrl,
+  clearGovSpendingBaseUrl,
+} from './city-config-client';
 
 export interface Meeting {
   id: string;
@@ -115,30 +123,30 @@ export interface TimelineEvent {
   sourceUrl?: string;
 }
 
-// Data source configuration
+// Data source configuration - loaded from city-config.json
 export const DATA_SOURCES = {
   civicClerk: {
-    baseUrl: 'https://flowerybranchga.portal.civicclerk.com',
-    eventUrl: (id: number) => `https://flowerybranchga.portal.civicclerk.com/event/${id}/files`,
+    baseUrl: civicClerkUrl,
+    eventUrl: (id: number) => `${civicClerkUrl}/event/${id}/files`,
   },
   cityWebsite: {
-    baseUrl: 'https://www.flowerybranchga.org',
+    baseUrl: cityWebsiteUrl,
     permits: (month: string, year: string) =>
-      `https://www.flowerybranchga.org/${month}${year}permitlisting.pdf`,
+      `${cityWebsiteUrl}/${month}${year}permitlisting.pdf`,
     business: (month: string, year: string) =>
-      `https://www.flowerybranchga.org/${month}${year}businesslisting.pdf`,
-    financialReports: 'https://www.flowerybranchga.org/departments/finance/financial_reports.php',
-    splostReports: 'https://www.flowerybranchga.org/departments/finance/splost_reports.php',
-    publicNotices: 'https://www.flowerybranchga.org/government/public_notices/index.php',
-    strategicPlan: 'https://www.flowerybranchga.org/departments/finance/fy2025_strategic_plan.php',
-    waterQualityReports: 'https://www.flowerybranchga.org/departments/water__wastewater/water_quality_reports.php',
+      `${cityWebsiteUrl}/${month}${year}businesslisting.pdf`,
+    financialReports: `${cityWebsiteUrl}/departments/finance/financial_reports.php`,
+    splostReports: `${cityWebsiteUrl}/departments/finance/splost_reports.php`,
+    publicNotices: `${cityWebsiteUrl}/government/public_notices/index.php`,
+    strategicPlan: `${cityWebsiteUrl}/departments/finance/fy2025_strategic_plan.php`,
+    waterQualityReports: `${cityWebsiteUrl}/departments/water__wastewater/water_quality_reports.php`,
   },
   municode: {
-    baseUrl: 'https://library.municode.com/ga/flowery_branch/codes/code_of_ordinances',
+    baseUrl: `${municodeUrl}/codes/code_of_ordinances`,
   },
   clearGov: {
-    budget: 'https://city-flowery-branch-ga-budget-book.cleargov.com/5302/introduction/transmittal-letter',
+    budget: clearGovBudgetUrl,
     // Note: Use getClearGovSpendingUrl() from @/lib/dates for dynamic year
-    spending: 'https://cleargov.com/georgia/hall/city/flowery-branch',
+    spending: clearGovSpendingBaseUrl,
   },
-} as const;
+};

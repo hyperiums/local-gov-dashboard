@@ -1,7 +1,10 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import { cityName } from './city-config-client';
 
-const dbPath = path.join(process.cwd(), 'data', 'flowery-branch.db');
+// Derive database name from city name (e.g., "Flowery Branch" -> "flowery-branch.db")
+const dbSlug = cityName.toLowerCase().replace(/\s+/g, '-');
+const dbPath = path.join(process.cwd(), 'data', `${dbSlug}.db`);
 
 // Database row types (snake_case matching SQLite columns)
 export interface MeetingRow {

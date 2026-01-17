@@ -4,6 +4,14 @@ import "./globals.css";
 import Header from "@/components/Header";
 import ContactEmail from "@/components/ContactEmail";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import {
+  cityName,
+  civicClerkUrl,
+  cityWebsiteUrl,
+  municodeUrl,
+  clearGovSpendingBaseUrl,
+  contactEmail,
+} from "@/lib/city-config-client";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,11 +24,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flowery Branch Informed Citizen Dashboard",
-  description: "Stay informed about what your local government is doing in Flowery Branch, Georgia. Track meetings, ordinances, permits, and more.",
-  keywords: ["Flowery Branch", "Georgia", "city council", "local government", "civic engagement", "transparency"],
+  title: `${cityName} Informed Citizen Dashboard`,
+  description: `Stay informed about what your local government is doing in ${cityName}. Track meetings, ordinances, permits, and more.`,
+  keywords: [cityName, "city council", "local government", "civic engagement", "transparency"],
   openGraph: {
-    title: "Flowery Branch Informed Citizen Dashboard",
+    title: `${cityName} Informed Citizen Dashboard`,
     description: "Making local government understandable, not overwhelming.",
     type: "website",
   },
@@ -49,17 +57,17 @@ export default function RootLayout({
                 <div>
                   <h3 className="text-slate-800 dark:text-slate-200 font-semibold mb-3">About This Dashboard</h3>
                   <p className="text-sm">
-                    An independent civic project making Flowery Branch local government
+                    An independent civic project making {cityName} local government
                     understandable, not overwhelming. All data sourced from official public records.
                   </p>
                 </div>
                 <div>
                   <h3 className="text-slate-800 dark:text-slate-200 font-semibold mb-3">Data Sources</h3>
                   <ul className="text-sm space-y-1">
-                    <li><a href="https://flowerybranchga.portal.civicclerk.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">CivicClerk Portal</a></li>
-                    <li><a href="https://www.flowerybranchga.org" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">City Website</a></li>
-                    <li><a href="https://library.municode.com/ga/flowery_branch" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">Municode</a></li>
-                    <li><a href="https://cleargov.com/georgia/hall/city/flowery-branch" target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">ClearGov</a></li>
+                    <li><a href={civicClerkUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">CivicClerk Portal</a></li>
+                    <li><a href={cityWebsiteUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">City Website</a></li>
+                    <li><a href={municodeUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">Municode</a></li>
+                    <li><a href={clearGovSpendingBaseUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">ClearGov</a></li>
                   </ul>
                 </div>
                 <div>
@@ -74,11 +82,11 @@ export default function RootLayout({
                   <p className="text-sm mb-2">
                     Notice an error or have a suggestion?
                   </p>
-                  <ContactEmail />
+                  <ContactEmail email={contactEmail} />
                 </div>
               </div>
               <div className="border-t border-slate-200 dark:border-slate-700 mt-8 pt-6 text-center text-sm">
-                <p>Made with care for the Flowery Branch community</p>
+                <p>Made with care for the {cityName} community</p>
               </div>
             </div>
           </footer>
