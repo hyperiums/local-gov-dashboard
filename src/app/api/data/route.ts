@@ -16,6 +16,7 @@ import {
   getOrdinancesForMeeting,
   getDb,
   getAllSummaryLevels,
+  MeetingRow,
 } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -48,8 +49,23 @@ export async function GET(request: Request) {
         const status = searchParams.get('status') || undefined;
         const limit = searchParams.get('limit')
           ? parseInt(searchParams.get('limit')!)
-          : undefined;  // Return all meetings by default
-        const meetings = getMeetings({ status, limit });
+          : undefined;
+        let meetings = getMeetings({ status, limit });
+
+        // Ensure at least one upcoming meeting is shown (even without agenda items)
+        if (!status || status === 'upcoming') {
+          const hasUpcoming = meetings.some(m => m.status === 'upcoming');
+          if (!hasUpcoming) {
+            const db = getDb();
+            const nextMeeting = db.prepare(`
+              SELECT * FROM meetings WHERE status = 'upcoming' ORDER BY date ASC LIMIT 1
+            `).get() as MeetingRow | undefined;
+            if (nextMeeting) {
+              meetings = [nextMeeting, ...meetings];
+            }
+          }
+        }
+
         return NextResponse.json({ meetings });
       }
 
