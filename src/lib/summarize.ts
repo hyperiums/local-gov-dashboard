@@ -1,26 +1,7 @@
 // AI-powered summarization using OpenAI API
 import OpenAI from 'openai';
 import { getSummary, saveSummary } from './db';
-
-// Shared guidelines for all AI summaries - positive, factual, helpful
-const TONE_GUIDELINES = `
-CRITICAL ANTI-HALLUCINATION RULES:
-- ONLY include information that is EXPLICITLY stated in the provided document
-- NEVER invent, fabricate, or make up ANY information - not names, numbers, dates, or details
-- NEVER use placeholder text like "[information needed]" or "[list items here]"
-- If data is not visible or readable, say "not visible in document" - do NOT guess
-- If you cannot read the document or it appears empty/corrupted, say so clearly
-- Count items carefully - do not estimate or round numbers
-- Quote exact figures from the document - never approximate
-
-TONE GUIDELINES:
-- Assume good faith and positive intentions from city officials and residents
-- Present information in a constructive, helpful manner
-- Focus on facts and what decisions mean for residents
-- Use welcoming, inclusive language
-- Highlight community benefits where applicable
-- Never make accusations, suggest impropriety, or editorialize
-- Always attribute information to official sources`;
+import { TONE_GUIDELINES, PDF_ANALYSIS_PROMPTS } from './prompts';
 
 // Initialize OpenAI client (requires OPENAI_API_KEY env var)
 function getClient(): OpenAI {
@@ -421,7 +402,7 @@ export async function analyzePdf(
   documentId: string,
   documentType: 'ordinance' | 'permit' | 'business' | 'meeting' | 'minutes' | 'agenda' | 'budget' | 'audit' | 'splost' | 'notice' | 'strategic' | 'water-quality' | 'resolution' | 'general',
   pdfBase64: string, // Base64-encoded PDF data (without data URL prefix)
-  options?: { forceRefresh?: boolean; metadata?: Record<string, unknown>; model?: 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo'; customPrompt?: string }
+  options?: { forceRefresh?: boolean; metadata?: Record<string, unknown>; model?: 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo'; customPrompt?: string; dryRun?: boolean }
 ): Promise<string> {
   if (!options?.forceRefresh) {
     const cached = getSummary(documentType, documentId, 'pdf-analysis');
@@ -437,255 +418,6 @@ export async function analyzePdf(
   const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
 
   const client = getClient();
-
-  // Customize prompt based on document type
-  const prompts: Record<string, string> = {
-    ordinance: `Analyze this ordinance and provide a structured summary. Do NOT include any preamble like "Certainly!" or "Here is the analysis" - just provide the content directly.
-
-**What it does**: A clear 2-3 sentence summary of what this ordinance accomplishes
-
-**Who it affects**: Which residents, businesses, or areas are impacted
-
-**Key details**: Any important dates, requirements, or changes
-
-**Why it matters**: Why the city implemented this (if stated in WHEREAS clauses)
-
-**What You Can Do**: If this ordinance is proposed (not yet adopted), note whether a public hearing is required before adoption. If a hearing is scheduled or required, emphasize that residents can attend and provide input before the final vote. If the ordinance has already been adopted, this section can be omitted.
-
-Read the document carefully and only include information that is actually in the text.`,
-    permit: `Analyze this Flowery Branch monthly permit report PDF.
-
-CRITICAL: If the PDF is empty, corrupted, or unreadable, respond with: "Unable to read permit data from this document."
-
-The table columns are: Permit #, Permit Type, Primary Contractor, Parcel #, Parcel Address, City, Lot, Subdivision, Work Class.
-
-Work Class values: "New" = new construction, "ADDITION" or "REPLACE/CHANGE OUT" = renovation/improvement
-
-Provide a summary with these sections:
-
-**Summary**
-State the exact total number of permits issued this month (count every row in the table across all pages). Briefly describe the mix of new construction vs improvements.
-
-**New Construction**
-List the exact count of new homes and which subdivisions they are in. List the builder/contractor names visible in the document.
-
-**Home Improvements**
-List permit types (electrical, plumbing, HVAC, pools, fences, etc.) with exact counts for each.
-
-**Growing Neighborhoods**
-Name the subdivisions with the most permit activity this month.
-
-RULES:
-- Count EVERY row in the table - check page numbers at the bottom
-- Only include subdivisions and builders actually named in the document
-- If a field is blank or unreadable, omit it - do NOT make up names`,
-    business: `Analyze this Flowery Branch new business registration listing PDF.
-
-CRITICAL: If the PDF is empty, corrupted, or unreadable, respond with: "Unable to read business data from this document."
-
-This is an UNOFFICIAL summary for informational purposes only. Do NOT speak as if you represent the city.
-
-Extract and list each new business registration. Do NOT include street addresses (some may be home businesses).
-
-Format your response as:
-
-**New Business Registrations**
-
-For each business found in the document, list:
-• Business Name - Phone number (if shown)
-
-End with the exact total count of businesses listed in the document.
-
-RULES:
-- Only list businesses actually shown in the document
-- Include phone numbers only if they appear in the document
-- Do NOT fabricate business names or details
-- Keep it factual - no welcome messages or commentary`,
-    meeting: `Summarize these meeting minutes. Do NOT include any preamble - start directly with the content.
-
-Format your response as:
-**Decisions Made**
-• [List 2-4 key decisions with outcomes - approved/denied/tabled]
-
-**What It Means for Residents**
-• [1-2 bullet points on practical impact]
-
-Keep it scannable and concise. Skip procedural items like roll call.`,
-    minutes: `Summarize these meeting minutes. Do NOT include any preamble - start directly with the content.
-
-Format your response as:
-**Decisions Made**
-• [List 2-4 key decisions with outcomes - approved/denied/tabled]
-
-**What It Means for Residents**
-• [1-2 bullet points on practical impact]
-
-Keep it scannable and concise. Skip procedural items like roll call.`,
-    agenda: `Summarize this meeting agenda. Do NOT include any preamble - start directly with the content.
-
-Format your response as:
-**Topics on the Agenda**
-• [List 3-5 main discussion items in plain language]
-
-**Public Hearings** (if any)
-• [List opportunities for residents to speak]
-
-**What You Can Do**
-• Public comment periods: Note when residents can address the council (typically at the beginning of the meeting or during specific agenda items)
-• If the agenda includes public hearings, emphasize that this is the residents' opportunity to voice support, concerns, or ask questions before a decision is made
-
-**Meeting Details**
-[Date, time, location - one line]
-
-Keep it scannable and concise. Skip routine items like pledge of allegiance.`,
-    general: `Analyze this document and provide a structured, citizen-friendly summary.
-
-**Key Points**
-- What is this document about? (2-3 bullet points)
-
-**Who It Affects**
-- Which residents, businesses, or areas are impacted?
-
-**What Residents Should Know**
-- Important details, requirements, or changes
-
-**Deadlines or Actions Required** (if any)
-- Any dates, deadlines, or steps residents need to take
-- Contact information for questions (if provided)
-
-If any of these sections don't apply to this document, skip them. Keep the summary concise and factual.`,
-    budget: `Analyze this city budget document and provide a citizen-friendly summary.
-
-**Budget Overview**
-• Total budget amount for this fiscal year
-• Major spending categories with approximate percentages or amounts
-
-**Key Highlights**
-• Notable new investments, projects, or initiatives
-• Significant changes from previous year (if mentioned)
-• Major capital projects or infrastructure spending
-
-**What This Means for Residents**
-• Key services being funded (police, fire, parks, utilities, etc.)
-• Any tax or fee changes mentioned
-• Infrastructure or quality of life improvements
-
-Keep it factual and concise. Focus on what residents would want to know about how their tax dollars are being spent. Do NOT include preamble like "Here is the analysis" - start directly with the content.`,
-    audit: `Analyze this Annual Comprehensive Financial Report (ACFR) or audit report and provide a citizen-friendly summary.
-
-**Financial Health Overview**
-• Total revenues and expenditures for the fiscal year
-• Did the city end the year with a surplus or deficit?
-• Fund balance / reserves status
-
-**Key Financial Highlights**
-• Major sources of revenue (property tax, sales tax, grants, etc.)
-• Largest spending areas
-• Notable financial achievements or concerns mentioned in the auditor's letter
-
-**What This Means for Residents**
-• Is the city in good financial standing?
-• Any significant changes from previous years
-• Impact on services or future planning
-
-**Auditor's Opinion**
-• What opinion did the auditors give? (unmodified/clean is best)
-• Any findings or recommendations noted
-
-Keep it factual and accessible. This is a retrospective report showing what actually happened during the fiscal year. Do NOT include preamble - start directly with the content.`,
-    splost: `Analyze this SPLOST (Special Purpose Local Option Sales Tax) report and provide a citizen-friendly summary.
-
-IMPORTANT: Only include dollar amounts that are explicitly stated in the document. Double-check that any totals you report match the sum of individual items. If numbers don't add up or are unclear, note the discrepancy.
-
-**Title:** [Extract the official document title/heading from the document, e.g., "SPLOST VII Annual Report - December 31, 2022" or "City of Flowery Branch SPLOST Requirements Report"]
-
-**Document Date:** [Extract the reporting period end date or report date. Format as YYYY-MM-DD (e.g., 2022-12-31 for a report ending December 31, 2022). If only a year is stated, use YYYY-01-01]
-
-**Fund Status**
-• Total SPLOST funds allocated (exact figure from document)
-• Total funds spent to date (exact figure from document)
-• Current fund balance (if stated)
-
-**Projects Funded**
-For each project, include:
-• Project name
-• Budgeted/estimated cost (exact figure)
-• Amount spent to date (exact figure)
-• Status: completed, in progress, or planned
-
-**What This Means for Residents**
-• Brief summary of how these projects benefit the community
-
-Keep it factual. Only report numbers that appear in the document. Do NOT include preamble - start directly with the content.`,
-    notice: `Analyze this public notice and provide a citizen-friendly summary.
-
-IMPORTANT: Quote dates, times, locations, and deadlines exactly as written in the document. These details are legally significant.
-
-**Title:** [Extract the official notice title/subject from the document header]
-
-**Document Date:** [Extract the date this notice was issued, posted, or the primary date it refers to. Format as YYYY-MM-DD if possible (e.g., 2025-11-25). If no date is found, write "Not specified"]
-
-**What's Happening**
-• One sentence summary of what this notice is about
-
-**Key Details**
-• Date and time (quote exactly as written)
-• Location/address (quote exactly as written)
-• Who this affects
-
-**Important Deadlines**
-• List any deadlines prominently (comment periods, response deadlines, hearing dates)
-• Make these stand out - they are often time-sensitive
-
-**What You Can Do**
-• What residents can or should do in response
-• How to submit comments or objections (if applicable)
-• Contact information for questions - include name, phone, email, and address if provided
-
-Keep it brief and actionable. Do NOT include preamble - start directly with the content.`,
-    strategic: `Analyze this city strategic plan and provide a citizen-friendly summary.
-
-**Title:** [Extract the official document title, e.g., "City of Flowery Branch Strategic Plan FY2025"]
-
-**Vision & Goals**
-• What is the city working toward?
-• Top 3-5 strategic priorities
-
-**Key Initiatives**
-• Major projects or programs planned
-• Timeline for implementation (if mentioned)
-
-**What This Means for Residents**
-• How the city plans to improve quality of life
-• Any new services or improvements to expect
-
-**Measuring Success**
-• How will the city track progress? (metrics or milestones if mentioned)
-
-Keep it forward-looking and accessible. This is about what the city plans to accomplish. Do NOT include preamble - start directly with the content.`,
-    'water-quality': `Analyze this water quality report (Consumer Confidence Report / CCR) and provide a citizen-friendly summary.
-
-**Title:** [Extract the official document title/heading, e.g., "2024 Annual Water Quality Report" or "Consumer Confidence Report 2024"]
-
-**Document Date:** [Extract the year this report covers. Format as YYYY-01-01 (e.g., 2024-01-01 for the 2024 water quality report)]
-
-**Overall Water Quality**
-• Does the water meet all federal and state standards?
-• Source of the city's water supply
-
-**Key Test Results**
-• Any contaminants detected (even if within limits)
-• How results compare to allowed levels
-
-**What This Means for Residents**
-• Is the water safe to drink?
-• Any special considerations for sensitive groups (infants, elderly, immunocompromised)
-
-**Contact Information**
-• Who to call with water quality questions
-
-Keep it reassuring but honest. Residents want to know their water is safe. Do NOT include preamble - start directly with the content.`
-  };
 
   const selectedModel = options?.model || 'gpt-4o-mini';
   const response = await client.chat.completions.create({
@@ -710,7 +442,7 @@ ${TONE_GUIDELINES}`,
         content: [
           {
             type: 'text',
-            text: options?.customPrompt || prompts[documentType] || prompts.general
+            text: options?.customPrompt || PDF_ANALYSIS_PROMPTS[documentType] || PDF_ANALYSIS_PROMPTS.general
           },
           {
             type: 'file',
@@ -725,10 +457,12 @@ ${TONE_GUIDELINES}`,
   });
 
   const summary = response.choices[0]?.message?.content || '';
-  saveSummary(documentType, documentId, 'pdf-analysis', summary, {
-    ...options?.metadata,
-    model: selectedModel
-  });
+  if (!options?.dryRun) {
+    saveSummary(documentType, documentId, 'pdf-analysis', summary, {
+      ...options?.metadata,
+      model: selectedModel
+    });
+  }
 
   return summary;
 }
