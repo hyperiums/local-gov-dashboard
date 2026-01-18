@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// Protected routes are defined here for runtime auth logic (using startsWith).
+// These same routes appear in config.matcher below with "/:path*" suffixes,
+// which is Next.js syntax telling it which requests to run middleware on.
+// Next.js requires config.matcher to be a static array, so we can't derive it
+// from these constants. Tests verify the two definitions stay in sync.
 const PROTECTED_PAGE_ROUTES = ['/admin'];
 const PROTECTED_API_ROUTES = ['/api/scrape', '/api/summarize', '/api/upload-strategic-plan'];
 
@@ -58,6 +63,7 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// See comment at top of file explaining relationship to route constants above
 export const config = {
   matcher: [
     '/admin/:path*',
@@ -66,3 +72,6 @@ export const config = {
     '/api/upload-strategic-plan/:path*',
   ],
 };
+
+// Exported for testing - verifies config.matcher stays in sync
+export const PROTECTED_ROUTES = [...PROTECTED_PAGE_ROUTES, ...PROTECTED_API_ROUTES];

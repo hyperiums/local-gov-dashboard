@@ -14,7 +14,7 @@ vi.mock('next/server', () => ({
 }));
 
 // Import after mocking
-import { middleware } from '../middleware';
+import { middleware, config, PROTECTED_ROUTES } from '@/middleware';
 import { NextResponse } from 'next/server';
 
 interface MockRequestOptions {
@@ -249,5 +249,19 @@ describe('Auth Middleware', () => {
         expect(NextResponse.next).toHaveBeenCalled();
       });
     });
+  });
+});
+
+describe('config.matcher', () => {
+  it('includes all protected routes with wildcards', () => {
+    // Verify each protected route has a corresponding matcher entry
+    for (const route of PROTECTED_ROUTES) {
+      expect(config.matcher).toContain(`${route}/:path*`);
+    }
+  });
+
+  it('has no extra routes beyond protected routes', () => {
+    // Matcher should have exactly one entry per protected route
+    expect(config.matcher).toHaveLength(PROTECTED_ROUTES.length);
   });
 });
