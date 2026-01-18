@@ -9,6 +9,8 @@ npm run dev      # Start Next.js dev server at http://localhost:3000
 npm run build    # Production build
 npm start        # Run production server
 npm run lint     # Run ESLint
+npm test         # Run tests in watch mode
+npm run test:run # Run tests once
 ```
 
 ## Architecture
@@ -83,6 +85,19 @@ Middleware protects `/admin`, `/api/scrape`, `/api/summarize`. Uses `ADMIN_SECRE
 OPENAI_API_KEY=sk-...           # Required for AI summarization
 ADMIN_SECRET=<random-string>    # Required for protected routes
 ```
+
+## Testing
+
+This project uses Vitest for testing. Tests live in `src/tests/`.
+
+**When to add tests:**
+- Security-critical code (auth, validation, access control)
+- Complex logic with edge cases
+- Bug fixes (write a failing test first, then fix)
+- Code that's difficult to test manually
+
+**Testing philosophy:**
+Strategic tests that prevent regressions are more valuable than high coverage numbers. A few well-placed tests on critical paths catch more bugs than exhaustive tests on trivial code.
 
 ## Deployment
 
