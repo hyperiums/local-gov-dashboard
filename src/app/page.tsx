@@ -1,4 +1,4 @@
-import CityUpdates from '@/components/CityUpdates';
+import CityUpdates from '@/components/city-updates';
 import QuickLinks from '@/components/QuickLinks';
 import {
   cityName,
