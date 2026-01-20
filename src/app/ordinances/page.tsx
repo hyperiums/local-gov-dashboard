@@ -3,11 +3,12 @@
 import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Scale, ExternalLink, Search, ChevronDown, ChevronUp, ChevronRight, Sparkles, Calendar, Clock, FileText, Check, XCircle, PauseCircle } from 'lucide-react';
+import { Scale, ExternalLink, Search, ChevronDown, ChevronUp, ChevronRight, Sparkles, Calendar, Clock, FileText, XCircle, PauseCircle } from 'lucide-react';
 import { getRecentYears, formatDate } from '@/lib/dates';
 import { cityName, municodeUrl, civicClerkUrl } from '@/lib/city-config-client';
 import { formatAndSanitize } from '@/lib/sanitize';
 import type { PendingOrdinanceWithProgress } from '@/lib/db';
+import { OrdinanceLifecycleTimeline } from '@/components/ordinances';
 
 interface Ordinance {
   id: string;
@@ -383,22 +384,6 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Map action types to display labels and colors
-  const getActionDisplay = (action: string | null) => {
-    const actionMap: Record<string, { label: string; color: string }> = {
-      'introduced': { label: 'Introduced', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' },
-      'first_reading': { label: 'First Reading', color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' },
-      'second_reading': { label: 'Second Reading', color: 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300' },
-      'adopted': { label: 'Adopted', color: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' },
-      'tabled': { label: 'Tabled', color: 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300' },
-      'amended': { label: 'Amended', color: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' },
-      'discussed': { label: 'Discussed', color: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400' },
-      'denied': { label: 'Denied', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
-      'rejected': { label: 'Rejected', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
-    };
-    return actionMap[action || 'discussed'] || { label: action || 'Discussed', color: 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400' };
-  };
-
   return (
     <div
       id={`ordinance-${ordinance.number}`}
@@ -490,9 +475,9 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
           {/* Meeting History - collapsible */}
           {showMeetingHistory && (
             <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800">
-              <div className="flex items-center text-xs text-blue-700 dark:text-blue-300 mb-2 font-medium">
+              <div className="flex items-center text-xs text-blue-700 dark:text-blue-300 mb-3 font-medium">
                 <Calendar className="w-3 h-3 mr-1" />
-                Meeting History
+                Legislative Journey
               </div>
               {loadingMeetings ? (
                 <div className="flex items-center text-sm text-slate-500 dark:text-slate-400">
@@ -500,33 +485,15 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
                   Loading...
                 </div>
               ) : meetings.length > 0 ? (
-                <div className="space-y-2">
-                  {meetings.map((meeting, index) => {
-                    const actionDisplay = getActionDisplay(meeting.action);
-                    return (
-                      <div key={meeting.id} className="flex items-center text-sm">
-                        {/* Timeline connector */}
-                        <div className="flex flex-col items-center mr-3">
-                          <div className={`w-2.5 h-2.5 rounded-full ${index === meetings.length - 1 ? 'bg-emerald-500' : 'bg-blue-400'}`}></div>
-                          {index < meetings.length - 1 && (
-                            <div className="w-0.5 h-4 bg-blue-200 dark:bg-blue-700 mt-0.5"></div>
-                          )}
-                        </div>
-                        <div className="flex-1 flex items-center flex-wrap gap-2">
-                          <Link
-                            href={`/meetings?expand=${meeting.id}&section=ordinances`}
-                            className="text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
-                          >
-                            {formatDate(meeting.date)}
-                          </Link>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${actionDisplay.color}`}>
-                            {actionDisplay.label}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <OrdinanceLifecycleTimeline
+                  readings={meetings.map(m => ({
+                    action: m.action || 'discussed',
+                    meeting_id: m.id,
+                    meeting_date: m.date,
+                    meeting_title: m.title,
+                  }))}
+                  variant="vertical"
+                />
               ) : (
                 <div className="text-sm text-slate-500 dark:text-slate-400">
                   <p className="mb-2">No meeting record in our database.</p>
@@ -622,18 +589,8 @@ function PendingLegislationSection({ ordinances, autoExpand }: { ordinances: Pen
   );
 }
 
-// Progress steps for ordinance adoption
-const PROGRESS_STEPS = [
-  { key: 'first_reading', label: 'First Reading' },
-  { key: 'second_reading', label: 'Second Reading' },
-  { key: 'adopted', label: 'Adopted' },
-];
-
 function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOrdinance; highlighted?: boolean }) {
   const [showSummary, setShowSummary] = useState(false);
-
-  // Determine completed steps from readings
-  const completedActions = new Set(ordinance.readings.map(r => r.action));
 
   // Get status display
   const getStatusDisplay = (status: string) => {
@@ -642,6 +599,8 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
         return { label: 'First Reading Complete', color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' };
       case 'second_reading':
         return { label: 'Awaiting Adoption', color: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200' };
+      case 'adopted':
+        return { label: 'Adopted', color: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200' };
       default:
         return { label: 'Introduced', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' };
     }
@@ -671,7 +630,7 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
 
       {/* Progress Timeline */}
       <div className="mt-4">
-        <ProgressTimeline completedActions={completedActions} />
+        <OrdinanceLifecycleTimeline readings={ordinance.readings} showExpectedSteps />
       </div>
 
       {/* Next Action */}
@@ -750,48 +709,6 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function ProgressTimeline({ completedActions }: { completedActions: Set<string> }) {
-  return (
-    <div className="flex items-center">
-      {PROGRESS_STEPS.map((step, index) => {
-        const isCompleted = completedActions.has(step.key);
-        const isNext = !isCompleted &&
-          (index === 0 || completedActions.has(PROGRESS_STEPS[index - 1].key));
-
-        return (
-          <div key={step.key} className="flex items-center flex-1">
-            {/* Step circle */}
-            <div className="flex flex-col items-center">
-              <div
-                className={`
-                  w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
-                  ${isCompleted
-                    ? 'bg-emerald-500 text-white'
-                    : isNext
-                      ? 'bg-amber-500 text-white ring-2 ring-amber-200 dark:ring-amber-700'
-                      : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400'}
-                `}
-              >
-                {isCompleted ? <Check className="w-3.5 h-3.5" /> : index + 1}
-              </div>
-              <span className={`mt-1 text-xs whitespace-nowrap ${isCompleted ? 'text-slate-700 dark:text-slate-200 font-medium' : 'text-slate-400'}`}>
-                {step.label}
-              </span>
-            </div>
-
-            {/* Connector line */}
-            {index < PROGRESS_STEPS.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-1 ${
-                isCompleted ? 'bg-emerald-300 dark:bg-emerald-600' : 'bg-slate-200 dark:bg-slate-600'
-              }`} />
-            )}
-          </div>
-        );
-      })}
     </div>
   );
 }

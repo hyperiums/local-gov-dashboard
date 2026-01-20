@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Scale, FileText, ExternalLink } from 'lucide-react';
 import MeetingCard from '@/components/MeetingCard';
+import { normalizeAction, ACTION_LABELS } from '@/components/ordinances/types';
 import type { Meeting, OrdinanceWithAction, ResolutionWithMeeting } from './types';
 
 interface MeetingWithOrdinancesProps {
@@ -72,18 +73,24 @@ export default function MeetingWithOrdinances({ meeting, highlighted, expandOrdi
 
   // Map action types to display labels and colors
   const getActionDisplay = (action: string | null) => {
-    const actionMap: Record<string, { label: string; color: string }> = {
-      'introduced': { label: 'Introduced', color: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' },
-      'first_reading': { label: 'First Reading', color: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300' },
-      'second_reading': { label: 'Second Reading', color: 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300' },
-      'adopted': { label: 'Adopted', color: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300' },
-      'tabled': { label: 'Tabled', color: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' },
-      'amended': { label: 'Amended', color: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300' },
-      'discussed': { label: 'Discussed', color: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' },
-      'denied': { label: 'Denied', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
-      'rejected': { label: 'Rejected', color: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' },
+    const normalized = normalizeAction(action);
+
+    const colorMap: Record<string, string> = {
+      'introduced': 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300',
+      'first_reading': 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300',
+      'second_reading': 'bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300',
+      'adopted': 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300',
+      'tabled': 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+      'amended': 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300',
+      'discussed': 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+      'denied': 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300',
+      'rejected': 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300',
     };
-    return actionMap[action || 'discussed'] || { label: action || 'Discussed', color: 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' };
+
+    return {
+      label: ACTION_LABELS[normalized] || normalized,
+      color: colorMap[normalized] || colorMap['discussed'],
+    };
   };
 
   // Map resolution status to display style

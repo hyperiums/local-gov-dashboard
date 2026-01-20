@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { cityName } from './city-config-client';
+import { normalizeAction } from '@/components/ordinances/types';
 
 // Derive database name from city name (e.g., "Flowery Branch" -> "flowery-branch.db")
 const dbSlug = cityName.toLowerCase().replace(/\s+/g, '-');
@@ -777,8 +778,14 @@ function detectExpectedAction(title: string): string {
 
 // Helper to determine status from readings
 function determineStatusFromReadings(readings: PendingOrdinanceReading[]): string {
-  const actions = new Set(readings.map(r => r.action));
-  if (actions.has('second_reading')) return 'second_reading';
+  const actions = new Set(readings.map(r => normalizeAction(r.action)));
+
+  // Check for terminal states in reading history (defensive)
+  const hasDenied = actions.has('denied') || actions.has('rejected');
+  const hasTabled = actions.has('tabled');
+
+  // Adopted or second reading complete (and no terminal state) = adopted
+  if ((actions.has('second_reading') || actions.has('adopted')) && !hasDenied && !hasTabled) return 'adopted';
   if (actions.has('first_reading')) return 'first_reading';
   return 'proposed';
 }
