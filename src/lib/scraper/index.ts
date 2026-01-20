@@ -36,6 +36,9 @@ export {
 } from './resolutions';
 export type { LinkResult } from './resolutions';
 
+// Ordinance inference
+export { inferReadingsFromDiscussed } from './ordinance-linking';
+
 // Permits
 export { getPermitPdfUrl, parsePermitPdfText } from './permits';
 

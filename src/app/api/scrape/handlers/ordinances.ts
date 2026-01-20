@@ -6,6 +6,7 @@ import {
   getMunicodePdfUrl,
   linkOrdinancesToMeetings,
   updateOrdinanceDatesFromMeetings,
+  inferReadingsFromDiscussed,
 } from '@/lib/scraper';
 import { fetchPdfAsBase64, analyzePdf } from '@/lib/summarize';
 import {
@@ -170,10 +171,19 @@ export async function handleSyncMunicodeSupplements() {
   });
 }
 
-export async function handleLinkOrdinances() {
+export async function handleLinkOrdinances(params: HandlerParams) {
+  const { ordinanceNumber } = params || {};
+
   // Link ordinances to meetings based on agenda item references
   console.log('Starting ordinance-meeting linking...');
   const result = linkOrdinancesToMeetings();
+
+  // Infer readings from "discussed" actions based on chronological order
+  // Pass ordinanceNumber to test on a single ordinance before running on all
+  console.log(ordinanceNumber
+    ? `Inferring readings for ordinance ${ordinanceNumber}...`
+    : 'Inferring readings from chronological sequence...');
+  const inferred = inferReadingsFromDiscussed(ordinanceNumber as string | undefined);
 
   // Update ordinance adoption dates from linked meeting dates
   const datesUpdated = updateOrdinanceDatesFromMeetings();
@@ -181,6 +191,8 @@ export async function handleLinkOrdinances() {
   return NextResponse.json({
     success: true,
     linked: result.linked,
+    readingsInferred: inferred.updated,
+    ordinancesInferred: inferred.ordinances,
     datesUpdated,
     notFound: result.notFound,
     errors: result.errors,

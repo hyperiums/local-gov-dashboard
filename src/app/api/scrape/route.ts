@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       case 'sync-municode-supplements':
         return handleSyncMunicodeSupplements();
       case 'link-ordinances':
-        return handleLinkOrdinances();
+        return handleLinkOrdinances(params);
       case 'generate-ordinance-summaries':
         return handleGenerateOrdinanceSummaries(params);
 

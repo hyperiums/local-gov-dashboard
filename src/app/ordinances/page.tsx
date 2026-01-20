@@ -376,13 +376,16 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
     setShowMeetingHistory(!showMeetingHistory);
   };
 
-  // Auto-load meeting history when auto-expanding
+  // Auto-load meeting history to support adoption date linking
   useEffect(() => {
-    if (autoExpand) {
-      loadMeetingHistory();
-    }
+    loadMeetingHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Find adoption meeting for linking
+  const adoptionMeeting = meetings.find(m =>
+    m.action === 'adopted' || m.action === 'second_reading'
+  );
 
   return (
     <div
@@ -419,12 +422,24 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
             {ordinance.adopted_date && (
               <>
                 <span>•</span>
-                <span>
-                  Adopted: {ordinance.adopted_date.endsWith('-01-01')
-                    ? ordinance.adopted_date.substring(0, 4)
-                    : formatDate(ordinance.adopted_date)
-                  }
-                </span>
+                {adoptionMeeting ? (
+                  <Link
+                    href={`/meetings?expand=${adoptionMeeting.id}&section=ordinances`}
+                    className="hover:text-emerald-600 dark:hover:text-emerald-400"
+                  >
+                    Adopted: {ordinance.adopted_date.endsWith('-01-01')
+                      ? ordinance.adopted_date.substring(0, 4)
+                      : formatDate(ordinance.adopted_date)
+                    }
+                  </Link>
+                ) : (
+                  <span>
+                    Adopted: {ordinance.adopted_date.endsWith('-01-01')
+                      ? ordinance.adopted_date.substring(0, 4)
+                      : formatDate(ordinance.adopted_date)
+                    }
+                  </span>
+                )}
               </>
             )}
             <span>•</span>
@@ -589,8 +604,20 @@ function PendingLegislationSection({ ordinances, autoExpand }: { ordinances: Pen
   );
 }
 
+// Helper to check if a date is more than 60 days in the past
+function isStaleDate(dateStr: string | undefined): boolean {
+  if (!dateStr) return false;
+  const date = new Date(dateStr + 'T12:00:00');
+  const sixtyDaysMs = 60 * 24 * 60 * 60 * 1000;
+  return (Date.now() - date.getTime()) > sixtyDaysMs;
+}
+
 function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOrdinance; highlighted?: boolean }) {
   const [showSummary, setShowSummary] = useState(false);
+
+  // Check if meeting data might be stale (last reading >60 days ago)
+  const lastReading = ordinance.readings?.[ordinance.readings.length - 1];
+  const isDataStale = isStaleDate(lastReading?.meeting_date);
 
   // Get status display
   const getStatusDisplay = (status: string) => {
@@ -682,6 +709,21 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
               </Link>
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Stale Data Notice - show when last reading is >60 days old */}
+      {isDataStale && (
+        <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-sm text-amber-700 dark:text-amber-300">
+          Meeting data may be incomplete.{' '}
+          <a
+            href={`${municodeUrl}?nodeId=SUHITA`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-amber-900 dark:hover:text-amber-100"
+          >
+            Verify on Municode →
+          </a>
         </div>
       )}
 
