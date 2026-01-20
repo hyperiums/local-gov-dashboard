@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Calendar, Scale, FileText, ListChecks } from 'lucide-react';
 import { SearchResultsGrouped } from '@/lib/search';
+import React from "react";
 
 interface SearchResultsProps {
   results: SearchResultsGrouped;

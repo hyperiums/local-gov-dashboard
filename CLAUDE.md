@@ -11,6 +11,7 @@ npm start        # Run production server
 npm run lint     # Run ESLint
 npm test         # Run tests in watch mode
 npm run test:run # Run tests once
+npm run test:run src/tests/middleware.test.ts  # Run single test file
 ```
 
 ## Architecture
@@ -107,3 +108,13 @@ docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
 Database persists in `./data/` volume mount.
+
+## Claude Code Skill
+
+Run `/scrape-guide` to get guided assistance with data scraping workflows. This skill knows the proper operation order and verification steps.
+
+## Planning & Documentation
+
+When planning new features or complex changes, use the `docs/` folder to store implementation plans and roadmaps. This folder is gitignored (except its README) to keep the repository clean while allowing local planning.
+
+See `docs/README.md` for guidelines on what belongs there.
