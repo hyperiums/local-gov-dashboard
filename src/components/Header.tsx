@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Calendar, FileText, Building2, Scale, BarChart3, Clock, ChevronDown, Gavel, X, Menu } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { cityName } from '@/lib/city-config-client';
+import SearchInput from './search/SearchInput';
 
 export default function Header() {
   const [legislationDropdownOpen, setLegislationDropdownOpen] = useState(false);
@@ -156,6 +157,9 @@ export default function Header() {
               </Link>
             ))}
 
+            {/* Search */}
+            <SearchInput variant="header" />
+
             {/* Theme Toggle */}
             <div className="ml-2 bg-white/10 rounded-lg">
               <ThemeToggle />
@@ -164,6 +168,7 @@ export default function Header() {
 
           {/* Mobile menu button */}
           <div className="flex items-center space-x-2 md:hidden">
+            <SearchInput variant="header" />
             <div className="bg-white/10 rounded-lg">
               <ThemeToggle />
             </div>

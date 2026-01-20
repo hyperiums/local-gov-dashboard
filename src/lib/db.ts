@@ -209,6 +209,48 @@ function initializeSchema() {
   addColumnIfNotExists(database, 'resolutions', 'outcome_verified', 'INTEGER DEFAULT 0');
   addColumnIfNotExists(database, 'ordinances', 'disposition', 'TEXT');
   addColumnIfNotExists(database, 'ordinances', 'minutes_url', 'TEXT');
+
+  // ============================================================================
+  // HYBRID SEARCH STRATEGY: Two FTS5 indexes for best of both worlds
+  // ============================================================================
+  //
+  // Problem: Porter stemming is great for recall (budget → budgets, budgeting)
+  // but breaks partial-word prefix matching (zonin → zoning fails because
+  // "zonin" stems to something that doesn't match "zone", the stem of "zoning").
+  //
+  // Solution: Use TWO indexes:
+  // 1. search_index (porter stemmer) - Primary, for complete word matching
+  // 2. search_index_prefix (no stemmer) - Fallback, for prefix matching
+  //
+  // Search strategy:
+  // 1. Try stemmed search first (handles "budget" → "budgets")
+  // 2. If 0 results, fallback to prefix search (handles "zonin" → "zoning")
+  //
+  // This gives users the best experience: stemming benefits for complete words,
+  // and reliable prefix matching for partial words typed during search-as-you-type.
+  // ============================================================================
+
+  // Primary index: Porter stemmer for linguistic matching (budget → budgets)
+  database.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
+      entity_type,
+      entity_id,
+      title,
+      content,
+      tokenize='porter unicode61'
+    );
+  `);
+
+  // Fallback index: No stemmer, pure prefix matching (zonin* → zoning)
+  database.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS search_index_prefix USING fts5(
+      entity_type,
+      entity_id,
+      title,
+      content,
+      tokenize='unicode61'
+    );
+  `);
 }
 
 // Meeting operations
