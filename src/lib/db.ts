@@ -465,6 +465,26 @@ export function insertOrdinance(ordinance: {
   minutesUrl?: string;   // link to meeting minutes (for non-Municode ordinances)
 }) {
   const db = getDb();
+
+  // Check if an ordinance with this number already exists under a different ID
+  // (e.g., agenda-created "ordinance-774" being upgraded to "municode-ord-774")
+  const existing = db.prepare(
+    'SELECT id FROM ordinances WHERE number = ? AND id != ?'
+  ).get(ordinance.number, ordinance.id) as { id: string } | undefined;
+
+  if (existing) {
+    // Migrate meeting links from the old ID to the new one
+    db.prepare(
+      'UPDATE OR IGNORE ordinance_meetings SET ordinance_id = ? WHERE ordinance_id = ?'
+    ).run(ordinance.id, existing.id);
+    // Clean up any duplicate links that couldn't be moved
+    db.prepare(
+      'DELETE FROM ordinance_meetings WHERE ordinance_id = ?'
+    ).run(existing.id);
+    // Remove the old record so INSERT doesn't conflict
+    db.prepare('DELETE FROM ordinances WHERE id = ?').run(existing.id);
+  }
+
   const stmt = db.prepare(`
     INSERT OR REPLACE INTO ordinances (id, number, title, description, summary, status, introduced_date, adopted_date, municode_url, disposition, minutes_url, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))

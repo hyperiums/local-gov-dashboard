@@ -20,6 +20,8 @@ export {
   fetchCivicClerkAgendaPdf,
   getCivicClerkMinutesPdfUrl,
   fetchCivicClerkMinutesPdf,
+  fetchCivicClerkOrdinanceAttachment,
+  fetchCivicClerkOrdinanceAttachments,
   scrapeCivicClerkMeetingsWithPlaywright,
   fetchVoteOutcomesFromOverview,
   hasVoteDataAvailable,

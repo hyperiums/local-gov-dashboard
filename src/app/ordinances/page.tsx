@@ -593,6 +593,7 @@ function PendingLegislationSection({ ordinances, autoExpand }: { ordinances: Pen
       <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
         These ordinances are currently being considered by City Council. They require multiple
         readings before adoption and may change during the review process.
+        Residents can share feedback during public comment at any council meeting.
       </p>
 
       <div className="space-y-4">
@@ -693,22 +694,40 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
         </div>
       )}
 
-      {/* Past Readings */}
+      {/* Past Readings + View Draft link */}
       {ordinance.readings.length > 0 && (
-        <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          <span className="font-medium">History:</span>{' '}
-          {ordinance.readings.map((r, i) => (
-            <span key={r.meeting_id}>
-              {i > 0 && ' → '}
-              <Link
-                href={`/meetings?expand=${r.meeting_id}&section=ordinances`}
-                className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+        <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            <span className="font-medium">History:</span>{' '}
+            {ordinance.readings.map((r, i) => (
+              <span key={r.meeting_id}>
+                {i > 0 && ' → '}
+                <Link
+                  href={`/meetings?expand=${r.meeting_id}&section=ordinances`}
+                  className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+                >
+                  {r.action.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} (
+                  {new Date(r.meeting_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
+                </Link>
+              </span>
+            ))}
+          </div>
+          {(() => {
+            const firstReading = ordinance.readings[0];
+            const eventId = firstReading?.meeting_id?.replace('civicclerk-', '');
+            return eventId ? (
+              <a
+                href={`${civicClerkUrl}/event/${eventId}/files`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 shrink-0"
               >
-                {r.action.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} (
-                {new Date(r.meeting_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
-              </Link>
-            </span>
-          ))}
+                <FileText className="w-3 h-3 mr-1" />
+                View Draft
+                <ExternalLink className="w-3 h-3 ml-1" />
+              </a>
+            ) : null;
+          })()}
         </div>
       )}
 
@@ -741,11 +760,21 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
 
           {showSummary && (
             <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/30 rounded-lg border border-purple-100 dark:border-purple-800">
-              <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                {ordinance.summary}
+              <div className="flex items-center text-xs text-purple-700 dark:text-purple-300 mb-2">
+                <Sparkles className="w-3 h-3 mr-1" />
+                AI-Generated Summary
+              </div>
+              <div className="text-sm text-slate-700 dark:text-slate-300 space-y-2">
+                {ordinance.summary.split('\n').map((paragraph, i) => (
+                  <p
+                    key={i}
+                    className="mb-2 last:mb-0"
+                    dangerouslySetInnerHTML={{ __html: formatAndSanitize(paragraph) }}
+                  />
+                ))}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic">
-                AI-generated summary. View the meeting packet for official language.
+                AI-generated from the draft ordinance. This is pending legislation and may change before adoption.
               </p>
             </div>
           )}

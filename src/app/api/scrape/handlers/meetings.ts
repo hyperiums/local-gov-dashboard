@@ -12,8 +12,9 @@ import {
   fetchCivicClerkResolutionAttachments,
   createOrdinanceFromAgendaItem,
   fetchVoteOutcomesFromOverview,
+  fetchCivicClerkOrdinanceAttachments,
 } from '@/lib/scraper';
-import { analyzePdf } from '@/lib/summarize';
+import { analyzePdf, analyzeOrdinancePdf } from '@/lib/summarize';
 import {
   insertMeeting,
   insertAgendaItem,
@@ -23,6 +24,8 @@ import {
   updateResolutionSummary,
   updateMeetingAgendaSummary,
   updateMeetingMinutesSummary,
+  updateOrdinanceSummary,
+  getOrdinancesForMeeting,
   getDb,
   type MeetingRow,
 } from '@/lib/db';
@@ -344,6 +347,23 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
         });
       }
 
+      // Auto-create ordinance records for references not yet in the database
+      for (const item of agendaItems) {
+        if (item.referenceNumber && (
+          item.type === 'ordinance' ||
+          (item.type === 'public_hearing' && item.title.toLowerCase().includes('ordinance'))
+        )) {
+          const existing = getOrdinanceByNumber(item.referenceNumber);
+          if (!existing) {
+            createOrdinanceFromAgendaItem(
+              item.referenceNumber,
+              item.title,
+              meeting.date
+            );
+          }
+        }
+      }
+
       agendaResults.push({
         eventId: meeting.eventId,
         date: meeting.date,
@@ -372,6 +392,50 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
 
   // Step 4: Update ordinance adoption dates from meeting dates
   const datesUpdated = updateOrdinanceDatesFromMeetings();
+
+  // Step 4.5: Generate summaries for newly-created ordinances using CivicClerk attachments
+  // Ordinances at first reading aren't on Municode yet, so we fetch the individual
+  // ordinance PDF attachments from the CivicClerk meeting files sidebar
+  let ordinanceSummariesGenerated = 0;
+  const newlyScrapedMeetings = agendaResults.filter(r => r.success && !r.skipped);
+
+  for (const result of newlyScrapedMeetings) {
+    const meetingId = `civicclerk-${result.eventId}`;
+    const meetingOrdinances = getOrdinancesForMeeting(meetingId);
+    const unsummarized = meetingOrdinances.filter(o => !o.summary && !o.municode_url);
+
+    if (unsummarized.length === 0) continue;
+
+    console.log(`Fetching ordinance attachments from CivicClerk for ${meetingId} (${unsummarized.length} ordinances)...`);
+
+    try {
+      const ordinanceNumbers = unsummarized.map(o => o.number);
+      const pdfMap = await fetchCivicClerkOrdinanceAttachments(result.eventId!, ordinanceNumbers);
+
+      for (const ordinance of unsummarized) {
+        const pdfBase64 = pdfMap.get(ordinance.number);
+        if (!pdfBase64) {
+          console.log(`  No PDF attachment for Ordinance ${ordinance.number}`);
+          continue;
+        }
+
+        try {
+          const summary = await analyzeOrdinancePdf(ordinance.number, pdfBase64);
+          updateOrdinanceSummary(ordinance.id, summary);
+          ordinanceSummariesGenerated++;
+          console.log(`  Generated summary for Ordinance ${ordinance.number}`);
+        } catch (error) {
+          console.error(`  Failed to summarize Ordinance ${ordinance.number}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error(`  Failed to fetch ordinance attachments for ${meetingId}:`, error);
+    }
+  }
+
+  if (ordinanceSummariesGenerated > 0) {
+    console.log(`Generated ${ordinanceSummariesGenerated} ordinance summaries from CivicClerk attachments`);
+  }
 
   // Step 5: Extract resolutions from all agenda items
   console.log('Extracting resolutions from agenda items...');
@@ -663,6 +727,7 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
     ordinancesLinked: linkResult.linked,
     ordinanceDatesUpdated: datesUpdated,
     ordinancesNotFound: linkResult.notFound,
+    ordinanceSummariesGenerated,
     resolutionsExtracted,
     votesUpdated,
     summariesGenerated: {

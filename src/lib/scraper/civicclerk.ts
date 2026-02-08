@@ -492,6 +492,159 @@ export async function fetchCivicClerkMinutesPdf(
   }
 }
 
+// Fetch a specific ordinance attachment PDF from a CivicClerk meeting's file sidebar
+// Ordinance PDFs appear as individual attachments grouped under their agenda item header
+export async function fetchCivicClerkOrdinanceAttachment(
+  eventId: number,
+  ordinanceNumber: string
+): Promise<string | null> {
+  const { chromium } = await import('playwright');
+
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    });
+    const page = await context.newPage();
+
+    const eventUrl = `${DATA_SOURCES.civicClerk.baseUrl}/event/${eventId}/files`;
+    await page.goto(eventUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(2000);
+
+    // Find and click the ordinance attachment in the sidebar
+    // Attachments have text like "Ordinance 774 Annexation 4651..."
+    const clicked = await page.evaluate((ordNum) => {
+      const items = document.querySelectorAll(
+        'li.MuiListItem-container'
+      );
+      for (const item of items) {
+        const textSpan = item.querySelector('.MuiListItemText-primary');
+        const text = textSpan?.textContent?.trim() || '';
+        // Match "Ordinance {number}" at the start of the attachment name
+        if (text.match(new RegExp(`^Ordinance\\s+${ordNum}\\b`, 'i'))) {
+          const button = item.querySelector('button, [role="button"]');
+          if (button) {
+            (button as HTMLElement).click();
+            return text;
+          }
+        }
+      }
+      return null;
+    }, ordinanceNumber);
+
+    if (!clicked) {
+      console.log(`No attachment found for Ordinance ${ordinanceNumber} in event ${eventId}`);
+      return null;
+    }
+
+    console.log(`Clicked attachment: "${clicked}"`);
+    await page.waitForTimeout(2000);
+
+    // Extract the PDF URL from the iframe viewer
+    const pdfUrl = await page.evaluate(() => {
+      const iframe = document.querySelector('iframe[src*="pdfjs"]');
+      if (!iframe) return null;
+      const src = iframe.getAttribute('src') || '';
+      const fileMatch = src.match(/file=([^&]+)/);
+      return fileMatch ? decodeURIComponent(fileMatch[1]) : null;
+    });
+
+    if (!pdfUrl) {
+      console.log(`No PDF URL found after clicking Ordinance ${ordinanceNumber} attachment`);
+      return null;
+    }
+
+    const buffer = await fetchPdf(pdfUrl);
+    return buffer.toString('base64');
+  } catch (error) {
+    console.error(`Failed to fetch Ordinance ${ordinanceNumber} attachment from event ${eventId}:`, error);
+    return null;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
+// Fetch multiple ordinance attachments from a single browser session to avoid repeated launches
+export async function fetchCivicClerkOrdinanceAttachments(
+  eventId: number,
+  ordinanceNumbers: string[]
+): Promise<Map<string, string>> {
+  const { chromium } = await import('playwright');
+  const results = new Map<string, string>();
+
+  if (ordinanceNumbers.length === 0) return results;
+
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    });
+    const page = await context.newPage();
+
+    const eventUrl = `${DATA_SOURCES.civicClerk.baseUrl}/event/${eventId}/files`;
+    await page.goto(eventUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(2000);
+
+    for (const ordinanceNumber of ordinanceNumbers) {
+      try {
+        const clicked = await page.evaluate((ordNum) => {
+          const items = document.querySelectorAll('li.MuiListItem-container');
+          for (const item of items) {
+            const textSpan = item.querySelector('.MuiListItemText-primary');
+            const text = textSpan?.textContent?.trim() || '';
+            if (text.match(new RegExp(`^Ordinance\\s+${ordNum}\\b`, 'i'))) {
+              const button = item.querySelector('button, [role="button"]');
+              if (button) {
+                (button as HTMLElement).click();
+                return text;
+              }
+            }
+          }
+          return null;
+        }, ordinanceNumber);
+
+        if (!clicked) {
+          console.log(`  No attachment for Ordinance ${ordinanceNumber}`);
+          continue;
+        }
+
+        await page.waitForTimeout(2000);
+
+        const pdfUrl = await page.evaluate(() => {
+          const iframe = document.querySelector('iframe[src*="pdfjs"]');
+          if (!iframe) return null;
+          const src = iframe.getAttribute('src') || '';
+          const fileMatch = src.match(/file=([^&]+)/);
+          return fileMatch ? decodeURIComponent(fileMatch[1]) : null;
+        });
+
+        if (pdfUrl) {
+          const buffer = await fetchPdf(pdfUrl);
+          results.set(ordinanceNumber, buffer.toString('base64'));
+          console.log(`  Fetched PDF for Ordinance ${ordinanceNumber}`);
+        }
+      } catch (error) {
+        console.error(`  Failed to fetch Ordinance ${ordinanceNumber}:`, error);
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error(`Failed to fetch ordinance attachments from event ${eventId}:`, error);
+    return results;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
 // Scrape all meetings from CivicClerk portal using Playwright
 export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
   minYear?: number;
