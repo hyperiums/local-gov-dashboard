@@ -20,8 +20,12 @@ RUN npm run build
 FROM node:20-slim AS runner
 WORKDIR /app
 
-# Install runtime dependencies for SQLite and curl for health checks
-RUN apt-get update && apt-get install -y libsqlite3-0 curl && rm -rf /var/lib/apt/lists/*
+# Install runtime dependencies for SQLite, curl, and Playwright's Chromium system libs
+RUN apt-get update && apt-get install -y libsqlite3-0 curl \
+    libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 \
+    libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
+    libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 \
+    libasound2 libatspi2.0-0 && rm -rf /var/lib/apt/lists/*
 
 # Copy built application
 COPY --from=builder /app/.next ./.next

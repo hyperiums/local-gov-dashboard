@@ -7,6 +7,7 @@ services:
       - "3001:3000"
     volumes:
       - ./data:/app/data
+      - /root/.cache/ms-playwright:/root/.cache/ms-playwright:ro
     env_file:
       - .env
     restart: unless-stopped
