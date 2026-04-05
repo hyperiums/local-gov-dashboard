@@ -102,12 +102,44 @@ Strategic tests that prevent regressions are more valuable than high coverage nu
 
 ## Deployment
 
-Production runs via Docker on port 3001 with nginx reverse proxy:
+Production runs via Docker on port 3001 with nginx reverse proxy on `root@45.55.236.77`. Deploy using the local script:
 ```bash
-docker-compose -f docker-compose.prod.yml up -d --build
+bash deploy.sh
+```
+This checkpoints the SQLite WAL, then pushes to the `production` git remote (a bare repo with a post-receive hook that checks out code, rebuilds Docker, and restarts the container).
+
+Do NOT manually scp the database — the Docker container mounts `./data/` from the working tree that the post-receive hook checks out, so the git push is what delivers database changes.
+
+Database persists in `./data/` volume mount. The database file is tracked in git.
+
+## Data Refresh Workflow
+
+Run the scrape pipeline locally against the dev server (`npm run dev`), then deploy. The `bulk-meetings-with-agenda` operation is the most comprehensive — it discovers meetings, scrapes agendas, links ordinances, extracts resolutions, and generates summaries in one call.
+
+Typical refresh sequence:
+```bash
+# 1. Start dev server
+npm run dev
+
+# 2. Scrape recent meetings (does most of the work)
+curl -X POST http://localhost:3000/api/scrape \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_SECRET" \
+  -d '{"type":"bulk-meetings-with-agenda","params":{"minYear":2026,"limit":10}}'
+
+# 3. Optional: scrape Municode ordinances (requires Playwright)
+curl -X POST http://localhost:3000/api/scrape \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_SECRET" \
+  -d '{"type":"ordinances"}'
+
+# 4. Verify locally, then commit and deploy
+sqlite3 data/flowery-branch.db "PRAGMA wal_checkpoint(TRUNCATE);"
+git add data/flowery-branch.db && git commit -m "data: ..."
+bash deploy.sh
 ```
 
-Database persists in `./data/` volume mount.
+**Important:** SQLite WAL mode means changes live in `flowery-branch.db-wal` until checkpointed. Always run `PRAGMA wal_checkpoint(TRUNCATE)` before committing, or git won't see the changes. The deploy script does this automatically.
 
 ## Claude Code Skill
 
