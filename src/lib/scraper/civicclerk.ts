@@ -308,6 +308,7 @@ export async function discoverCivicClerkEventIds(): Promise<number[]> {
     console.log(`Found ${validIds.length} unique event IDs`);
   } catch (error) {
     console.error('Failed to discover CivicClerk events:', error);
+    throw error;
   } finally {
     if (browser) {
       await browser.close();
@@ -908,6 +909,7 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
     console.log(`Successfully scraped ${meetings.length} meetings`);
   } catch (error) {
     console.error('Failed to scrape CivicClerk meetings:', error);
+    throw error;
   } finally {
     if (browser) {
       await browser.close();

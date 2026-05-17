@@ -33,6 +33,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/public ./public
 
+# Install Playwright's Chromium headless shell — version-locked to the
+# playwright-core in node_modules so it can't drift like the previous
+# host-bind-mount setup did.
+RUN npx playwright install chromium-headless-shell
+
 # Set environment
 ENV NODE_ENV=production
 ENV PORT=3000
