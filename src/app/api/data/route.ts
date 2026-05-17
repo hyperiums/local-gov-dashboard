@@ -182,11 +182,17 @@ export async function GET(request: Request) {
           ORDER BY entity_id ASC
         `).all() as { month: string; content: string }[];
 
+        // GPT sometimes wraps numbers in markdown bold (`**20 permits**`),
+        // which breaks naive whitespace-based regexes. Strip markdown
+        // emphasis before matching so the same pattern catches both
+        // styled and plain-text summaries.
+        const stripMarkdown = (s: string) => s.replace(/\*+/g, '');
+
         // Extract permit counts from AI summaries
         const monthlyData: { month: string; count: number; total_value: number }[] = [];
         for (const summary of summaries) {
           // Match patterns like "A total of 24 permits were issued" or "24 permits were issued"
-          const match = summary.content.match(/(?:total of\s+)?(\d+)\s+permits?\s+were\s+issued/i);
+          const match = stripMarkdown(summary.content).match(/(?:total of\s+)?(\d+)\s+permits?\s+were\s+issued/i);
           if (match) {
             monthlyData.push({
               month: summary.month,
@@ -201,12 +207,13 @@ export async function GET(request: Request) {
         let newConstructionTotal = 0;
         let homeImprovementsTotal = 0;
         for (const summary of summaries) {
-          const newHomesMatch = summary.content.match(/(\d+)\s+new\s+(homes?|construction)/i);
+          const cleaned = stripMarkdown(summary.content);
+          const newHomesMatch = cleaned.match(/(\d+)\s+new\s+(homes?|construction)/i);
           if (newHomesMatch) {
             newConstructionTotal += parseInt(newHomesMatch[1], 10);
           }
           // Home improvements often mentioned as difference between total and new construction
-          const totalMatch = summary.content.match(/(\d+)\s+permits?\s+were\s+issued/i);
+          const totalMatch = cleaned.match(/(\d+)\s+permits?\s+were\s+issued/i);
           if (totalMatch && newHomesMatch) {
             const total = parseInt(totalMatch[1], 10);
             const newHomes = parseInt(newHomesMatch[1], 10);
