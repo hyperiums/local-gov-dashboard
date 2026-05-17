@@ -466,23 +466,43 @@ export function insertOrdinance(ordinance: {
 }) {
   const db = getDb();
 
-  // Check if an ordinance with this number already exists under a different ID
-  // (e.g., agenda-created "ordinance-774" being upgraded to "municode-ord-774")
+  // If an ordinance with this number already exists under a different id
+  // (e.g., an agenda-created "ordinance-778" colliding with an incoming
+  // "municode-ord-778"), update that row in place. The id is opaque —
+  // nothing branches on the prefix — and updating in place avoids the
+  // FK dance that previously failed because the migration tried to
+  // repoint ordinance_meetings before the new ordinance row existed.
   const existing = db.prepare(
     'SELECT id FROM ordinances WHERE number = ? AND id != ?'
   ).get(ordinance.number, ordinance.id) as { id: string } | undefined;
 
   if (existing) {
-    // Migrate meeting links from the old ID to the new one
-    db.prepare(
-      'UPDATE OR IGNORE ordinance_meetings SET ordinance_id = ? WHERE ordinance_id = ?'
-    ).run(ordinance.id, existing.id);
-    // Clean up any duplicate links that couldn't be moved
-    db.prepare(
-      'DELETE FROM ordinance_meetings WHERE ordinance_id = ?'
-    ).run(existing.id);
-    // Remove the old record so INSERT doesn't conflict
-    db.prepare('DELETE FROM ordinances WHERE id = ?').run(existing.id);
+    db.prepare(`
+      UPDATE ordinances SET
+        title = ?,
+        description = ?,
+        summary = COALESCE(?, summary),
+        status = ?,
+        introduced_date = COALESCE(introduced_date, ?),
+        adopted_date = COALESCE(adopted_date, ?),
+        municode_url = ?,
+        disposition = ?,
+        minutes_url = COALESCE(minutes_url, ?),
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).run(
+      ordinance.title,
+      ordinance.description || null,
+      ordinance.summary || null,
+      ordinance.status || 'proposed',
+      ordinance.introducedDate || null,
+      ordinance.adoptedDate || null,
+      ordinance.municodeUrl || null,
+      ordinance.disposition || null,
+      ordinance.minutesUrl || null,
+      existing.id
+    );
+    return;
   }
 
   const stmt = db.prepare(`
