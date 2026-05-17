@@ -106,40 +106,38 @@ Production runs via Docker on port 3001 with nginx reverse proxy on `root@45.55.
 ```bash
 bash deploy.sh
 ```
-This checkpoints the SQLite WAL, then pushes to the `production` git remote (a bare repo with a post-receive hook that checks out code, rebuilds Docker, and restarts the container).
+This checkpoints the SQLite WAL, then pushes to the `production` git remote (a bare repo with a post-receive hook that checks out code, rebuilds Docker, and restarts the container). The hook is kept in the repo at `scripts/post-receive.sh` for visibility but is **not** auto-synced — update the server copy manually if it changes.
 
-Do NOT manually scp the database — the Docker container mounts `./data/` from the working tree that the post-receive hook checks out, so the git push is what delivers database changes.
-
-Database persists in `./data/` volume mount. The database file is tracked in git.
+**Production database is preserved across deploys.** The post-receive hook backs up `data/flowery-branch.db` before checkout and restores it afterward. That means `data:` commits made locally **never reach production** — they only matter as a backup if prod is rebuilt from scratch. The prod DB is kept fresh by the cron pipeline (see below) and ad-hoc admin scrapes. If you want a local data change to deploy, you'd need to skip the hook's restore step.
 
 ## Data Refresh Workflow
 
-Run the scrape pipeline locally against the dev server (`npm run dev`), then deploy. The `bulk-meetings-with-agenda` operation is the most comprehensive — it discovers meetings, scrapes agendas, links ordinances, extracts resolutions, and generates summaries in one call.
+### Automated (production)
 
-Typical refresh sequence:
+A cron job on the production host runs `/usr/local/bin/flowerybranch-scrape.sh` at **06:00 UTC every Wednesday and Saturday**. The source of truth is `scripts/server-scrape.sh` in this repo — the post-receive hook copies it into place on every deploy.
+
+The cron pipeline runs these operations in order:
+1. `bulk-meetings-with-agenda` (minYear 2025) — meetings, agenda items, agenda/minutes summaries, resolutions, vote outcomes, ordinance attachment summaries
+2. `ordinances` (no per-call summarization) — pull ordinances published on Municode
+3. `generate-ordinance-summaries` (limit 10) — incrementally summarize ordinances still missing a summary
+4. `link-ordinances` — attach ordinances to meetings via agenda references
+5. `bulk-permits` (current + previous year) — monthly permit PDFs
+
+Failures are emailed via Resend if `RESEND_API_KEY`, `ALERT_FROM_EMAIL`, and `ALERT_TO_EMAIL` are set in `/var/www/flowerybranch.charlesthompson.me/.env` on the server. The script exits non-zero on any non-success response and logs everything to `/var/log/flowerybranch-scrape.log`.
+
+### Manual (local dev)
+
+You can still run any operation against a local `npm run dev` server for testing:
 ```bash
-# 1. Start dev server
-npm run dev
-
-# 2. Scrape recent meetings (does most of the work)
 curl -X POST http://localhost:3000/api/scrape \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ADMIN_SECRET" \
-  -d '{"type":"bulk-meetings-with-agenda","params":{"minYear":2026,"limit":10}}'
-
-# 3. Optional: scrape Municode ordinances (requires Playwright)
-curl -X POST http://localhost:3000/api/scrape \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $ADMIN_SECRET" \
-  -d '{"type":"ordinances"}'
-
-# 4. Verify locally, then commit and deploy
-sqlite3 data/flowery-branch.db "PRAGMA wal_checkpoint(TRUNCATE);"
-git add data/flowery-branch.db && git commit -m "data: ..."
-bash deploy.sh
+  -d '{"type":"bulk-meetings-with-agenda","params":{"minYear":2026}}'
 ```
 
-**Important:** SQLite WAL mode means changes live in `flowery-branch.db-wal` until checkpointed. Always run `PRAGMA wal_checkpoint(TRUNCATE)` before committing, or git won't see the changes. The deploy script does this automatically.
+Local DB changes can be committed and deployed, but remember the post-receive hook restores the prod DB after checkout (see Deployment section), so the deployed commit doesn't actually update production data. Commits like `data: ...` are useful as a checked-in backup but won't affect the live site.
+
+**SQLite WAL note:** Changes live in `flowery-branch.db-wal` until checkpointed. Run `sqlite3 data/flowery-branch.db "PRAGMA wal_checkpoint(TRUNCATE);"` before committing, or git won't see the changes. The deploy script does this automatically.
 
 ## Claude Code Skill
 
