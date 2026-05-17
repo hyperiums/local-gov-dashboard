@@ -137,6 +137,32 @@ curl -X POST http://localhost:3000/api/scrape \
 
 Local DB changes can be committed and deployed, but remember the post-receive hook restores the prod DB after checkout (see Deployment section), so the deployed commit doesn't actually update production data. Commits like `data: ...` are useful as a checked-in backup but won't affect the live site.
 
+### Permits refresh (manual local push)
+
+The production cron's `bulk-permits` step always returns 0 PDFs because the city's PDF CDN (`cms3.revize.com`) blocks our droplet IP. The op exits with `success: true` so it doesn't alert, but it doesn't actually fetch anything from prod. Refresh permits from a machine the CDN isn't blocking (e.g. your laptop):
+
+```bash
+# 1. Start the local dev server
+npm run dev
+
+# 2. Scrape permits locally
+curl -X POST http://localhost:3000/api/scrape \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_SECRET" \
+  -d '{"type":"bulk-permits","params":{"years":["2025","2026"]}}'
+
+# 3. Push the rows to prod (uses ssh + the prod ADMIN_SECRET on the server side)
+bash scripts/push-permits.sh
+```
+
+The `push-permits.sh` script reads from your local DB, scp's a JSON payload to the prod host, and calls `/api/scrape` with `type: import-permits` from inside the host. It never writes the prod `ADMIN_SECRET` to your local shell. Override `PROD_HOST`/`PROD_ENV`/`PROD_API_BASE` env vars to point at a fork or staging environment.
+
+Be respectful when scraping the city site: their permit PDFs are public records under the Georgia Open Records Act, but the bandwidth isn't free. The current `bulk-permits` makes ~24 small requests per refresh and uses an honest `User-Agent` (`FloweryBranchCivicDashboard/1.0 (civic transparency project)`) so the city can see who's hitting them. Don't crank up the frequency or remove the UA.
+
+### Secrets
+
+All credentials live in `/var/www/flowerybranch.charlesthompson.me/.env` on the production host and `.env` locally. Both are gitignored. **Never** commit `.env`, API keys, or admin secrets — this repo is public.
+
 **SQLite WAL note:** Changes live in `flowery-branch.db-wal` until checkpointed. Run `sqlite3 data/flowery-branch.db "PRAGMA wal_checkpoint(TRUNCATE);"` before committing, or git won't see the changes. The deploy script does this automatically.
 
 ## Claude Code Skill

@@ -115,6 +115,10 @@ run_op "generate-ordinance-summaries" \
 run_op "link-ordinances" '{"type":"link-ordinances"}'
 
 # Monthly permit reports for this year and last (covers slow republishing).
+# Note: this currently silently fetches 0 PDFs from production because
+# the city's PDF CDN (cms3.revize.com) blocks our droplet IP. The op
+# returns success:true so it doesn't trigger an alert. Refresh permits
+# manually with scripts/push-permits.sh when needed.
 run_op "bulk-permits" \
   "$(printf '{"type":"bulk-permits","params":{"years":["%s","%s"]}}' "$LAST_YEAR" "$THIS_YEAR")"
 

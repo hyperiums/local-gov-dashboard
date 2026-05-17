@@ -7,8 +7,89 @@ import {
 } from '@/lib/scraper';
 import { analyzePdf } from '@/lib/summarize';
 import { getRecentYears, getAllMonths } from '@/lib/dates';
-import { insertPermit } from '@/lib/db';
+import { insertPermit, getDb } from '@/lib/db';
 import { parsePdf, formatError, hasSummary, type HandlerParams } from './shared';
+
+type PermitRow = {
+  id: string;
+  month: string;
+  type?: string | null;
+  address?: string | null;
+  description?: string | null;
+  value?: number | null;
+  sourceUrl?: string | null;
+  source_url?: string | null;
+};
+
+const MAX_IMPORT_PERMITS = 10000;
+const MAX_STRING_LEN = 2000;
+
+export async function handleImportPermits(params: HandlerParams) {
+  // Upsert pre-fetched permit records. Used by scripts/push-permits.sh
+  // to push permits scraped locally into prod, since the production IP
+  // is blocked by the city's CDN. Same ADMIN_SECRET auth gate as every
+  // other /api/scrape op.
+  //
+  // Accepts the snake_case `source_url` shape that comes straight out
+  // of `sqlite3 -json` so callers don't have to rename columns.
+  const permits = (params?.permits as PermitRow[] | undefined) || [];
+  if (!Array.isArray(permits)) {
+    return NextResponse.json({ error: 'params.permits must be an array' }, { status: 400 });
+  }
+  if (permits.length > MAX_IMPORT_PERMITS) {
+    return NextResponse.json(
+      { error: `too many permits in one request (max ${MAX_IMPORT_PERMITS}, got ${permits.length})` },
+      { status: 413 }
+    );
+  }
+
+  const isShortString = (v: unknown): v is string =>
+    typeof v === 'string' && v.length > 0 && v.length <= MAX_STRING_LEN;
+  const isValidMonth = (v: unknown): v is string =>
+    typeof v === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
+
+  let imported = 0;
+  const errors: { id?: string; error: string }[] = [];
+  const db = getDb();
+
+  const tx = db.transaction((rows: PermitRow[]) => {
+    for (const p of rows) {
+      const sourceUrl = p.sourceUrl ?? p.source_url ?? '';
+      if (!isShortString(p.id) || !isValidMonth(p.month) || !isShortString(sourceUrl)) {
+        errors.push({ id: p.id, error: 'invalid id, month (YYYY-MM), or sourceUrl' });
+        continue;
+      }
+      if (p.type != null && !isShortString(p.type)) { errors.push({ id: p.id, error: 'type too long' }); continue; }
+      if (p.address != null && !isShortString(p.address)) { errors.push({ id: p.id, error: 'address too long' }); continue; }
+      if (p.description != null && !isShortString(p.description)) { errors.push({ id: p.id, error: 'description too long' }); continue; }
+      if (p.value != null && (typeof p.value !== 'number' || !Number.isFinite(p.value))) {
+        errors.push({ id: p.id, error: 'value must be a finite number' }); continue;
+      }
+      try {
+        insertPermit({
+          id: p.id,
+          month: p.month,
+          type: p.type ?? undefined,
+          address: p.address ?? undefined,
+          description: p.description ?? undefined,
+          value: p.value ?? undefined,
+          sourceUrl,
+        });
+        imported++;
+      } catch (err) {
+        errors.push({ id: p.id, error: err instanceof Error ? err.message : String(err) });
+      }
+    }
+  });
+  tx(permits);
+
+  return NextResponse.json({
+    success: errors.length === 0,
+    imported,
+    received: permits.length,
+    errors,
+  });
+}
 
 export async function handlePermits(params: HandlerParams) {
   // Scrape permit PDFs for a given month

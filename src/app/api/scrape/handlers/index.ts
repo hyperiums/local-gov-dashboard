@@ -30,6 +30,7 @@ export {
   handlePermits,
   handleBulkPermits,
   handleGeneratePermitSummaries,
+  handleImportPermits,
 } from './permits';
 
 // Financial handlers

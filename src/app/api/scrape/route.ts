@@ -16,6 +16,7 @@ import {
   handlePermits,
   handleBulkPermits,
   handleGeneratePermitSummaries,
+  handleImportPermits,
   handleFinancial,
   handleGenerateBudgetSummaries,
   handleGenerateAuditSummaries,
@@ -74,6 +75,8 @@ export async function POST(request: Request) {
         return handleBulkPermits(params);
       case 'generate-permit-summaries':
         return handleGeneratePermitSummaries(params);
+      case 'import-permits':
+        return handleImportPermits(params);
 
       // Financial operations
       case 'financial':
