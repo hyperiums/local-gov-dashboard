@@ -10,6 +10,12 @@ import { getRecentYears, getAllMonths } from '@/lib/dates';
 import { insertPermit, getDb } from '@/lib/db';
 import { parsePdf, formatError, hasSummary, type HandlerParams } from './shared';
 
+const VALID_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+// Cap on base64 PDF size accepted per month in import-permits. Real
+// monthly permit PDFs from Flowery Branch are ~80KB binary / ~110KB
+// base64, so 5MB is a comfortable ceiling that still bounds memory.
+const MAX_PDF_BASE64_BYTES = 5 * 1024 * 1024;
+
 type PermitRow = {
   id: string;
   month: string;
@@ -32,6 +38,12 @@ export async function handleImportPermits(params: HandlerParams) {
   //
   // Accepts the snake_case `source_url` shape that comes straight out
   // of `sqlite3 -json` so callers don't have to rename columns.
+  //
+  // Optional `pdfsByMonth: { "YYYY-MM": "<base64>" }` triggers AI
+  // summary generation for each month after rows are imported. The PDFs
+  // are fetched on the local machine (where the city CDN isn't blocking
+  // us) and the OpenAI call happens here on the server, so the API key
+  // never leaves prod.
   const permits = (params?.permits as PermitRow[] | undefined) || [];
   if (!Array.isArray(permits)) {
     return NextResponse.json({ error: 'params.permits must be an array' }, { status: 400 });
@@ -43,10 +55,15 @@ export async function handleImportPermits(params: HandlerParams) {
     );
   }
 
+  const pdfsByMonth = (params?.pdfsByMonth as Record<string, string> | undefined) || {};
+  if (typeof pdfsByMonth !== 'object' || Array.isArray(pdfsByMonth)) {
+    return NextResponse.json({ error: 'params.pdfsByMonth must be an object' }, { status: 400 });
+  }
+
   const isShortString = (v: unknown): v is string =>
     typeof v === 'string' && v.length > 0 && v.length <= MAX_STRING_LEN;
   const isValidMonth = (v: unknown): v is string =>
-    typeof v === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
+    typeof v === 'string' && VALID_MONTH.test(v);
 
   let imported = 0;
   const errors: { id?: string; error: string }[] = [];
@@ -83,11 +100,37 @@ export async function handleImportPermits(params: HandlerParams) {
   });
   tx(permits);
 
+  const summaries: { month: string; success: boolean; error?: string }[] = [];
+  const pdfMonths = Object.keys(pdfsByMonth);
+  for (const month of pdfMonths) {
+    if (!VALID_MONTH.test(month)) {
+      summaries.push({ month, success: false, error: 'invalid month format (YYYY-MM)' });
+      continue;
+    }
+    const pdfBase64 = pdfsByMonth[month];
+    if (typeof pdfBase64 !== 'string' || !pdfBase64) {
+      summaries.push({ month, success: false, error: 'pdfBase64 must be a non-empty string' });
+      continue;
+    }
+    if (pdfBase64.length > MAX_PDF_BASE64_BYTES) {
+      summaries.push({ month, success: false, error: `pdfBase64 too large (max ${MAX_PDF_BASE64_BYTES} chars)` });
+      continue;
+    }
+    try {
+      await analyzePdf(month, 'permit', pdfBase64, { forceRefresh: true });
+      summaries.push({ month, success: true });
+    } catch (err) {
+      summaries.push({ month, success: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  const summaryErrors = summaries.filter(s => !s.success).length;
   return NextResponse.json({
-    success: errors.length === 0,
+    success: errors.length === 0 && summaryErrors === 0,
     imported,
     received: permits.length,
     errors,
+    summaries,
   });
 }
 

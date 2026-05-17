@@ -51,17 +51,76 @@ if [ -z "$ROWS_JSON" ] || [ "$ROWS_JSON" = "[]" ]; then
   exit 0
 fi
 
+# Unique months in the payload — we'll fetch a PDF for each so prod can
+# regenerate the AI summary. Cap to avoid pathological payload sizes.
+MONTHS=$(python3 -c "
+import json, sys
+rows = json.loads(sys.argv[1])
+seen = []
+for r in rows:
+    m = r.get('month')
+    if m and m not in seen:
+        seen.append(m)
+print('\n'.join(sorted(seen)))
+" "$ROWS_JSON")
+
+MONTH_COUNT=$(printf '%s\n' "$MONTHS" | grep -c .)
+if [ "$MONTH_COUNT" -gt 24 ]; then
+  echo "Too many months ($MONTH_COUNT > 24) in one push. Tighten the SINCE arg." >&2
+  exit 1
+fi
+
+# Fetch each month's PDF from your local (unblocked) IP and base64 it.
+# Map YYYY-MM to the month-name shape the city uses: 01->Jan, 09->Sept, etc.
+declare -A MNAMES=(
+  [01]=Jan [02]=Feb [03]=Mar [04]=Apr [05]=May [06]=June
+  [07]=July [08]=Aug [09]=Sept [10]=Oct [11]=Nov [12]=Dec
+)
+PDF_TMP=$(mktemp -d /tmp/fb-permit-pdfs.XXXXXX)
+trap 'rm -rf "$PDF_TMP" "${TMP:-}"' EXIT
+PDFS_JSON_ENTRIES=""
+echo "Fetching $MONTH_COUNT permit PDF(s) from your local IP..."
+for M in $MONTHS; do
+  YEAR="${M%-*}"
+  MM="${M#*-}"
+  MNAME="${MNAMES[$MM]:-}"
+  if [ -z "$MNAME" ]; then
+    echo "  skip $M (no month-name mapping)"
+    continue
+  fi
+  URL="https://www.flowerybranchga.org/${MNAME}${YEAR}permitlisting.pdf"
+  OUT="$PDF_TMP/$M.pdf"
+  CODE=$(curl -sS -o "$OUT" -w "%{http_code}" -L --max-time 20 \
+    -A "FloweryBranchCivicDashboard/1.0 (civic transparency project)" \
+    "$URL" || echo "ERR")
+  if [ "$CODE" != "200" ] || [ ! -s "$OUT" ]; then
+    echo "  $M: PDF unavailable ($URL → $CODE); skipping summary"
+    rm -f "$OUT"
+    continue
+  fi
+  SIZE=$(wc -c < "$OUT" | tr -d ' ')
+  echo "  $M: ${SIZE}B from $URL"
+  B64=$(base64 < "$OUT" | tr -d '\n')
+  ENTRY=$(python3 -c "import json,sys; print(json.dumps({sys.argv[1]: sys.argv[2]})[1:-1])" "$M" "$B64")
+  if [ -z "$PDFS_JSON_ENTRIES" ]; then
+    PDFS_JSON_ENTRIES="$ENTRY"
+  else
+    PDFS_JSON_ENTRIES="$PDFS_JSON_ENTRIES,$ENTRY"
+  fi
+done
+
 PAYLOAD=$(python3 -c "
 import json, sys
 rows = json.loads(sys.argv[1])
-print(json.dumps({'type': 'import-permits', 'params': {'permits': rows}}))
-" "$ROWS_JSON")
+pdfs = json.loads('{' + sys.argv[2] + '}') if sys.argv[2] else {}
+print(json.dumps({'type': 'import-permits', 'params': {'permits': rows, 'pdfsByMonth': pdfs}}))
+" "$ROWS_JSON" "$PDFS_JSON_ENTRIES")
 
 COUNT=$(python3 -c "
 import json, sys
 print(len(json.loads(sys.argv[1])))
 " "$ROWS_JSON")
-echo "Pushing $COUNT permit row(s) to $PROD_HOST..."
+echo "Pushing $COUNT permit row(s) + $MONTH_COUNT PDF(s) to $PROD_HOST..."
 
 TMP=$(mktemp /tmp/fb-permits-payload.XXXXXX.json)
 trap 'rm -f "$TMP"' EXIT
