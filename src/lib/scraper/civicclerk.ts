@@ -791,19 +791,13 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
       return Array.from(ids).sort((a, b) => b - a);
     });
 
-    console.log(`Found ${eventIds.length} unique event IDs, fetching details (newest first)...`);
-
-    let consecutiveSkips = 0;
-    const maxConsecutiveSkips = 30;
+    // Visit every event ID found on the calendar — IDs are NOT monotonic
+    // with date on Flowery Branch's CivicClerk (low IDs like 37-46 are
+    // 2026 scheduled meetings while higher IDs are ad-hoc events
+    // scattered across years), so an early break would miss meetings.
+    console.log(`Found ${eventIds.length} unique event IDs, fetching details...`);
 
     for (const eventId of eventIds) {
-      if (options?.minYear && consecutiveSkips >= maxConsecutiveSkips) {
-        console.log(
-          `Stopping early: ${consecutiveSkips} consecutive events older than ${options.minYear}`
-        );
-        break;
-      }
-
       try {
         const eventUrl = `${baseUrl}/event/${eventId}/files`;
         await page.goto(eventUrl, {
@@ -879,7 +873,6 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
             console.log(
               `  Event ${eventId}: Skipping (${meetingYear} < minYear ${options.minYear})`
             );
-            consecutiveSkips++;
           } else {
             meetings.push({
               eventId,
@@ -894,7 +887,6 @@ export async function scrapeCivicClerkMeetingsWithPlaywright(options?: {
               mediaUrl: `${baseUrl}/event/${eventId}/media`,
             });
             console.log(`  Event ${eventId}: ${title} on ${dateStr}`);
-            consecutiveSkips = 0;
           }
         } else {
           console.log(
