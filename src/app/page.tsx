@@ -7,6 +7,11 @@ import {
   meetingSchedule,
 } from '@/lib/city-config-client';
 
+// CityUpdates reads civic data from SQLite at render time. Without this, Next.js
+// statically renders the home page at build, so scraper DB updates don't appear
+// until the image is rebuilt. force-dynamic keeps the landing page live.
+export const dynamic = 'force-dynamic';
+
 export default function HomePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
