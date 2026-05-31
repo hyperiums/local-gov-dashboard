@@ -10,6 +10,8 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    init: true        # reap zombie chrome procs (npm as PID 1 doesn't; 144 had leaked)
+    mem_limit: 1g     # bound the scraper's headless-chrome so it can't OOM the 4GB box
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
