@@ -121,15 +121,23 @@ export function classifyResolutionAttachments(
 
     if (!inResolutionSection) continue;
 
-    // Check staff report first so an "Executive Summary ... resolution ..."
-    // file isn't mistaken for the resolution document
-    if (/Staff\s+Recommend/i.test(item) || /Executive\s+Summary/i.test(item)) {
-      attachments.push({ text: item, type: 'staffReport' });
-    } else if (
-      /^Resolution\b/i.test(item) ||
-      /^0+\s*-\s*Resolution/i.test(item) ||
-      /^0+\s*-\s*\d+-\d+/i.test(item)
+    // Staff report / executive summary. Check these FIRST: they are often
+    // titled with "Resolution" in them ("ES - Reimbursement Resolution ...",
+    // "Executive Summary - for resolution for solicitor") and would
+    // otherwise be mistaken for the resolution document itself.
+    if (
+      /^ES\b/i.test(item) ||
+      /Executive\s+Summary/i.test(item) ||
+      /Staff\s+Recommend/i.test(item)
     ) {
+      attachments.push({ text: item, type: 'staffReport' });
+    } else if (/resolution/i.test(item) || /^0+\s*-\s*\d+-\d+/i.test(item)) {
+      // The resolution PDF is the file naming "Resolution" — the city puts
+      // that word at the start ("Resolution assistant solicitor"), end
+      // ("... Comp Plan Adoption Resolution"), or middle ("REIMBURSEMENT
+      // RESOLUTION - 2026-013"). Bounded to this agenda section, any such
+      // file is the resolution. (The legacy "00 - 26-006" numbered form
+      // has no "Resolution" word, hence the second pattern.)
       attachments.push({ text: item, type: 'resolution' });
     }
   }

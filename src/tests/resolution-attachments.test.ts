@@ -53,6 +53,37 @@ describe('classifyResolutionAttachments', () => {
     expect(found).toEqual([{ text: '00 - Resolution 24-003 Signed', type: 'resolution' }]);
   });
 
+  it('matches a resolution file with "Resolution" at the END of the name (26-010)', () => {
+    // Real event-46 sidebar: the resolution word trails, and the "Final
+    // Draft" comp-plan doc must NOT be picked up as the resolution
+    const sidebar = [
+      'a. Consider Resolution 26-010 Adopting the City of Flowery Branch Comprehensive Plan',
+      'Final Draft - for May 21st',
+      'Flowery Branch 2026 Comp Plan Adoption Resolution',
+      'b. Alcohol Ordinance Discussion',
+    ];
+    const found = classifyResolutionAttachments(sidebar, '26-010');
+    expect(found).toEqual([
+      { text: 'Flowery Branch 2026 Comp Plan Adoption Resolution', type: 'resolution' },
+    ]);
+  });
+
+  it('matches a mid-name resolution and abbreviated "ES -" summary (26-013)', () => {
+    // Real event-71 sidebar: file numbered 2026-013 (4-digit year), and
+    // the exec summary is abbreviated "ES -"
+    const sidebar = [
+      'e. Consider Resolution 26-013: Reimbursement Resolution for Acquisition of Old Town Project',
+      'ES - Reimbursement Resolution TAD Bond Funds',
+      'REIMBURSEMENT RESOLUTION - 2026-013',
+      'a. City Manager Report',
+    ];
+    const found = classifyResolutionAttachments(sidebar, '26-013');
+    expect(found).toEqual([
+      { text: 'ES - Reimbursement Resolution TAD Bond Funds', type: 'staffReport' },
+      { text: 'REIMBURSEMENT RESOLUTION - 2026-013', type: 'resolution' },
+    ]);
+  });
+
   it('returns nothing when the resolution is not in the sidebar', () => {
     expect(classifyResolutionAttachments(EVENT_42_SIDEBAR, '26-099')).toEqual([]);
   });
