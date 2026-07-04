@@ -24,6 +24,22 @@ export function getMunicodePdfUrl(nodeId: string): string {
   return `https://mcclibraryfunctions.azurewebsites.us/api/ordinanceDownload/${productId}/${nodeId}/pdf`;
 }
 
+export function extractMunicodeNodeId(municodeUrl: string | null | undefined): string | null {
+  return municodeUrl?.match(/nodeId=(\d+)/)?.[1] ?? null;
+}
+
+// Summaries come from the Municode PDF, so only ordinances with a nodeId can be
+// processed. Agenda-created ordinances have no municode_url until the Municode
+// scrape enriches their row (insertOrdinance matches by number); selecting them
+// earlier would waste the batch's limit slots on rows that always fail.
+export function selectOrdinancesForSummarization<
+  T extends { summary: string | null; municode_url: string | null }
+>(ordinances: T[], options: { limit: number; forceRefresh?: boolean }): T[] {
+  const summarizable = ordinances.filter(o => extractMunicodeNodeId(o.municode_url));
+  const pending = options.forceRefresh ? summarizable : summarizable.filter(o => !o.summary);
+  return pending.slice(0, options.limit);
+}
+
 // Scrape Municode ordinances using Playwright (headless browser)
 // This approach works reliably because Municode is a React SPA with authenticated APIs
 export async function scrapeMunicodeOrdinances(

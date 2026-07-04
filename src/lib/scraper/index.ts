@@ -56,7 +56,13 @@ export { scrapeCivicDocuments, getCivicDocumentsByType } from './civic-docs';
 export type { CivicDocType, CivicDocument } from './civic-docs';
 
 // Municode ordinances
-export { getMunicodePdfUrl, scrapeMunicodeOrdinances, scrapeMunicodeSupplementHistory } from './municode';
+export {
+  getMunicodePdfUrl,
+  extractMunicodeNodeId,
+  selectOrdinancesForSummarization,
+  scrapeMunicodeOrdinances,
+  scrapeMunicodeSupplementHistory,
+} from './municode';
 export type { ScrapedOrdinance, SupplementHistoryEntry } from './municode';
 
 // Business listings

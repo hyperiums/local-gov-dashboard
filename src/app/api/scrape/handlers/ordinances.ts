@@ -4,6 +4,8 @@ import {
   scrapeMunicodeOrdinances,
   scrapeMunicodeSupplementHistory,
   getMunicodePdfUrl,
+  extractMunicodeNodeId,
+  selectOrdinancesForSummarization,
   linkOrdinancesToMeetings,
   updateOrdinanceDatesFromMeetings,
   inferReadingsFromDiscussed,
@@ -215,22 +217,21 @@ export async function handleGenerateOrdinanceSummaries(params: HandlerParams) {
     municode_url: string | null;
   }[];
 
-  // Filter to those without summaries (unless forceRefresh)
-  const toProcess = forceRefresh
-    ? ordinances.slice(0, limit as number)
-    : ordinances.filter(o => !o.summary).slice(0, limit as number);
+  const toProcess = selectOrdinancesForSummarization(ordinances, {
+    limit: limit as number,
+    forceRefresh: forceRefresh as boolean,
+  });
 
   const results = [];
   for (const ord of toProcess) {
     try {
-      // Get nodeId from municode_url or construct from number
-      const nodeIdMatch = ord.municode_url?.match(/nodeId=(\d+)/);
-      if (!nodeIdMatch) {
+      const nodeId = extractMunicodeNodeId(ord.municode_url);
+      if (!nodeId) {
         results.push({ number: ord.number, success: false, error: 'No nodeId in URL' });
         continue;
       }
 
-      const pdfUrl = getMunicodePdfUrl(nodeIdMatch[1]);
+      const pdfUrl = getMunicodePdfUrl(nodeId);
       console.log(`Fetching PDF for ordinance ${ord.number} (using ${model})...`);
       const pdfBase64 = await fetchPdfAsBase64(pdfUrl);
 
