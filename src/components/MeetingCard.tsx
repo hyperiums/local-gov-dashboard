@@ -155,6 +155,8 @@ export default function MeetingCard({ meeting, showSummary = false }: MeetingCar
               href={meeting.agenda_url}
               target="_blank"
               rel="noopener noreferrer"
+              data-umami-event="document-click"
+              data-umami-event-kind="agenda"
               className="inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 transition"
             >
               <FileText className="w-3.5 h-3.5 mr-1.5" />
@@ -167,6 +169,8 @@ export default function MeetingCard({ meeting, showSummary = false }: MeetingCar
               href={meeting.packet_url}
               target="_blank"
               rel="noopener noreferrer"
+              data-umami-event="document-click"
+              data-umami-event-kind="packet"
               className="inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 transition"
             >
               <FileText className="w-3.5 h-3.5 mr-1.5" />
@@ -180,6 +184,8 @@ export default function MeetingCard({ meeting, showSummary = false }: MeetingCar
               href={meeting.minutes_url}
               target="_blank"
               rel="noopener noreferrer"
+              data-umami-event="document-click"
+              data-umami-event-kind="minutes"
               className="inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm text-slate-700 dark:text-slate-300 transition"
             >
               <FileText className="w-3.5 h-3.5 mr-1.5" />

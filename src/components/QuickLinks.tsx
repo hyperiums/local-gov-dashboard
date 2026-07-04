@@ -12,24 +12,28 @@ function getLinks() {
       title: 'CivicClerk Portal',
       description: 'Official agendas & minutes',
       url: civicClerkUrl,
+      slug: 'civicclerk',
       color: 'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-blue-200 dark:border-blue-800',
     },
     {
       title: 'City Code (Municode)',
       description: 'Official ordinances',
       url: `${municodeUrl}/codes/code_of_ordinances`,
+      slug: 'municode',
       color: 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 border-purple-200 dark:border-purple-800',
     },
     {
       title: 'Budget Transparency',
       description: 'ClearGov spending data',
       url: getClearGovSpendingUrl(),
+      slug: 'cleargov',
       color: 'bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border-emerald-200 dark:border-emerald-800',
     },
     {
       title: 'City Website',
       description: 'Official city portal',
       url: cityWebsiteUrl,
+      slug: 'city-website',
       color: 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-800',
     },
   ];
@@ -47,6 +51,8 @@ export default function QuickLinks() {
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
+            data-umami-event="source-click"
+            data-umami-event-source={link.slug}
             className={`flex items-center justify-between p-3 rounded-lg border transition ${link.color}`}
           >
             <div>

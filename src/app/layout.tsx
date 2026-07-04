@@ -68,10 +68,10 @@ export default function RootLayout({
                 <div>
                   <h3 className="text-slate-800 dark:text-slate-200 font-semibold mb-3">Data Sources</h3>
                   <ul className="text-sm space-y-1">
-                    <li><a href={civicClerkUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">CivicClerk Portal</a></li>
-                    <li><a href={cityWebsiteUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">City Website</a></li>
-                    <li><a href={municodeUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">Municode</a></li>
-                    <li><a href={clearGovSpendingBaseUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">ClearGov</a></li>
+                    <li><a href={civicClerkUrl} target="_blank" rel="noopener noreferrer" data-umami-event="source-click" data-umami-event-source="civicclerk" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">CivicClerk Portal</a></li>
+                    <li><a href={cityWebsiteUrl} target="_blank" rel="noopener noreferrer" data-umami-event="source-click" data-umami-event-source="city-website" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">City Website</a></li>
+                    <li><a href={municodeUrl} target="_blank" rel="noopener noreferrer" data-umami-event="source-click" data-umami-event-source="municode" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">Municode</a></li>
+                    <li><a href={clearGovSpendingBaseUrl} target="_blank" rel="noopener noreferrer" data-umami-event="source-click" data-umami-event-source="cleargov" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">ClearGov</a></li>
                   </ul>
                 </div>
                 <div>
@@ -80,6 +80,12 @@ export default function RootLayout({
                     This is not an official city resource. AI-generated summaries are for
                     convenience only. Always verify information with official sources.
                   </p>
+                  {umamiSrc && umamiWebsiteId && (
+                    <p className="text-sm mt-2">
+                      Page visits are counted with privacy-friendly, cookie-free analytics.
+                      Nothing that identifies you is stored or shared.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-slate-800 dark:text-slate-200 font-semibold mb-3">Contact</h3>
