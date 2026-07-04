@@ -206,7 +206,13 @@ export async function handleGenerateBusinessSummaries(params: HandlerParams) {
         const pdfBase64 = pdfResult.buffer.toString('base64');
         console.log(`Analyzing businesses for ${monthKey}...`);
 
-        await analyzePdf(monthKey, 'business', pdfBase64, { forceRefresh: forceRefresh as boolean });
+        // Store the source URL so the /development link points at the exact
+        // file the city published (same as the push path), rather than the
+        // UI guessing a filename from the month
+        await analyzePdf(monthKey, 'business', pdfBase64, {
+          forceRefresh: forceRefresh as boolean,
+          metadata: { pdfUrl: pdfResult.url },
+        });
 
         results.push({ month: monthKey, success: true });
         console.log(`Generated summary for ${monthKey}`);

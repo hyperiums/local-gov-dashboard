@@ -68,29 +68,6 @@ function getPermitPdfUrl(month: string): string {
   return `${cityWebsiteUrl}/permits`;
 }
 
-function getBusinessPdfUrl(month: string): string {
-  // Handle YYYY-MM format
-  const match = month.match(/^(\d{4})-(\d{2})$/);
-  if (match) {
-    const [, year, monthNum] = match;
-    const monthName = MONTH_NAMES[monthNum] || 'Jan';
-    return `${cityWebsiteUrl}/${monthName}${year}businesslisting.pdf`;
-  }
-
-  // Handle formats like "jan-2025-businesses"
-  const yearMatch = month.match(/(\d{4})/);
-  const monthMatch = month.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i);
-  if (yearMatch && monthMatch) {
-    const monthName = monthMatch[1].charAt(0).toUpperCase() + monthMatch[1].slice(1).toLowerCase();
-    const pdfMonthNames: Record<string, string> = {
-      Jan: 'Jan', Feb: 'Feb', Mar: 'Mar', Apr: 'Apr', May: 'May', Jun: 'June',
-      Jul: 'July', Aug: 'Aug', Sep: 'Sept', Oct: 'Oct', Nov: 'Nov', Dec: 'Dec'
-    };
-    return `${cityWebsiteUrl}/${pdfMonthNames[monthName] || monthName}${yearMatch[1]}businesslisting.pdf`;
-  }
-
-  return `${cityWebsiteUrl}/business`;
-}
 
 export default function DevelopmentPage() {
   const [permitSummaries, setPermitSummaries] = useState<MonthlySummary[]>([]);
@@ -246,7 +223,11 @@ export default function DevelopmentPage() {
   }, [permitSummaries, filterYear]);
 
   const currentSummaries = activeTab === 'permits' ? filteredPermitSummaries : businessSummaries;
-  const getPdfUrl = activeTab === 'permits' ? getPermitPdfUrl : getBusinessPdfUrl;
+  // Permits fall back to a constructed URL; businesses always carry a
+  // verified pdfUrl from the DB, so they show a link only when it exists
+  // rather than guessing a filename the city may not have used.
+  const getReportUrl = (month: string, pdfUrl?: string | null): string | null =>
+    pdfUrl || (activeTab === 'permits' ? getPermitPdfUrl(month) : null);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -516,8 +497,9 @@ export default function DevelopmentPage() {
                         AI Summary
                       </span>
                     </div>
+                    {getReportUrl(item.month, item.pdfUrl) && (
                     <a
-                      href={item.pdfUrl || getPdfUrl(item.month)}
+                      href={getReportUrl(item.month, item.pdfUrl)!}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
@@ -527,6 +509,7 @@ export default function DevelopmentPage() {
                       View Report
                       <ExternalLink className="w-3 h-3 ml-1" />
                     </a>
+                    )}
                   </button>
                   {expandedMonths.has(item.month) && (
                     <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
