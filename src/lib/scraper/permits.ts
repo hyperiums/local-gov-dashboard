@@ -239,9 +239,21 @@ function parseDistrictReport(text: string, month: string, sourceUrl: string): Pa
   let pendingTypeLines: string[] = [];
   let open: ParsedPermit | null = null;
 
-  for (const rawLine of text.split('\n')) {
-    const line = rawLine.trim();
-    if (!line) continue;
+  // Extraction sometimes wraps an address between its street and city
+  // ("6793 Winding Canyon Rd," / "Flowery Branch, GA 30542"); rejoin the
+  // pair so the anchor regex can see the whole address
+  const rawLines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const lines: string[] = [];
+  for (let i = 0; i < rawLines.length; i++) {
+    if (/,$/.test(rawLines[i]) && i + 1 < rawLines.length && /^Flowery Branch,\s*GA/i.test(rawLines[i + 1])) {
+      lines.push(`${rawLines[i]} ${rawLines[i + 1]}`);
+      i++;
+    } else {
+      lines.push(rawLines[i]);
+    }
+  }
+
+  for (const line of lines) {
     // Page footers repeat city hall's own address and would otherwise
     // parse as ghost permits ("Page 2 of 8" + "5318 Railroad Avenue")
     if (/^Page \d+ of /.test(line)) continue;

@@ -125,11 +125,18 @@ describe('parsePermitPdfText - Permit Report format without Issued Date column (
 describe('parsePermitPdfText - District format (June 2026)', () => {
   const permits = parse('permit-2026-06.txt', '2026-06');
 
-  it('finds all 47 records and no page-footer ghosts', () => {
-    expect(permits).toHaveLength(47);
+  it('finds all 48 records ("GRAND TOTAL OF PERMITS: 48") and no page-footer ghosts', () => {
+    expect(permits).toHaveLength(48);
     for (const p of permits) {
       expect(p.address).not.toContain('5318 Railroad Avenue');
     }
+  });
+
+  it('keeps records whose address wraps between street and city lines', () => {
+    // ROW-000160-2026's address splits as "...Winding Canyon Rd," /
+    // "Flowery Branch, GA 30542" in the extracted text
+    const windingCanyon = permits.find(p => /Winding Canyon/.test(p.address));
+    expect(windingCanyon?.type).toBe('right-of-way');
   });
 
   it('maps district-report types onto the site vocabulary', () => {
@@ -143,7 +150,7 @@ describe('parsePermitPdfText - District format (June 2026)', () => {
       electrical: 4,
       hvac: 2,
       sign: 3,
-      'right-of-way': 2,
+      'right-of-way': 3,
     });
   });
 
