@@ -77,6 +77,66 @@ export function createOrdinanceFromAgendaItem(
   console.log(`Auto-created ordinance ${ordinanceNumber}: "${title}" (${status})`);
 }
 
+export interface ResolutionAttachmentRef {
+  text: string;
+  type: 'resolution' | 'staffReport';
+}
+
+// Classify the sidebar file list of a CivicClerk event into the resolution
+// document and its staff report / executive summary, for one resolution.
+//
+// Attachments are grouped under agenda-item headers ("b. Consider
+// Resolution 26-006, ..."). Once we're inside the right section, the file
+// naming varies: the city names resolution PDFs by TOPIC ("Resolution
+// assistant solicitor"), by number ("Resolution No. 26-006"), or with a
+// legacy zero prefix ("00 - Resolution ..."). Matching on the leading
+// word rather than requiring the number in the filename is what lets
+// topic-named resolutions be found at all.
+export function classifyResolutionAttachments(
+  sidebarItems: string[],
+  resolutionNumber: string
+): ResolutionAttachmentRef[] {
+  const resolutionPattern = new RegExp(
+    `(Resolution\\s+(No\\.?\\s+)?)?${resolutionNumber}`,
+    'i'
+  );
+  let inResolutionSection = false;
+  const attachments: ResolutionAttachmentRef[] = [];
+
+  for (const item of sidebarItems) {
+    // Section header for our resolution
+    if (/^[a-z]\.\s+Consider/i.test(item) && resolutionPattern.test(item)) {
+      inResolutionSection = true;
+      continue;
+    }
+
+    // Reached the next agenda item — this section is done
+    if (
+      inResolutionSection &&
+      /^[a-z]\.\s+/i.test(item) &&
+      !resolutionPattern.test(item)
+    ) {
+      break;
+    }
+
+    if (!inResolutionSection) continue;
+
+    // Check staff report first so an "Executive Summary ... resolution ..."
+    // file isn't mistaken for the resolution document
+    if (/Staff\s+Recommend/i.test(item) || /Executive\s+Summary/i.test(item)) {
+      attachments.push({ text: item, type: 'staffReport' });
+    } else if (
+      /^Resolution\b/i.test(item) ||
+      /^0+\s*-\s*Resolution/i.test(item) ||
+      /^0+\s*-\s*\d+-\d+/i.test(item)
+    ) {
+      attachments.push({ text: item, type: 'resolution' });
+    }
+  }
+
+  return attachments;
+}
+
 // Fetch resolution attachments (resolution PDF + staff recommendations) for a specific resolution
 // Each resolution has multiple attachments grouped under a section header in the sidebar
 // Falls back to extracting S3 PDF links from the iframe viewer for older meetings
@@ -115,53 +175,12 @@ export async function fetchCivicClerkResolutionAttachments(
         .map((l) => l.trim());
     });
 
-    // Find attachments for this resolution
-    // Pattern: section header "a. Consider Resolution XX-XXX..." followed by child attachments
-    const resolutionPattern = new RegExp(
-      `(Resolution\\s+(No\\.?\\s+)?)?${resolutionNumber}`,
-      'i'
+    // Find attachments for this resolution (section header "a. Consider
+    // Resolution XX-XXX..." followed by its child attachment files)
+    const attachmentsToFetch = classifyResolutionAttachments(
+      sidebarItems,
+      resolutionNumber
     );
-    let inResolutionSection = false;
-    const attachmentsToFetch: { text: string; type: 'resolution' | 'staffReport' }[] =
-      [];
-
-    for (const item of sidebarItems) {
-      // Check if this is a section header for our resolution
-      if (item.match(/^[a-z]\.\s+Consider/i) && resolutionPattern.test(item)) {
-        inResolutionSection = true;
-        continue;
-      }
-
-      // Check if we've moved to the next section
-      if (
-        inResolutionSection &&
-        item.match(/^[a-z]\.\s+/i) &&
-        !resolutionPattern.test(item)
-      ) {
-        break;
-      }
-
-      // Collect relevant attachments within the resolution section
-      if (inResolutionSection) {
-        // Resolution PDF patterns
-        const isResolutionPdf =
-          item.match(/^0+\s*-\s*Resolution/i) ||
-          item.match(/^0+\s*-\s*\d+-\d+/i) ||
-          (item.match(/^Resolution\s+(No\.?\s+)?\d+-\d+/i) &&
-            resolutionPattern.test(item));
-
-        if (isResolutionPdf) {
-          attachmentsToFetch.push({ text: item, type: 'resolution' });
-        }
-        // Staff Recommendations / Executive Summary
-        else if (
-          item.match(/Staff\s+Recommend/i) ||
-          item.match(/Executive\s+Summary/i)
-        ) {
-          attachmentsToFetch.push({ text: item, type: 'staffReport' });
-        }
-      }
-    }
 
     console.log(
       `Found ${attachmentsToFetch.length} attachments to fetch for resolution ${resolutionNumber}`
