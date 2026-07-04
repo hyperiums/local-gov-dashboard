@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
@@ -12,6 +13,9 @@ import {
   clearGovSpendingBaseUrl,
   contactEmail,
 } from "@/lib/city-config-client";
+
+const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC;
+const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -90,6 +94,9 @@ export default function RootLayout({
               </div>
             </div>
           </footer>
+          {umamiSrc && umamiWebsiteId && (
+            <Script src={umamiSrc} data-website-id={umamiWebsiteId} strategy="afterInteractive" />
+          )}
         </ThemeProvider>
       </body>
     </html>

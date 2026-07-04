@@ -13,6 +13,13 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# NEXT_PUBLIC_* values are inlined into the client bundle, so they must be
+# present at build time — runtime env_file is too late for these.
+ARG NEXT_PUBLIC_UMAMI_SRC
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
+ENV NEXT_PUBLIC_UMAMI_SRC=$NEXT_PUBLIC_UMAMI_SRC
+ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
+
 # Build the Next.js application
 RUN npm run build
 

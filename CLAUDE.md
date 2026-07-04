@@ -85,6 +85,11 @@ Middleware protects `/admin`, `/api/scrape`, `/api/summarize`. Uses `ADMIN_SECRE
 ```bash
 OPENAI_API_KEY=sk-...           # Required for AI summarization
 ADMIN_SECRET=<random-string>    # Required for protected routes
+
+# Optional analytics — both must be set at Docker *build* time (they are
+# inlined into the client bundle; see Dockerfile ARGs). Unset = no tracking code.
+NEXT_PUBLIC_UMAMI_SRC=<umami script url>
+NEXT_PUBLIC_UMAMI_WEBSITE_ID=<umami website id>
 ```
 
 ## Testing
