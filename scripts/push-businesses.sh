@@ -10,9 +10,14 @@
 #
 # Usage:
 #   bash scripts/push-businesses.sh [START_MONTH] [END_MONTH]
+#   FORCE=1 bash scripts/push-businesses.sh [START_MONTH] [END_MONTH]
 # Defaults: START_MONTH = January of the current year, END_MONTH = the
 # current month. Months whose PDF the city hasn't published are skipped.
-# Re-pushing an existing month regenerates its summary.
+# The verified working PDF URL is stored per month so the site links to
+# the exact filename the city published (their naming varies: Jun2026 vs
+# June2025, April2025 vs Apr2025). By default an already-summarized month
+# only has its stored URL refreshed (no OpenAI spend); FORCE=1
+# regenerates the summary too (e.g. after a prompt change).
 #
 # Configuration via env vars (defaults are this project's prod setup):
 #   PROD_HOST      SSH target  (default: root@45.55.236.77)
@@ -52,6 +57,7 @@ TMP=$(mktemp /tmp/fb-businesses-payload.XXXXXX.json)
 trap 'rm -rf "$PDF_TMP" "$TMP"' EXIT
 
 PDFS_JSON_ENTRIES=""
+URLS_JSON_ENTRIES=""
 FOUND=0
 M="$START"
 while [ "$(printf '%s\n%s' "$M" "$END" | sort | head -1)" = "$M" ]; do
@@ -76,10 +82,15 @@ while [ "$(printf '%s\n%s' "$M" "$END" | sort | head -1)" = "$M" ]; do
     echo "  $M: ${SIZE}B from $GOT"
     B64=$(base64 < "$OUT" | tr -d '\n')
     ENTRY=$(python3 -c "import json,sys; print(json.dumps({sys.argv[1]: sys.argv[2]})[1:-1])" "$M" "$B64")
+    # Store the verified URL so the site links to the filename variant
+    # the city actually published, not a guess from the month
+    URL_ENTRY=$(python3 -c "import json,sys; print(json.dumps({sys.argv[1]: sys.argv[2]})[1:-1])" "$M" "$GOT")
     if [ -z "$PDFS_JSON_ENTRIES" ]; then
       PDFS_JSON_ENTRIES="$ENTRY"
+      URLS_JSON_ENTRIES="$URL_ENTRY"
     else
       PDFS_JSON_ENTRIES="$PDFS_JSON_ENTRIES,$ENTRY"
+      URLS_JSON_ENTRIES="$URLS_JSON_ENTRIES,$URL_ENTRY"
     fi
     FOUND=$((FOUND + 1))
   else
@@ -99,7 +110,13 @@ if [ "$FOUND" -eq 0 ]; then
   exit 0
 fi
 
-printf '{"type":"import-businesses","params":{"pdfsByMonth":{%s}}}' "$PDFS_JSON_ENTRIES" > "$TMP"
+# Default re-push only refreshes stored URLs / summarizes new months.
+# FORCE=1 regenerates every summary (e.g. after a prompt change).
+FORCE_JSON=false
+[ "${FORCE:-0}" = "1" ] && FORCE_JSON=true
+
+printf '{"type":"import-businesses","params":{"pdfsByMonth":{%s},"urlsByMonth":{%s},"forceRefresh":%s}}' \
+  "$PDFS_JSON_ENTRIES" "$URLS_JSON_ENTRIES" "$FORCE_JSON" > "$TMP"
 
 echo "Pushing $FOUND business PDF(s) to $PROD_HOST..."
 REMOTE_TMP="/tmp/fb-businesses-import-$$.json"

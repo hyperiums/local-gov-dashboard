@@ -165,7 +165,7 @@ Business data is AI summaries only (no rows table) and is **not** in the cron �
 bash scripts/push-businesses.sh 2026-02 2026-06   # start/end months; defaults to Jan of this year → current month
 ```
 
-Months without a published PDF are skipped (e.g. Jan 2026 was never posted); re-pushing a month regenerates its summary. The homepage "new businesses" stat regex-parses the summary's closing line `**Total Count**: N new businesses registered this month.`, which `src/lib/prompts/business.ts` pins — don't loosen that wording.
+Months without a published PDF are skipped (e.g. Jan 2026 was never posted). The push stores each month's verified PDF URL in the summary metadata, because the city's filenames are inconsistent (`Jun2026businesslisting.pdf` but `June2025…`, and `April2025…` where the permit file is `Apr2025…`) — the `/development` source link uses the stored URL and only guesses from the month as a last resort. By default a re-push just refreshes stored URLs / summarizes new months (no OpenAI spend on existing ones); `FORCE=1 bash scripts/push-businesses.sh …` regenerates summaries too (e.g. after a prompt change). The homepage "new businesses" stat regex-parses the summary's closing line `**Total Count**: N new businesses registered this month.`, which `src/lib/prompts/business.ts` pins — don't loosen that wording.
 
 Be respectful when scraping the city site: their permit PDFs are public records under the Georgia Open Records Act, but the bandwidth isn't free. The current `bulk-permits` makes ~24 small requests per refresh and uses an honest `User-Agent` (`FloweryBranchCivicDashboard/1.0 (civic transparency project)`) so the city can see who's hitting them. Don't crank up the frequency or remove the UA.
 

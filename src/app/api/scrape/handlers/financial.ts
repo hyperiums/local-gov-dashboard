@@ -15,7 +15,7 @@ import {
   MAX_PDF_BASE64_BYTES,
   type HandlerParams,
 } from './shared';
-import { getSummaryMetadata } from '@/lib/db';
+import { getSummaryMetadata, updateSummaryMetadata } from '@/lib/db';
 
 export async function handleFinancial() {
   // Scrape financial report links
@@ -241,7 +241,19 @@ export async function handleImportBusinesses(params: HandlerParams) {
     return NextResponse.json({ error: 'params.pdfsByMonth must be an object' }, { status: 400 });
   }
 
-  const summaries: { month: string; success: boolean; error?: string }[] = [];
+  // The city's PDF filenames are inconsistent (Jun2026 vs June2025,
+  // April2025 vs Apr2025permit...), so the working URL — verified by the
+  // local push before the PDF was fetched — is stored in the summary's
+  // metadata. The /development source link then uses it instead of
+  // guessing a filename from the month.
+  const urlsByMonth = (params?.urlsByMonth as Record<string, string> | undefined) || {};
+  if (typeof urlsByMonth !== 'object' || Array.isArray(urlsByMonth)) {
+    return NextResponse.json({ error: 'params.urlsByMonth must be an object' }, { status: 400 });
+  }
+
+  const forceRefresh = params?.forceRefresh === true;
+
+  const summaries: { month: string; success: boolean; action?: string; error?: string }[] = [];
   for (const [month, pdfBase64] of Object.entries(pdfsByMonth)) {
     if (!VALID_MONTH.test(month)) {
       summaries.push({ month, success: false, error: 'invalid month format (YYYY-MM)' });
@@ -255,9 +267,25 @@ export async function handleImportBusinesses(params: HandlerParams) {
       summaries.push({ month, success: false, error: `pdfBase64 too large (max ${MAX_PDF_BASE64_BYTES} chars)` });
       continue;
     }
+    const pdfUrl = urlsByMonth[month];
+    if (pdfUrl !== undefined && (typeof pdfUrl !== 'string' || !/^https?:\/\/.{1,500}$/.test(pdfUrl))) {
+      summaries.push({ month, success: false, error: 'pdfUrl must be an http(s) URL under 500 chars' });
+      continue;
+    }
     try {
-      await analyzePdf(month, 'business', pdfBase64, { forceRefresh: true });
-      summaries.push({ month, success: true });
+      // A re-push to backfill source URLs shouldn't pay for a new
+      // summary: if the month is already summarized and we aren't
+      // forcing, just refresh the stored URL.
+      if (!forceRefresh && hasSummary('business', month)) {
+        if (pdfUrl) updateSummaryMetadata('business', month, 'pdf-analysis', { pdfUrl });
+        summaries.push({ month, success: true, action: 'url-updated' });
+        continue;
+      }
+      await analyzePdf(month, 'business', pdfBase64, {
+        forceRefresh: true,
+        metadata: pdfUrl ? { pdfUrl } : undefined,
+      });
+      summaries.push({ month, success: true, action: 'summarized' });
     } catch (err) {
       summaries.push({ month, success: false, error: formatError(err) });
     }

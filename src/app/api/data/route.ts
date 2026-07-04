@@ -263,13 +263,16 @@ export async function GET(request: Request) {
           ORDER BY s.entity_id DESC
         `).all() as { month: string; summary: string; pdfUrl: string | null }[];
 
-        // Get business summaries (UI constructs PDF URLs from month)
+        // Business PDF URLs come from metadata (the local push verified
+        // which filename variant the city actually published); the UI
+        // only falls back to constructing a URL when pdfUrl is null.
         const businessSummaries = db.prepare(`
-          SELECT entity_id as month, content as summary
+          SELECT entity_id as month, content as summary,
+                 json_extract(metadata, '$.pdfUrl') as pdfUrl
           FROM summaries
           WHERE entity_type = 'business' AND summary_type = 'pdf-analysis'
           ORDER BY entity_id DESC
-        `).all() as { month: string; summary: string }[];
+        `).all() as { month: string; summary: string; pdfUrl: string | null }[];
 
         return NextResponse.json({
           permits: permitSummaries,
