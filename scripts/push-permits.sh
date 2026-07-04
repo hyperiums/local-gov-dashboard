@@ -65,7 +65,9 @@ fi
 MONTHS=$(sqlite3 "$LOCAL_DB" \
   "SELECT month || ' ' || source_url FROM permits WHERE month >= '$PDF_SINCE' GROUP BY month ORDER BY month")
 
-MONTH_COUNT=$(printf '%s\n' "$MONTHS" | grep -c .)
+# grep -c exits 1 on zero matches (a legitimate case when PDF_SINCE is
+# in the future for a rows-only push), which set -e would treat as fatal
+MONTH_COUNT=$(printf '%s\n' "$MONTHS" | grep -c . || true)
 if [ "$MONTH_COUNT" -gt 24 ]; then
   echo "Too many summary PDFs ($MONTH_COUNT > 24) in one push. Tighten the PDF_SINCE arg." >&2
   exit 1
