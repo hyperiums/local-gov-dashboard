@@ -1,6 +1,7 @@
 export const budgetPrompt = `Analyze this city budget document and provide a citizen-friendly summary.
 
 **Budget Overview**
+• If the document is a PROPOSED budget (not yet adopted by council), open with a sentence saying so
 • Total budget amount for this fiscal year
 • Major spending categories with approximate percentages or amounts
 

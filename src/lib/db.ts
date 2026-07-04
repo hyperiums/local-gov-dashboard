@@ -919,6 +919,24 @@ export function updateSummaryMetadata(
   `).run(JSON.stringify(updatedMetadata), id);
 }
 
+export function getSummaryMetadata(
+  entityType: string,
+  entityId: string,
+  summaryType: string
+): Record<string, unknown> | null {
+  const db = getDb();
+  const row = db.prepare(`
+    SELECT metadata FROM summaries
+    WHERE entity_type = ? AND entity_id = ? AND summary_type = ?
+  `).get(entityType, entityId, summaryType) as { metadata: string | null } | undefined;
+  if (!row?.metadata) return null;
+  try {
+    return JSON.parse(row.metadata) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export function getSummary(entityType: string, entityId: string, summaryType?: string) {
   const db = getDb();
   if (summaryType) {

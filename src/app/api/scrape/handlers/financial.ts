@@ -15,6 +15,7 @@ import {
   MAX_PDF_BASE64_BYTES,
   type HandlerParams,
 } from './shared';
+import { getSummaryMetadata } from '@/lib/db';
 
 export async function handleFinancial() {
   // Scrape financial report links
@@ -57,8 +58,13 @@ export async function handleGenerateBudgetSummaries(params: HandlerParams) {
 
   for (const doc of budgetDocuments) {
     try {
-      // Check if we already have a summary
-      if (!forceRefresh && hasSummary('budget', doc.fiscalYear)) {
+      // Skip only when the summary exists AND still describes the same
+      // source PDF — when the adopted budget book replaces the proposed
+      // one for a fiscal year, the URL changes and the summary must be
+      // regenerated from the new document
+      const storedMeta = getSummaryMetadata('budget', doc.fiscalYear, 'pdf-analysis');
+      const sameSource = storedMeta?.pdfUrl === doc.url;
+      if (!forceRefresh && hasSummary('budget', doc.fiscalYear) && sameSource) {
         results.push({ fiscalYear: doc.fiscalYear, success: true, error: 'Already exists (skipped)', url: doc.url });
         continue;
       }
