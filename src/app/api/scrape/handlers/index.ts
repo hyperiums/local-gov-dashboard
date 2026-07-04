@@ -44,6 +44,7 @@ export {
 
 // Civic document handlers
 export { handleGenerateCivicSummaries } from './civic';
+export { handleImportSummaries } from './import-summaries';
 
 // Admin handlers
 export { handleResetDatabase } from './admin';

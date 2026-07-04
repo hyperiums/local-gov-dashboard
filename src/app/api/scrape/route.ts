@@ -23,6 +23,7 @@ import {
   handleGenerateBusinessSummaries,
   handleImportBusinesses,
   handleGenerateCivicSummaries,
+  handleImportSummaries,
   handleResetDatabase,
 } from './handlers';
 
@@ -94,6 +95,8 @@ export async function POST(request: Request) {
       // Civic document operations
       case 'generate-civic-summaries':
         return handleGenerateCivicSummaries(params);
+      case 'import-summaries':
+        return handleImportSummaries(params);
 
       // Admin operations
       case 'reset-database':

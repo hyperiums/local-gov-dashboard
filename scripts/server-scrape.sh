@@ -114,6 +114,15 @@ run_op "generate-ordinance-summaries" \
 # Link freshly-pulled ordinances to their meetings.
 run_op "link-ordinances" '{"type":"link-ordinances"}'
 
+# Summarize up to 10 resolutions still missing a summary. Resolution
+# PDFs come from CivicClerk, which production CAN reach (unlike the
+# city's own PDF CDN). A handful of resolutions have no discoverable
+# text in either the separate PDF or the agenda; they re-fail
+# harmlessly and occupy batch slots, so keep an eye on the log if the
+# missing count stops shrinking.
+run_op "generate-resolution-summaries" \
+  '{"type":"generate-resolution-summaries","params":{"limit":10}}'
+
 # Monthly permit reports for this year and last (covers slow republishing).
 # Note: this currently silently fetches 0 PDFs from production because
 # the city's PDF CDN (cms3.revize.com) blocks our droplet IP. The op
