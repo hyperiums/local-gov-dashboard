@@ -522,9 +522,25 @@ export function insertOrdinance(ordinance: {
     return;
   }
 
+  // Upsert rather than INSERT OR REPLACE: REPLACE deletes the old row, so a
+  // re-scrape without summaries (the cron's ordinances op) would null every
+  // existing summary and the incremental summarizer would re-buy them each
+  // run. Field semantics mirror the update-by-number branch above.
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO ordinances (id, number, title, description, summary, status, introduced_date, adopted_date, municode_url, disposition, minutes_url, updated_at)
+    INSERT INTO ordinances (id, number, title, description, summary, status, introduced_date, adopted_date, municode_url, disposition, minutes_url, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      number = excluded.number,
+      title = excluded.title,
+      description = excluded.description,
+      summary = COALESCE(excluded.summary, summary),
+      status = excluded.status,
+      introduced_date = COALESCE(introduced_date, excluded.introduced_date),
+      adopted_date = COALESCE(adopted_date, excluded.adopted_date),
+      municode_url = excluded.municode_url,
+      disposition = excluded.disposition,
+      minutes_url = COALESCE(minutes_url, excluded.minutes_url),
+      updated_at = datetime('now')
   `);
   stmt.run(
     ordinance.id,
