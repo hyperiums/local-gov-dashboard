@@ -157,6 +157,16 @@ bash scripts/push-permits.sh
 
 The `push-permits.sh` script reads from your local DB, scp's a JSON payload to the prod host, and calls `/api/scrape` with `type: import-permits` from inside the host. It never writes the prod `ADMIN_SECRET` to your local shell. Override `PROD_HOST`/`PROD_ENV`/`PROD_API_BASE` env vars to point at a fork or staging environment.
 
+### Business summaries refresh (manual local push)
+
+Business data is AI summaries only (no rows table) and is **not** in the cron — the droplet gets a 403 on the city's `businesslisting` PDFs, same CDN block as permits. When the city posts new monthly listings:
+
+```bash
+bash scripts/push-businesses.sh 2026-02 2026-06   # start/end months; defaults to Jan of this year → current month
+```
+
+Months without a published PDF are skipped (e.g. Jan 2026 was never posted); re-pushing a month regenerates its summary. The homepage "new businesses" stat regex-parses the summary's closing line `**Total Count**: N new businesses registered this month.`, which `src/lib/prompts/business.ts` pins — don't loosen that wording.
+
 Be respectful when scraping the city site: their permit PDFs are public records under the Georgia Open Records Act, but the bandwidth isn't free. The current `bulk-permits` makes ~24 small requests per refresh and uses an honest `User-Agent` (`FloweryBranchCivicDashboard/1.0 (civic transparency project)`) so the city can see who's hitting them. Don't crank up the frequency or remove the UA.
 
 ### Secrets

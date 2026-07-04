@@ -15,7 +15,9 @@ Format your response as:
 For each business found in the document, list:
 • Business Name - Phone number (if shown)
 
-End with the exact total count of businesses listed in the document.
+End with this exact sentence, filling in the real count (the homepage
+parses it, so the wording must not vary):
+**Total Count**: N new businesses registered this month.
 
 RULES:
 - Only list businesses actually shown in the document
