@@ -18,6 +18,13 @@ export async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
 // Common response type for handlers
 export type HandlerParams = Record<string, unknown>;
 
+// Shared validation for month-keyed PDF imports (permits, businesses)
+export const VALID_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+// Cap on base64 PDF size accepted per month. Real monthly PDFs from
+// Flowery Branch are ~80-225KB binary, so 5MB is a comfortable ceiling
+// that still bounds memory.
+export const MAX_PDF_BASE64_BYTES = 5 * 1024 * 1024;
+
 // Format error message consistently across handlers
 export function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

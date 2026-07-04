@@ -21,6 +21,7 @@ import {
   handleGenerateBudgetSummaries,
   handleGenerateAuditSummaries,
   handleGenerateBusinessSummaries,
+  handleImportBusinesses,
   handleGenerateCivicSummaries,
   handleResetDatabase,
 } from './handlers';
@@ -87,6 +88,8 @@ export async function POST(request: Request) {
         return handleGenerateAuditSummaries(params);
       case 'generate-business-summaries':
         return handleGenerateBusinessSummaries(params);
+      case 'import-businesses':
+        return handleImportBusinesses(params);
 
       // Civic document operations
       case 'generate-civic-summaries':

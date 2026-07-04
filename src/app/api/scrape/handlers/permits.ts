@@ -8,13 +8,14 @@ import {
 import { analyzePdf } from '@/lib/summarize';
 import { getRecentYears, getAllMonths } from '@/lib/dates';
 import { insertPermit, replacePermitsForMonth } from '@/lib/db';
-import { parsePdf, formatError, hasSummary, type HandlerParams } from './shared';
-
-const VALID_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
-// Cap on base64 PDF size accepted per month in import-permits. Real
-// monthly permit PDFs from Flowery Branch are ~80KB binary / ~110KB
-// base64, so 5MB is a comfortable ceiling that still bounds memory.
-const MAX_PDF_BASE64_BYTES = 5 * 1024 * 1024;
+import {
+  parsePdf,
+  formatError,
+  hasSummary,
+  VALID_MONTH,
+  MAX_PDF_BASE64_BYTES,
+  type HandlerParams,
+} from './shared';
 
 type PermitRow = {
   id: string;

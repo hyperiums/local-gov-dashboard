@@ -8,7 +8,13 @@ import {
 } from '@/lib/scraper';
 import { fetchPdfAsBase64, analyzePdf } from '@/lib/summarize';
 import { getRecentYears, getAllMonths } from '@/lib/dates';
-import { formatError, hasSummary, type HandlerParams } from './shared';
+import {
+  formatError,
+  hasSummary,
+  VALID_MONTH,
+  MAX_PDF_BASE64_BYTES,
+  type HandlerParams,
+} from './shared';
 
 export async function handleFinancial() {
   // Scrape financial report links
@@ -215,5 +221,44 @@ export async function handleGenerateBusinessSummaries(params: HandlerParams) {
     successful: results.filter(r => r.success && r.error !== 'Already exists (skipped)').length,
     skipped: results.filter(r => r.error === 'Already exists (skipped)').length,
     results,
+  });
+}
+
+export async function handleImportBusinesses(params: HandlerParams) {
+  // Businesses counterpart of import-permits' pdfsByMonth path, for the
+  // same reason: the city's PDF CDN blocks the production IP, so the
+  // PDFs are fetched on a local machine (scripts/push-businesses.sh)
+  // and the OpenAI call happens here where the API key lives. Business
+  // data is summaries-only — there are no rows to import.
+  const pdfsByMonth = (params?.pdfsByMonth as Record<string, string> | undefined) || {};
+  if (typeof pdfsByMonth !== 'object' || Array.isArray(pdfsByMonth)) {
+    return NextResponse.json({ error: 'params.pdfsByMonth must be an object' }, { status: 400 });
+  }
+
+  const summaries: { month: string; success: boolean; error?: string }[] = [];
+  for (const [month, pdfBase64] of Object.entries(pdfsByMonth)) {
+    if (!VALID_MONTH.test(month)) {
+      summaries.push({ month, success: false, error: 'invalid month format (YYYY-MM)' });
+      continue;
+    }
+    if (typeof pdfBase64 !== 'string' || !pdfBase64) {
+      summaries.push({ month, success: false, error: 'pdfBase64 must be a non-empty string' });
+      continue;
+    }
+    if (pdfBase64.length > MAX_PDF_BASE64_BYTES) {
+      summaries.push({ month, success: false, error: `pdfBase64 too large (max ${MAX_PDF_BASE64_BYTES} chars)` });
+      continue;
+    }
+    try {
+      await analyzePdf(month, 'business', pdfBase64, { forceRefresh: true });
+      summaries.push({ month, success: true });
+    } catch (err) {
+      summaries.push({ month, success: false, error: formatError(err) });
+    }
+  }
+
+  return NextResponse.json({
+    success: summaries.every(s => s.success),
+    summaries,
   });
 }
