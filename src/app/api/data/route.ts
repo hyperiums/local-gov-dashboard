@@ -171,69 +171,34 @@ export async function GET(request: Request) {
       }
 
       case 'permit-chart-data': {
-        // Get permit data for trend charts from AI summaries (more accurate than scraped data)
+        // Read directly from parsed permit rows. This used to extract
+        // counts from AI-summary prose via regex, which caught wrong
+        // numbers (e.g. the year "2020" as a permit count), reported no
+        // valuations, and silently dropped months whose summary was
+        // phrased unexpectedly. The rows are PDF-exact, so counts, types,
+        // and values all come straight from them now.
         const db = getDb();
 
-        // Get all permit summaries and extract counts using regex
-        const summaries = db.prepare(`
-          SELECT entity_id as month, content
-          FROM summaries
-          WHERE entity_type = 'permit' AND summary_type = 'pdf-analysis'
-          ORDER BY entity_id ASC
-        `).all() as { month: string; content: string }[];
+        const monthlyData = db.prepare(`
+          SELECT month, COUNT(*) as count, COALESCE(SUM(value), 0) as total_value
+          FROM permits
+          GROUP BY month
+          ORDER BY month ASC
+        `).all() as { month: string; count: number; total_value: number }[];
 
-        // GPT sometimes wraps numbers in markdown bold (`**20 permits**`),
-        // which breaks naive whitespace-based regexes. Strip markdown
-        // emphasis before matching so the same pattern catches both
-        // styled and plain-text summaries.
-        const stripMarkdown = (s: string) => s.replace(/\*+/g, '');
+        const typeBreakdown = db.prepare(`
+          SELECT type, COUNT(*) as count
+          FROM permits
+          WHERE type IS NOT NULL
+          GROUP BY type
+          ORDER BY count DESC
+        `).all() as { type: string; count: number }[];
 
-        // Extract permit counts from AI summaries
-        const monthlyData: { month: string; count: number; total_value: number }[] = [];
-        for (const summary of summaries) {
-          // Match patterns like "A total of 24 permits were issued" or "24 permits were issued"
-          const match = stripMarkdown(summary.content).match(/(?:total of\s+)?(\d+)\s+permits?\s+were\s+issued/i);
-          if (match) {
-            monthlyData.push({
-              month: summary.month,
-              count: parseInt(match[1], 10),
-              total_value: 0, // We don't have value data from summaries
-            });
-          }
-        }
-
-        // Extract type breakdown from summaries (aggregate new construction counts)
-        // Parse "X new homes" and "Y home improvements" patterns
-        let newConstructionTotal = 0;
-        let homeImprovementsTotal = 0;
-        for (const summary of summaries) {
-          const cleaned = stripMarkdown(summary.content);
-          const newHomesMatch = cleaned.match(/(\d+)\s+new\s+(homes?|construction)/i);
-          if (newHomesMatch) {
-            newConstructionTotal += parseInt(newHomesMatch[1], 10);
-          }
-          // Home improvements often mentioned as difference between total and new construction
-          const totalMatch = cleaned.match(/(\d+)\s+permits?\s+were\s+issued/i);
-          if (totalMatch && newHomesMatch) {
-            const total = parseInt(totalMatch[1], 10);
-            const newHomes = parseInt(newHomesMatch[1], 10);
-            homeImprovementsTotal += Math.max(0, total - newHomes);
-          }
-        }
-
-        const typeBreakdown = [
-          { type: 'new construction', count: newConstructionTotal },
-          { type: 'home improvements', count: homeImprovementsTotal },
-        ].filter(t => t.count > 0);
-
-        // Year-over-year data from monthly data
-        const yearOverYear: { year: string; monthNum: string; count: number }[] = [];
-        for (const m of monthlyData) {
+        const yearOverYear = monthlyData.map(m => {
           const [year, monthNum] = m.month.split('-');
-          yearOverYear.push({ year, monthNum, count: m.count });
-        }
+          return { year, monthNum, count: m.count };
+        });
 
-        // Get unique years
         const years = [...new Set(monthlyData.map(d => d.month.split('-')[0]))].sort();
 
         return NextResponse.json({
