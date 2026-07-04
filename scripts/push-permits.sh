@@ -15,8 +15,14 @@
 #          -d '{"type":"bulk-permits","params":{"years":["2025","2026"]}}'
 #   3. Push the rows to prod:                      bash scripts/push-permits.sh
 #
-# Optional arg: minimum month to push (default 2025-01). Example:
-#   bash scripts/push-permits.sh 2026-01
+# Optional args:
+#   $1  minimum month to push (default 2025-01)
+#   $2  minimum month to attach PDFs for (default: same as $1). PDFs
+#       trigger AI summary regeneration on prod, so when backfilling
+#       corrected rows for months whose summaries already exist, set
+#       this to the first month that actually needs a new summary.
+# Example:
+#   bash scripts/push-permits.sh 2024-01 2026-05
 #
 # Configuration via env vars (defaults are this project's prod setup;
 # override for forks or staging):
@@ -33,6 +39,7 @@ set -euo pipefail
 
 LOCAL_DB="${LOCAL_DB:-data/flowery-branch.db}"
 SINCE="${1:-2025-01}"
+PDF_SINCE="${2:-$SINCE}"
 PROD_HOST="${PROD_HOST:-root@45.55.236.77}"
 PROD_ENV="${PROD_ENV:-/var/www/flowerybranch.charlesthompson.me/.env}"
 PROD_API_BASE="${PROD_API_BASE:-http://localhost:3001}"
@@ -51,44 +58,26 @@ if [ -z "$ROWS_JSON" ] || [ "$ROWS_JSON" = "[]" ]; then
   exit 0
 fi
 
-# Unique months in the payload — we'll fetch a PDF for each so prod can
-# regenerate the AI summary. Cap to avoid pathological payload sizes.
-MONTHS=$(python3 -c "
-import json, sys
-rows = json.loads(sys.argv[1])
-seen = []
-for r in rows:
-    m = r.get('month')
-    if m and m not in seen:
-        seen.append(m)
-print('\n'.join(sorted(seen)))
-" "$ROWS_JSON")
+# Unique month → source_url pairs needing summary PDFs — we'll fetch a
+# PDF for each so prod can regenerate the AI summary. The scraper already
+# found the working URL for every month (the city's file naming varies:
+# June2025 vs Jun2026), so reuse it instead of guessing names.
+MONTHS=$(sqlite3 "$LOCAL_DB" \
+  "SELECT month || ' ' || source_url FROM permits WHERE month >= '$PDF_SINCE' GROUP BY month ORDER BY month")
 
 MONTH_COUNT=$(printf '%s\n' "$MONTHS" | grep -c .)
 if [ "$MONTH_COUNT" -gt 24 ]; then
-  echo "Too many months ($MONTH_COUNT > 24) in one push. Tighten the SINCE arg." >&2
+  echo "Too many summary PDFs ($MONTH_COUNT > 24) in one push. Tighten the PDF_SINCE arg." >&2
   exit 1
 fi
 
 # Fetch each month's PDF from your local (unblocked) IP and base64 it.
-# Map YYYY-MM to the month-name shape the city uses: 01->Jan, 09->Sept, etc.
-declare -A MNAMES=(
-  [01]=Jan [02]=Feb [03]=Mar [04]=Apr [05]=May [06]=June
-  [07]=July [08]=Aug [09]=Sept [10]=Oct [11]=Nov [12]=Dec
-)
 PDF_TMP=$(mktemp -d /tmp/fb-permit-pdfs.XXXXXX)
 trap 'rm -rf "$PDF_TMP" "${TMP:-}"' EXIT
 PDFS_JSON_ENTRIES=""
 echo "Fetching $MONTH_COUNT permit PDF(s) from your local IP..."
-for M in $MONTHS; do
-  YEAR="${M%-*}"
-  MM="${M#*-}"
-  MNAME="${MNAMES[$MM]:-}"
-  if [ -z "$MNAME" ]; then
-    echo "  skip $M (no month-name mapping)"
-    continue
-  fi
-  URL="https://www.flowerybranchga.org/${MNAME}${YEAR}permitlisting.pdf"
+while read -r M URL; do
+  [ -z "$M" ] && continue
   OUT="$PDF_TMP/$M.pdf"
   CODE=$(curl -sS -o "$OUT" -w "%{http_code}" -L --max-time 20 \
     -A "FloweryBranchCivicDashboard/1.0 (civic transparency project)" \
@@ -107,7 +96,7 @@ for M in $MONTHS; do
   else
     PDFS_JSON_ENTRIES="$PDFS_JSON_ENTRIES,$ENTRY"
   fi
-done
+done <<< "$MONTHS"
 
 PAYLOAD=$(python3 -c "
 import json, sys

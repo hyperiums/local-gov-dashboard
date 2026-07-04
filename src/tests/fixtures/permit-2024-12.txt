@@ -1,0 +1,627 @@
+Permit # Permit Type Primary
+Contractor
+Parcel # Parcel
+Address
+City Lot Subdivision Work Class
+800 Sign Independent
+Impressions
+INC.
+15044A002024 4153 FALCON
+PARKWAY
+FLOWERY
+BRANCH
+Signs
+799 Residential
+Building
+Owner 08099A000052 5566
+NEWBERRY
+POINT DRIVE
+FLOWERY
+BRANCH
+Renovation
+798 Residential
+Building
+Owner 08099A000068 5595
+NEWBERRY
+POINT DRIVE
+FLOWERY
+BRANCH
+NEWBERRY
+POINT
+Accessory
+797 Commercial Greg Loyd
+Construction
+08117 002015 5533 ATLANTA
+HIGHWAY
+FLOWERY
+BRANCH
+796 Residential
+Building
+Ashton Woods 5269 Frontier
+Court Lot 185
+Flowery
+Branch
+185 Eastlyn
+Crossing
+New
+795 Plumbing Stellar Home
+Maintenance
+08098A000122 4932 VIREO
+DRIVE
+FLOWERY
+BRANCH
+Replace /
+Change Out
+794 Residential
+Building
+Ashton Woods 5265 Frontier
+Court Lot 184
+Flowery
+Branch
+184 Eastlyn
+Crossing
+New
+793 Residential
+Building
+Ashton Woods 5261 Frontier
+Court Lot 183
+Flowery
+Branch
+183 Eastlyn
+Crossing
+New
+792 Residential
+Building
+Ashton Woods 5257 Frontier
+Court Lot 182
+Flowery
+Branch
+182 Eastlyn
+Crossing
+New
+Permit Report
+12/1/2024 - 12/31/2024
+Page: 1 of 6
+791 Residential
+Building
+Ashton Woods 5253 Frontier
+Court Lot 181
+Flowery
+Branch
+181 Eastlyn
+Crossing
+New
+790 Residential
+Building
+Ashton Woods 5512 Coalie
+Trace Lot 145
+Flowery
+Branch
+145 Eastlyn
+Crossing
+New
+789 Residential
+Building
+Ashton Woods 5516 Coalie
+Trace Lot 144
+Flowery
+Branch
+144 Eastlyn
+Crossing
+New
+788 Residential
+Building
+Ashton Woods 5520 Coalie
+Trace Lot 143
+Flowery
+Branch
+143 Eastlyn
+Crossing
+New
+787 Residential
+Building
+Ashton Woods 5524 Coalie
+Trace Lot 142
+Flowery
+Branch
+142 Eastlyn
+Crossing
+New
+786 Residential
+Building
+Ashton Woods 5429 Hargrove
+Way Lot 123
+Flowery
+Branch
+123 Eastlyn
+Crossing
+New
+785 Commercial MCGEE
+STORAGE &
+HANDLING
+08097
+000008B
+4851
+THURMON
+TANNER
+PARKWAY
+FLOWERY
+BRANCH
+Alteration
+784 Residential
+Building
+08118 001006 5971 LIGHTS
+FERRY ROAD
+FLOWERY
+BRANCH
+8 A Trails West Accessory
+783 Mechanical Service
+Experts & Air
+Conditioning
+15047 000747 6734 BIG SKY
+DRIVE
+FLOWERY
+BRANCH
+Sterling on the
+Lake
+Replace /
+Change Out
+782 Residential
+Building
+15047 000963 6809
+BUNGALOW
+ROAD LOT 86
+FLOWERY
+BRANCH
+86 STERLING ON
+THE LAKE
+New
+781 Row/Driveway SAM Gainesville St Flowery
+Branch
+Right of way
+780 Residential
+Building
+Owner 08100 001102 5946 PARK
+BAY COURT
+FLOWERY
+BRANCH
+49 PARK WALK
+AT LANIER
+Addition
+Page: 2 of 6
+779 Residential
+Building
+EMC Homes,
+LLC
+8117 002016 5547 Overview
+Drive Lot 9
+Flowery
+Branch
+9 Mulberry
+Summit
+New
+778 Residential
+Building
+Ashton Woods 5427 Allegro
+Lane Lot 222
+Flowery
+Branch
+222 Eastlyn
+Crossing
+New
+777 Residential
+Building
+Ashton Woods 5423 Allegro
+Lane Lot 221
+Flowery
+Branch
+221 Eastlyn
+Crossing
+New
+776 Residential
+Building
+Ashton Woods 5419 Allegro
+Lane Lot 220
+Flowery
+Branch
+220 Eastlyn
+Crossing
+New
+775 Residential
+Building
+Ashton Woods 5415 Allegro
+Lane Lot 219
+Flowery
+Branch
+219 Eastlyn
+Crossing
+New
+774 Residential
+Building
+Ashton Woods 5411 Allegro
+Lane Lot 218
+Flowery
+Branch
+218 Eastlyn
+Crossing
+New
+773 Residential
+Building
+Ashton Woods 5407 Allegro
+Lane Lot 217
+Flowery
+Branch
+217 Eastlyn
+Crossing
+New
+772 Residential
+Building
+Ashton Woods 5403 Allegro
+Lane Lot 216
+Flowery
+Branch
+216 Eastlyn
+Crossing
+New
+771 Residential
+Building
+Ashton Woods 5399 Allegro
+Lane Lot 215
+Flowery
+Branch
+215 Eastlyn
+Crossing
+New
+770 Residential
+Building
+Ashton Woods 5395 Allegro
+Lane Lot 214
+Flowery
+Branch
+214 Eastlyn
+Crossing
+New
+769 Residential
+Building
+Ashton Woods 5391 Allegro
+Lane Lot 213
+Flowery
+Branch
+213 Eastlyn
+Crossing
+New
+768 Residential
+Building
+Ashton Woods 5381 Frontier
+Court Lot 212
+Flowery
+Branch
+212 Eastlyn
+Crossing
+New
+767 Residential
+Building
+5377 Frontier
+Court Lot 211
+Flowery
+Branch
+211 Eastlyn
+Crossing
+New
+766 Residential
+Building
+Ashton Woods 5373 Frontier
+Court Lot 210
+Flowery
+Branch
+210 Eastlyn
+Crossing
+New
+765 Residential
+Building
+Ashton Woods 5369 Frontier
+Court Lot 209
+Flowery
+Branch
+209 Eastlyn
+Crossing
+New
+Page: 3 of 6
+764 Residential
+Building
+Ashton Woods 5365 Frontier
+Court Lot 208
+Flowery
+Branch
+208 Eastlyn
+Crossing
+New
+763 Residential
+Building
+Ashton Woods 5361 Frontier
+Court Lot 207
+Flowery
+Branch
+207 Eastlyn
+Crossing
+New
+762 Residential
+Building
+Ashton Woods 5249 Frontier
+Court Lot 180
+Flowery
+Branch
+180 Eastlyn
+Crossing
+New
+761 Residential
+Building
+Ashton Woods 5245 Frontier
+Court Lot 179
+Flowery
+Branch
+179 Eastlyn
+Crossing
+New
+760 Residential
+Building
+Ashton Woods 5241 Frontier
+Court Lot 178
+Flowery
+Branch
+178 Eastlyn
+Crossing
+New
+759 Residential
+Building
+Ashton Woods 5237 Frontier
+Court Lot 177
+Flowery
+Branch
+177 Eastlyn
+Crossing
+New
+758 Residential
+Building
+Ashton Woods 5233 Frontier
+Court Lot 176
+Flowery
+Branch
+176 Eastlyn
+Crossing
+New
+757 Residential
+Building
+Ashton Woods 5229 Frontier
+Court Lot 175
+Flowery
+Branch
+175 Eastlyn
+Crossing
+New
+756 Residential
+Building
+Ashton Woods 5425 Hargrove
+Way Lot 122
+Flowery
+Branch
+122 Eastlyn
+Crossing
+New
+755 Residential
+Building
+Ashton Woods 5421 Hargrove
+Way Lot 121
+Flowery
+Branch
+121 Eastlyn
+Crossing
+New
+754 Residential
+Building
+Ashton Woods 5417 Hargrove
+Way Lot 120
+Flowery
+Branch
+120 Eastlyn
+Crossing
+New
+753 Residential
+Building
+Ashton Woods 5413 Hargrove
+Way Lot 119
+Flowery
+Branch
+119 Eastlyn
+Crossing
+New
+Page: 4 of 6
+752 Residential
+Building
+Silverstar 08112 028010 6027
+MORROW
+DRIVE
+FLOWERY
+BRANCH
+New
+751 Residential
+Building
+D R HORTON 08150 002002 6721 Leigh
+Street Lot 109
+Flowery
+Branch
+109 Waypoint New
+750 Residential
+Building
+D R HORTON 08150 002002 6725 Leigh
+Street Lot 108
+Flowery
+Branch
+108 Waypoint New
+749 Residential
+Building
+D R HORTON 08150 002002 6729 Leigh
+Street Lot 107
+Flowery
+Branch
+107 Waypoint New
+748 Residential
+Building
+D R HORTON 08150 002002 6733 Leigh
+Street Lot 106
+Flowery
+Branch
+106 Waypoint New
+747 Residential
+Building
+D R HORTON 08150 002002 6694 Corryton
+Street Lot 22
+Flowery
+Branch
+22 Waypoint New
+746 Residential
+Building
+D R HORTON 08150 002002 6690 Corryton
+Street Lot 21
+Flowery
+Branch
+21 Waypoint New
+745 Residential
+Building
+D R HORTON 08150 002002 6686 Corryton
+Street Lot 20
+Flowery
+Branch
+20 Waypoint
+744 Residential
+Building
+D R HORTON 08150 002002 6682 Corryton
+Street Lot 19
+Flowery
+Branch
+19 Waypoint New
+743 Residential
+Building
+D R HORTON 08150 002002 6678 Corryton
+Street Lot 18
+Flowery
+Branch
+18 Waypoint New
+742 Residential
+Building
+D R HORTON 08150 002002 6674 Corryton
+Street Lot 17
+Flowery
+Branch
+17 Waypoint New
+740 Residential
+Building
+08100 001167 6012 PARK
+BAY COURT
+FLOWERY
+BRANCH
+60 Park Walk at
+Lanier
+Addition
+Page: 5 of 6
+739 Row/Driveway FICOA
+COMMUNICAT
+IONS
+15047C000116 7214
+WHITEWATER
+DRIVE
+FLOWERY
+BRANCH
+Sterling on the
+Lake
+Replace
+738 Mechanical Lennox NAS 08114 004009 5900 SPOUT
+SPRINGS
+ROAD SUITE R
+- 20
+FLOWERY
+BRANCH
+Replace /
+Change Out
+737 Demolition 08118 001006 5975 LIGHTS
+FERRY ROAD
+LOT 34
+FLOWERY
+BRANCH
+34 TRAILSWEST
+MOBILE HOME
+PARK
+Demolition
+736 Commercial Joseph Strada 6624 Corryton
+Street
+Flowery
+Branch
+Waypoint New
+735 Residential
+Building
+EMC Homes,
+LLC
+08117002019 5567 Overview
+Drive Lot 14
+Flowery
+Branch
+14 Mulberry
+Summit
+New
+734 Residential
+Building
+EMC Homes,
+LLC
+08117002019 5563 Overview
+Drive Lot 13
+Flowery
+Branch
+13 Mulberry
+Summit
+New
+733 Residential
+Building
+EMC Homes,
+LLC
+08117002019 5555 Overview
+Drive Lot 11
+Flowery
+Branch
+11 Mulberry
+Summit
+New
+732 Residential
+Building
+EMC Homes,
+LLC
+08117002019 5551 Overview
+Drive Lot 10
+Flowery
+Branch
+10 Mulberry
+Summit
+New
+731 Residential
+Building
+EMC Homes,
+LLC
+08117002019 5517 Keswick
+Drive Lot 3
+Flowery
+Branch
+3 Mulberry
+Summit
+New
+730 Residential
+Building
+EMC Homes,
+LLC
+08117002019 5525 Keswick
+Drive Lot 5
+Flowery
+Branch
+5 Mulberry
+Summit
+New
+Total Records: 70 12/31/2024
+Page: 6 of 6

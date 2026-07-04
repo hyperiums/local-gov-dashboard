@@ -7,7 +7,7 @@ import {
 } from '@/lib/scraper';
 import { analyzePdf } from '@/lib/summarize';
 import { getRecentYears, getAllMonths } from '@/lib/dates';
-import { insertPermit, getDb } from '@/lib/db';
+import { insertPermit, replacePermitsForMonth } from '@/lib/db';
 import { parsePdf, formatError, hasSummary, type HandlerParams } from './shared';
 
 const VALID_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -67,38 +67,44 @@ export async function handleImportPermits(params: HandlerParams) {
 
   let imported = 0;
   const errors: { id?: string; error: string }[] = [];
-  const db = getDb();
 
-  const tx = db.transaction((rows: PermitRow[]) => {
-    for (const p of rows) {
-      const sourceUrl = p.sourceUrl ?? p.source_url ?? '';
-      if (!isShortString(p.id) || !isValidMonth(p.month) || !isShortString(sourceUrl)) {
-        errors.push({ id: p.id, error: 'invalid id, month (YYYY-MM), or sourceUrl' });
-        continue;
-      }
-      if (p.type != null && !isShortString(p.type)) { errors.push({ id: p.id, error: 'type too long' }); continue; }
-      if (p.address != null && !isShortString(p.address)) { errors.push({ id: p.id, error: 'address too long' }); continue; }
-      if (p.description != null && !isShortString(p.description)) { errors.push({ id: p.id, error: 'description too long' }); continue; }
-      if (p.value != null && (typeof p.value !== 'number' || !Number.isFinite(p.value))) {
-        errors.push({ id: p.id, error: 'value must be a finite number' }); continue;
-      }
-      try {
-        insertPermit({
-          id: p.id,
-          month: p.month,
-          type: p.type ?? undefined,
-          address: p.address ?? undefined,
-          description: p.description ?? undefined,
-          value: p.value ?? undefined,
-          sourceUrl,
-        });
-        imported++;
-      } catch (err) {
-        errors.push({ id: p.id, error: err instanceof Error ? err.message : String(err) });
-      }
+  const validByMonth = new Map<string, Parameters<typeof insertPermit>[0][]>();
+  for (const p of permits) {
+    const sourceUrl = p.sourceUrl ?? p.source_url ?? '';
+    if (!isShortString(p.id) || !isValidMonth(p.month) || !isShortString(sourceUrl)) {
+      errors.push({ id: p.id, error: 'invalid id, month (YYYY-MM), or sourceUrl' });
+      continue;
     }
-  });
-  tx(permits);
+    if (p.type != null && !isShortString(p.type)) { errors.push({ id: p.id, error: 'type too long' }); continue; }
+    if (p.address != null && !isShortString(p.address)) { errors.push({ id: p.id, error: 'address too long' }); continue; }
+    if (p.description != null && !isShortString(p.description)) { errors.push({ id: p.id, error: 'description too long' }); continue; }
+    if (p.value != null && (typeof p.value !== 'number' || !Number.isFinite(p.value))) {
+      errors.push({ id: p.id, error: 'value must be a finite number' }); continue;
+    }
+    const rows = validByMonth.get(p.month) || [];
+    rows.push({
+      id: p.id,
+      month: p.month,
+      type: p.type ?? undefined,
+      address: p.address ?? undefined,
+      description: p.description ?? undefined,
+      value: p.value ?? undefined,
+      sourceUrl,
+    });
+    validByMonth.set(p.month, rows);
+  }
+
+  // The push carries every row the source machine has for each month, so
+  // each month is replaced wholesale — otherwise rows from earlier parses
+  // of the same PDF would linger under their old ids.
+  for (const [month, rows] of validByMonth) {
+    try {
+      replacePermitsForMonth(month, rows);
+      imported += rows.length;
+    } catch (err) {
+      errors.push({ error: `month ${month}: ${err instanceof Error ? err.message : String(err)}` });
+    }
+  }
 
   const summaries: { month: string; success: boolean; error?: string }[] = [];
   const pdfMonths = Object.keys(pdfsByMonth);
@@ -154,8 +160,10 @@ export async function handlePermits(params: HandlerParams) {
   const pdfData = await parsePdf(result.buffer);
   const permits = parsePermitPdfText(pdfData.text, `${year}-${month}`, result.url);
 
-  for (const permit of permits) {
-    insertPermit(permit);
+  // Only replace the month when the parse produced something, so an
+  // unrecognized future layout can't wipe previously-good rows
+  if (permits.length > 0) {
+    replacePermitsForMonth(`${year}-${month}`, permits);
   }
 
   return NextResponse.json({
@@ -187,8 +195,8 @@ export async function handleBulkPermits(params: HandlerParams) {
           const pdfData = await parsePdf(result.buffer);
           const permits = parsePermitPdfText(pdfData.text, `${y}-${month}`, result.url);
 
-          for (const permit of permits) {
-            insertPermit(permit);
+          if (permits.length > 0) {
+            replacePermitsForMonth(`${y}-${month}`, permits);
           }
 
           allResults.push({

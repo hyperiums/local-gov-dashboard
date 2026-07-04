@@ -1,0 +1,315 @@
+Permit
+#
+Issued Date Permit Type Primary
+Contractor
+Parcel # Parcel
+Address
+City Lot Subdivision Work Class
+1387 4/28/2026 Electrical Joseph Strada 08150 002025 6647 Parsons
+St
+Flowery
+Branch
+WAYPOINT New
+1386 4/28/2026 Yard Sale 08118A000003 7019 VALLEY
+FORGE DRIVE
+FLOWERY
+BRANCH
+Garage Sale
+1384 4/27/2026 Residential
+Building
+Walker
+Anderson
+Homes
+08112 027095 5629 Ernest
+Way Lot 44
+Flowery
+Branch
+44 Hemingway New
+1383 4/27/2026 Residential
+Building
+Walker
+Anderson
+Homes
+08112 027092 5641 Ernest
+Way Lot 41
+Flowery
+Branch
+41 Hemingway New
+1382 4/27/2026 Residential
+Building
+Walker
+Anderson
+Homes
+08112 027085 5659 Evelyn
+Lane Lot 34
+Flowery
+Branch
+34 Hemingway New
+1381 4/27/2026 Residential
+Building
+Walker
+Anderson
+Homes
+08112 027083 5667 Evelyn
+Lane Lot 32
+Flowery
+Branch
+32 Hemingway New
+1380 4/27/2026 Residential
+Building
+Walker
+Anderson
+Homes
+08112 027076 5650 Evelyn
+Lane Lot 25
+Flowery
+Branch
+25 Hemingway New
+1379 4/23/2026 Residential
+Building
+Piedmont
+Residential,
+LLC
+5253
+Gainesville St
+Lot 33
+Flowery
+Branch
+33 Magnolia
+Trace
+New
+1378 4/23/2026 Residential
+Building
+Piedmont
+Residential,
+LLC
+5226 Trace
+View Dr Lot 30
+Flowery
+Branch
+30 Magnolia
+Trace
+New
+1377 4/20/2026 Fence 08100A000025 5640
+CHINOOK
+COURT
+FLOWERY
+BRANCH
+Fence
+Permit Report
+4/1/2026 - 4/30/2026
+Page: 1 of 4
+1376 4/20/2026 Mechanical McKay
+ventures, LLC
+08092 000001 4603 ATLANTA
+HIGHWAY
+FLOWERY
+BRANCH
+New
+1375 4/16/2026 Electrical TE CERTIFIED
+ELECTRICAL ,
+PLUMBING,
+HEATING
+15047M00001
+7
+7154 LAKE
+EDGE DRIVE
+FLOWERY
+BRANCH
+STERLING ON
+THE LAKE
+1374 4/15/2026 Yard Sale 08111
+003003D
+5877 HOOT
+OWL LANE
+FLOWERY
+BRANCH
+SUMMIT LAKE Garage Sale
+1373 4/14/2026 Yard Sale 08118 001166 6016
+HARBOUR
+MIST DRIVE
+FLOWERY
+BRANCH
+HARBOUR
+LIGHTS
+Garage Sale
+1372 4/24/2026 Commercial Piedmont
+Residential,
+LLC
+08112 012001 5283 Ivory
+Oak Lane
+Flowery
+Branch
+Magnolia
+Trace
+1371 4/14/2026 Electrical Carter Electric
+Services
+08118 001006 5981 LIGHTS
+FERRY ROAD
+FLOWERY
+BRANCH
+Replacement
+1370 4/22/2026 Commercial Ericsson INC 08113 002013 5497 EAST
+MAIN STREET
+FLOWERY
+BRANCH
+New
+1369 4/13/2026 Electrical Stanley R.
+Mitchell, INC
+08112 012001 5283 Ivory
+Oak Lane
+Flowery
+Branch
+Magnolia
+Trace
+New
+1368 4/10/2026 Sign Sign Systems,
+LLC
+08112A001006 5512 MAIN
+STREET
+FLOWERY
+BRANCH
+New Sign
+1367 4/16/2026 Right-of-way FICOA
+COMMUNICAT
+IONS
+08150 002001 6477 MCEVER
+ROAD
+FLOWERY
+BRANCH
+1365 4/9/2026 Electrical Vinson-
+McDonald INC
+08140 000215 0 MCEVER
+ROAD
+FLOWERY
+BRANCH
+New
+1364 4/15/2026 Residential
+Building
+Walker
+Anderson
+Homes
+08112 027097 5621 Ernest
+Way Lot 46
+Flowery
+Branch
+46 HEMINGWAY
+Page: 2 of 4
+1363 4/15/2026 Residential
+Building
+Walker
+Anderson
+Homes
+08112 027090 5649 Ernest
+Way Lot 39
+Flowery
+Branch
+39 HEMINGWAY
+1361 4/27/2026 Residential
+Building
+Ashton Woods 08098 001238 5343 Callahan
+Trace Lot 101
+Flowery
+Branch
+101 EASTLYN
+CROSSING
+1360 4/27/2026 Residential
+Building
+Ashton Woods 08098 001237 5339 Callahan
+Trace Lot 100
+Flowery
+Branch
+100 EASTLYN
+CROSSING
+1359 4/27/2026 Residential
+Building
+Ashton Woods 08098 001236 5335 Callahan
+Trace Lot 99
+Flowery
+Branch
+99 EASTLYN
+CROSSING
+1358 4/27/2026 Sign Signs By
+Tomorrow
+08112 025006 5603 MAIN
+STREET, Suite
+E
+FLOWERY
+BRANCH
+1356 4/8/2026 Swimming
+Pool
+AMERICAN
+LIFESTYLES
+POOL
+15047 000763 6836 BIG SKY
+DRIVE
+FLOWERY
+BRANCH
+99 STERLING ON
+THE LAKE
+1352 4/8/2026 Residential
+Building
+Clark Brothers
+Roofing &
+Construction
+LLC
+08111 003189 5647 CRICKET
+MELODY LANE
+FLOWERY
+BRANCH
+SUMMIT LAKE Addition
+1351 4/6/2026 Sign 15047 000101 7005 LAKE
+STERLING
+BOULEVARD
+FLOWERY
+BRANCH
+STERLING ON
+THE LAKE
+1350 4/6/2026 Yard Sale 15047 000101 7005 LAKE
+STERLING
+BOULEVARD
+FLOWERY
+BRANCH
+STERLING ON
+THE LAKE
+1340 4/9/2026 Commercial THE WHITING-
+TURNER
+CONTRACTING
+COMPANY
+08093 000006 4400 FALCON
+PARKWAY
+FLOWERY
+BRANCH
+Page: 3 of 4
+1338 4/2/2026 Commercial HCB
+CONSTRUCTIO
+N LLC
+08099 000024 5461 MCEVER
+ROAD
+FLOWERY
+BRANCH
+1337 4/2/2026 Commercial HCB
+CONSTRUCTIO
+N LLC
+08099 000024 5461 MCEVER
+ROAD
+FLOWERY
+BRANCH
+1336 4/2/2026 Fence ACCENT
+FENCE
+15047 000751 6917
+CREEKSTONE
+PLACE
+FLOWERY
+BRANCH
+40 STERLING ON
+THE LAKE
+1327 4/1/2026 Commercial Towers 18
+Construction
+LLC
+08099 000016 5458 MCEVER
+ROAD
+FLOWERY
+BRANCH
+Total Records: 36 4/30/2026
+Page: 4 of 4

@@ -398,6 +398,23 @@ export function insertPermit(permit: {
   );
 }
 
+// A month's PDF is the authoritative source for that month, and permit ids
+// are derived from parsed content, so a re-scrape must replace the month
+// wholesale — upserting by id would strand rows from earlier parses.
+export function replacePermitsForMonth(
+  month: string,
+  permits: Parameters<typeof insertPermit>[0][]
+) {
+  const db = getDb();
+  const replace = db.transaction(() => {
+    db.prepare('DELETE FROM permits WHERE month = ?').run(month);
+    for (const permit of permits) {
+      insertPermit(permit);
+    }
+  });
+  replace();
+}
+
 export function getPermitsByMonth(month: string) {
   const db = getDb();
   return db.prepare('SELECT * FROM permits WHERE month = ?').all(month);
