@@ -105,17 +105,30 @@ function parseAgendaTopics(agendaSummary: string | null): string[] {
     .slice(0, 4); // Limit to 4 topics
 }
 
+// Select the soonest upcoming meeting. Exported for testing.
+//
+// A meeting's status is only recomputed when the scraper re-captures it, so a
+// meeting the city moved or cancelled — CivicClerk deletes the event, and it is
+// never re-captured — can stay frozen at status='upcoming' with a now-past
+// date. The `date >= today` guard keeps such a stranded row from surfacing as
+// the next meeting regardless of its stale status.
+export function queryNextUpcomingMeeting(
+  db: ReturnType<typeof getDb>,
+  today: string = new Date().toISOString().slice(0, 10)
+): (MeetingRow & { agenda_summary: string | null }) | undefined {
+  return db.prepare(`
+    SELECT * FROM meetings
+    WHERE status = 'upcoming' AND date >= ?
+    ORDER BY date ASC
+    LIMIT 1
+  `).get(today) as (MeetingRow & { agenda_summary: string | null }) | undefined;
+}
+
 // Get the next upcoming meeting with agenda details
 function getNextMeeting(): UpcomingMeeting | null {
   const db = getDb();
 
-  // Get the next upcoming meeting (sorted by date ASC to get the closest one)
-  const meeting = db.prepare(`
-    SELECT * FROM meetings
-    WHERE status = 'upcoming'
-    ORDER BY date ASC
-    LIMIT 1
-  `).get() as (MeetingRow & { agenda_summary: string | null }) | undefined;
+  const meeting = queryNextUpcomingMeeting(db);
 
   if (!meeting) return null;
 
@@ -319,9 +332,7 @@ function getFreshnessInfo(): FreshnessInfo {
     SELECT MAX(date) as date FROM meetings WHERE status = 'past'
   `).get() as { date: string | null };
 
-  const nextMeeting = db.prepare(`
-    SELECT MIN(date) as date FROM meetings WHERE status = 'upcoming'
-  `).get() as { date: string | null };
+  const nextMeeting = queryNextUpcomingMeeting(db);
 
   const lastUpdate = db.prepare(`
     SELECT MAX(created_at) as updated FROM summaries
@@ -330,7 +341,7 @@ function getFreshnessInfo(): FreshnessInfo {
   return {
     lastMeetingDate: lastMeeting.date,
     lastDataUpdate: lastUpdate.updated,
-    nextMeetingDate: nextMeeting.date,
+    nextMeetingDate: nextMeeting?.date ?? null,
   };
 }
 
@@ -340,19 +351,23 @@ function getPendingLegislation(): PendingLegislation[] {
   const legislation: PendingLegislation[] = [];
 
   // Get ordinances and resolutions from the UPCOMING meeting's agenda
-  // This shows what's actually being considered, not past items
+  // This shows what's actually being considered, not past items. Source it from
+  // the same date-guarded next meeting the rest of the page features, so a
+  // stranded past-dated 'upcoming' row can't feed phantom pending legislation.
+  const nextMeeting = queryNextUpcomingMeeting(db);
+  if (!nextMeeting) return [];
+
   const upcomingItems = db.prepare(`
     SELECT ai.title, ai.type, ai.reference_number, m.date as meeting_date, m.id as meeting_id
     FROM agenda_items ai
     JOIN meetings m ON ai.meeting_id = m.id
-    WHERE m.status = 'upcoming'
-      AND m.date = (SELECT MIN(date) FROM meetings WHERE status = 'upcoming')
+    WHERE m.id = ?
       AND (ai.type IN ('ordinance', 'resolution')
            OR ai.title LIKE '%Ordinance%'
            OR ai.title LIKE '%Resolution%')
     ORDER BY ai.order_num
     LIMIT 6
-  `).all() as {
+  `).all(nextMeeting.id) as {
     title: string;
     type: string | null;
     reference_number: string | null;

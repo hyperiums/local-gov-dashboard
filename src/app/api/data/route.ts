@@ -16,8 +16,8 @@ import {
   getOrdinancesForMeeting,
   getDb,
   getAllSummaryLevels,
-  MeetingRow,
 } from '@/lib/db';
+import { queryNextUpcomingMeeting } from '@/lib/cityUpdates';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,9 +57,7 @@ export async function GET(request: Request) {
           const hasUpcoming = meetings.some(m => m.status === 'upcoming');
           if (!hasUpcoming) {
             const db = getDb();
-            const nextMeeting = db.prepare(`
-              SELECT * FROM meetings WHERE status = 'upcoming' ORDER BY date ASC LIMIT 1
-            `).get() as MeetingRow | undefined;
+            const nextMeeting = queryNextUpcomingMeeting(db);
             if (nextMeeting) {
               meetings = [nextMeeting, ...meetings];
             }
