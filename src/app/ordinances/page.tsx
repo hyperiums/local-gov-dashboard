@@ -8,6 +8,7 @@ import { getRecentYears, formatDate } from '@/lib/dates';
 import { cityName, municodeUrl, civicClerkUrl } from '@/lib/city-config-client';
 import { formatAndSanitize } from '@/lib/sanitize';
 import type { PendingOrdinanceWithProgress } from '@/lib/db';
+import { DORMANT_AFTER_DAYS } from '@/components/ordinances/types';
 import { OrdinanceLifecycleTimeline } from '@/components/ordinances';
 
 interface Ordinance {
@@ -29,6 +30,7 @@ interface MeetingWithAction {
   date: string;
   title: string;
   action: string | null;
+  outcome_verified?: number;
 }
 
 // Re-export with shorter name for local use
@@ -506,7 +508,9 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
                     meeting_id: m.id,
                     meeting_date: m.date,
                     meeting_title: m.title,
+                    outcome_verified: m.outcome_verified,
                   }))}
+                  adoptionConfirmed={ordinance.status === 'adopted' && !!ordinance.adopted_date}
                   variant="vertical"
                 />
               ) : (
@@ -578,47 +582,90 @@ function OrdinanceRow({ ordinance, autoExpand = false }: { ordinance: Ordinance;
 
 // Pending Legislation Section - shows ordinances that haven't been adopted yet
 function PendingLegislationSection({ ordinances, autoExpand }: { ordinances: PendingOrdinance[]; autoExpand: string | null }) {
+  // An item the council has not touched in months is still a public record, but
+  // presenting it alongside live legislation overstates what is actually moving.
+  const active = ordinances.filter(ord => !ord.dormant);
+  const dormant = ordinances.filter(ord => ord.dormant);
+
+  // Open the inactive group when it holds the ordinance a link pointed at, so a
+  // deep link never lands on a collapsed section.
+  const [showDormant, setShowDormant] = useState(
+    () => !!autoExpand && dormant.some(ord => ord.number === autoExpand)
+  );
+
   if (ordinances.length === 0) return null;
 
   return (
-    <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 p-6 mb-6">
-      <div className="flex items-center mb-4">
-        <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2" />
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Pending Legislation</h2>
-        <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200">
-          {ordinances.length} in progress
-        </span>
-      </div>
+    <>
+      {active.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 p-6 mb-6">
+          <div className="flex items-center mb-4">
+            <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-2" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Pending Legislation</h2>
+            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200">
+              {active.length} in progress
+            </span>
+          </div>
 
-      <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
-        These ordinances are currently being considered by City Council. They require multiple
-        readings before adoption and may change during the review process.
-        Residents can share feedback during public comment at any council meeting.
-      </p>
+          <p className="text-sm text-amber-800 dark:text-amber-200 mb-4">
+            These ordinances are currently being considered by City Council. They require multiple
+            readings before adoption and may change during the review process.
+            Residents can share feedback during public comment at any council meeting.
+          </p>
 
-      <div className="space-y-4">
-        {ordinances.map(ord => (
-          <PendingOrdinanceCard key={ord.id} ordinance={ord} highlighted={autoExpand === ord.number} />
-        ))}
-      </div>
-    </div>
+          <div className="space-y-4">
+            {active.map(ord => (
+              <PendingOrdinanceCard key={ord.id} ordinance={ord} highlighted={autoExpand === ord.number} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {dormant.length > 0 && (
+        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6">
+          <button
+            onClick={() => setShowDormant(!showDormant)}
+            aria-expanded={showDormant}
+            className="w-full flex items-center justify-between p-6 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition rounded-xl"
+          >
+            <div className="flex items-center">
+              <PauseCircle className="w-5 h-5 text-slate-500 dark:text-slate-400 mr-2" aria-hidden="true" />
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">No Recent Action</h2>
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                {dormant.length}
+              </span>
+            </div>
+            {showDormant ? (
+              <ChevronUp className="w-5 h-5 text-slate-400" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-slate-400" aria-hidden="true" />
+            )}
+          </button>
+
+          {showDormant && (
+            <div className="px-6 pb-6">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                Introduced but not acted on by City Council in over {DORMANT_AFTER_DAYS} days, and not
+                scheduled on any upcoming agenda. An item can go quiet because the applicant withdrew
+                it, because it was replaced by a later ordinance, or simply because council has not
+                brought it back. This dashboard cannot tell which, so these are listed as-is rather
+                than as legislation under active consideration.
+              </p>
+              <div className="space-y-4">
+                {dormant.map(ord => (
+                  <PendingOrdinanceCard key={ord.id} ordinance={ord} highlighted={autoExpand === ord.number} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
-}
-
-// Helper to check if a date is more than 60 days in the past
-function isStaleDate(dateStr: string | undefined): boolean {
-  if (!dateStr) return false;
-  const date = new Date(dateStr + 'T12:00:00');
-  const sixtyDaysMs = 60 * 24 * 60 * 60 * 1000;
-  return (Date.now() - date.getTime()) > sixtyDaysMs;
 }
 
 function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOrdinance; highlighted?: boolean }) {
   const [showSummary, setShowSummary] = useState(false);
-
-  // Check if meeting data might be stale (last reading >60 days ago)
-  const lastReading = ordinance.readings?.[ordinance.readings.length - 1];
-  const isDataStale = isStaleDate(lastReading?.meeting_date);
 
   // Get status display
   const getStatusDisplay = (status: string) => {
@@ -731,15 +778,18 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
         </div>
       )}
 
-      {/* Stale Data Notice - show when last reading is >60 days old */}
-      {isDataStale && (
-        <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded text-sm text-amber-700 dark:text-amber-300">
-          Meeting data may be incomplete.{' '}
+      {/* Dormant items say plainly when council last touched them, so the gap
+          is visible rather than implied by the item's placement. */}
+      {ordinance.dormant && (
+        <div className="mt-3 p-2 bg-slate-100 dark:bg-slate-700/50 rounded text-sm text-slate-600 dark:text-slate-300">
+          {ordinance.last_action_date
+            ? `No council action since ${formatDate(ordinance.last_action_date)}.`
+            : 'No council action on record.'}{' '}
           <a
             href={`${municodeUrl}?nodeId=SUHITA`}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline hover:text-amber-900 dark:hover:text-amber-100"
+            className="underline hover:text-slate-900 dark:hover:text-slate-100"
           >
             Verify on Municode →
           </a>

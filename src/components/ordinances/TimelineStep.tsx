@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Check, X, Pause, Circle } from 'lucide-react';
-import type { TimelineStep as TimelineStepType, TimelineStepStatus } from './types';
+import type { TimelineStep as TimelineStepType } from './types';
 import { formatDate } from '@/lib/dates';
 
 interface TimelineStepProps {
@@ -33,6 +33,10 @@ export function TimelineStep({ step, isLast = false, vertical = false, compact =
         return 'bg-emerald-500 text-white';
       case 'current':
         return 'bg-amber-500 text-white ring-2 ring-amber-200 dark:ring-amber-700';
+      // Outlined rather than filled: the city scheduled this reading, but no
+      // vote is on record confirming it took place.
+      case 'scheduled':
+        return 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-2 border-dashed border-slate-300 dark:border-slate-500';
       case 'upcoming':
       default:
         return 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400';
@@ -42,6 +46,9 @@ export function TimelineStep({ step, isLast = false, vertical = false, compact =
   const getLabelStyles = (): string => {
     if (status === 'completed' || status === 'current' || isTerminal) {
       return 'text-slate-700 dark:text-slate-200 font-medium';
+    }
+    if (status === 'scheduled') {
+      return 'text-slate-500 dark:text-slate-400';
     }
     return 'text-slate-400 dark:text-slate-500';
   };
@@ -61,6 +68,10 @@ export function TimelineStep({ step, isLast = false, vertical = false, compact =
     return null;
   };
 
+  // Spelled out rather than left to the dashed outline alone, so the
+  // distinction survives for anyone not reading the styling.
+  const statusNote = status === 'scheduled' ? 'scheduled — no vote on record' : undefined;
+
   const circleSize = compact ? 'w-5 h-5' : 'w-6 h-6';
   const textSize = compact ? 'text-[10px]' : 'text-xs';
 
@@ -71,7 +82,7 @@ export function TimelineStep({ step, isLast = false, vertical = false, compact =
         ${getCircleStyles()}
         ${meetingId ? 'cursor-pointer hover:scale-110 transition-transform' : ''}
       `}
-      title={date ? formatDate(date) : undefined}
+      title={[date ? formatDate(date) : null, statusNote].filter(Boolean).join(' — ') || undefined}
     >
       {getIcon()}
     </div>
@@ -109,6 +120,7 @@ export function TimelineStep({ step, isLast = false, vertical = false, compact =
           )}
           {date && (
             <span className={`${textSize} text-slate-400 dark:text-slate-500`}>
+              {status === 'scheduled' ? 'scheduled ' : ''}
               {formatDate(date, { month: 'short', day: 'numeric' })}
             </span>
           )}
@@ -131,6 +143,7 @@ export function TimelineStep({ step, isLast = false, vertical = false, compact =
         </span>
         {date && status !== 'upcoming' && (
           <span className={`${textSize} text-slate-400 dark:text-slate-500 whitespace-nowrap`}>
+            {status === 'scheduled' ? 'scheduled ' : ''}
             {formatDate(date, { month: 'short', day: 'numeric' })}
           </span>
         )}

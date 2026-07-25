@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { cityName } from './city-config-client';
-import { normalizeAction } from '@/components/ordinances/types';
+import { normalizeAction, DORMANT_AFTER_DAYS } from '@/components/ordinances/types';
+import { classifyReading } from './ordinanceRefs';
 
 // Derive database name from city name (e.g., "Flowery Branch" -> "flowery-branch.db")
 const dbSlug = cityName.toLowerCase().replace(/\s+/g, '-');
@@ -208,6 +209,9 @@ function initializeSchema() {
 
   // Schema migrations - safely add columns that may not exist
   addColumnIfNotExists(database, 'resolutions', 'outcome_verified', 'INTEGER DEFAULT 0');
+  // Marks an action that came from a recorded council vote rather than from
+  // reading the agenda title, so re-linking cannot overwrite a known outcome.
+  addColumnIfNotExists(database, 'ordinance_meetings', 'outcome_verified', 'INTEGER DEFAULT 0');
   addColumnIfNotExists(database, 'ordinances', 'disposition', 'TEXT');
   addColumnIfNotExists(database, 'ordinances', 'minutes_url', 'TEXT');
 
@@ -628,6 +632,8 @@ export interface PendingOrdinanceReading {
   meeting_id: string;
   meeting_date: string;
   meeting_title: string;
+  /** 1 when a recorded vote confirmed this action, 0 when only the agenda scheduled it. */
+  outcome_verified?: number;
 }
 
 export interface PendingOrdinanceNextMeeting {
@@ -648,6 +654,10 @@ export interface PendingOrdinanceWithProgress {
   introduced_date: string | null;
   readings: PendingOrdinanceReading[];
   next_meeting: PendingOrdinanceNextMeeting | null;
+  // Date of the last council action on record, and whether that was long enough
+  // ago that calling the item "being considered" would overstate it.
+  last_action_date: string | null;
+  dormant: boolean;
 }
 
 // Get pending ordinances with their reading history and next scheduled action
@@ -704,10 +714,30 @@ export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress
   // Combine both sources
   const allPending: PendingOrdinanceWithProgress[] = [];
 
+  const dormantBefore = new Date();
+  dormantBefore.setDate(dormantBefore.getDate() - DORMANT_AFTER_DAYS);
+  const dormantBeforeStr = dormantBefore.toISOString().split('T')[0];
+
+  // An item with a future meeting on the calendar is live no matter how long
+  // ago it was last heard; otherwise its most recent reading decides.
+  const withDormancy = (
+    entry: Omit<PendingOrdinanceWithProgress, 'last_action_date' | 'dormant'>
+  ): PendingOrdinanceWithProgress => {
+    const lastActionDate = entry.readings.length > 0
+      ? entry.readings[entry.readings.length - 1].meeting_date
+      : entry.introduced_date;
+
+    return {
+      ...entry,
+      last_action_date: lastActionDate,
+      dormant: !entry.next_meeting && !!lastActionDate && lastActionDate < dormantBeforeStr,
+    };
+  };
+
   // Process ordinances from ordinances table
   for (const ord of pendingOrdinances) {
     const readings = db.prepare(`
-      SELECT om.action, om.meeting_id, m.date as meeting_date, m.title as meeting_title
+      SELECT om.action, om.meeting_id, m.date as meeting_date, m.title as meeting_title, om.outcome_verified
       FROM ordinance_meetings om
       JOIN meetings m ON m.id = om.meeting_id
       WHERE om.ordinance_id = ?
@@ -731,7 +761,7 @@ export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress
       item_title: string;
     } | undefined;
 
-    allPending.push({
+    allPending.push(withDormancy({
       ...ord,
       readings,
       next_meeting: nextMeeting ? {
@@ -741,7 +771,7 @@ export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress
         packet_url: nextMeeting.packet_url,
         expected_action: detectExpectedAction(nextMeeting.item_title),
       } : null,
-    });
+    }));
   }
 
   // Process ordinances from agenda_items that don't have records
@@ -798,7 +828,7 @@ export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress
     // Extract clean title from the most descriptive agenda item
     const cleanTitle = extractOrdinanceTitle(agendaOrd.title);
 
-    allPending.push({
+    allPending.push(withDormancy({
       id: `pending-${agendaOrd.number}`,
       number: agendaOrd.number,
       title: cleanTitle,
@@ -808,7 +838,7 @@ export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress
       introduced_date: agendaOrd.introduced_date,
       readings,
       next_meeting: nextMeeting,
-    });
+    }));
   }
 
   // Sort by ordinance number descending
@@ -820,8 +850,9 @@ export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress
 // Helper to detect action from agenda item title
 function detectActionFromTitle(title: string): string {
   const lower = title.toLowerCase();
-  if (lower.includes('second reading')) return 'second_reading';
-  if (lower.includes('first reading')) return 'first_reading';
+  const reading = classifyReading(title);
+  if (reading === 'second') return 'second_reading';
+  if (reading === 'first') return 'first_reading';
   if (lower.includes('adopt')) return 'adopted';
   if (lower.includes('public hearing')) return 'public_hearing';
   return 'discussed';
@@ -842,8 +873,9 @@ function actionPriority(action: string): number {
 // Helper to detect expected action for display
 function detectExpectedAction(title: string): string {
   const lower = title.toLowerCase();
-  if (lower.includes('second reading')) return 'Second Reading';
-  if (lower.includes('first reading')) return 'First Reading';
+  const reading = classifyReading(title);
+  if (reading === 'second') return 'Second Reading';
+  if (reading === 'first') return 'First Reading';
   if (lower.includes('adopt')) return 'Adoption Vote';
   if (lower.includes('public hearing')) return 'Public Hearing';
   return 'Discussion';
@@ -1039,6 +1071,7 @@ export interface OrdinanceMeetingRow {
 
 export interface MeetingWithAction extends MeetingRow {
   action: string | null;
+  outcome_verified?: number;
 }
 
 export interface OrdinanceRow {
@@ -1185,7 +1218,7 @@ export function getResolutionByNumber(number: string): ResolutionRow | undefined
 export function getMeetingsForOrdinance(ordinanceId: string): MeetingWithAction[] {
   const db = getDb();
   return db.prepare(`
-    SELECT m.*, om.action
+    SELECT m.*, om.action, om.outcome_verified
     FROM meetings m
     JOIN ordinance_meetings om ON m.id = om.meeting_id
     WHERE om.ordinance_id = ?
@@ -1211,9 +1244,16 @@ export function insertOrdinanceMeeting(
   action?: string
 ): void {
   const db = getDb();
+  // An action derived from a recorded vote outranks one guessed from the agenda
+  // title. link-ordinances runs after the vote-outcome pass, so without this
+  // guard it overwrote real outcomes — a second reading that passed came back
+  // as "tabled" because the item's title happened to mention "Table 9.1".
   db.prepare(`
-    INSERT OR REPLACE INTO ordinance_meetings (ordinance_id, meeting_id, action)
+    INSERT INTO ordinance_meetings (ordinance_id, meeting_id, action)
     VALUES (?, ?, ?)
+    ON CONFLICT(ordinance_id, meeting_id) DO UPDATE SET
+      action = CASE WHEN ordinance_meetings.outcome_verified = 1
+                    THEN ordinance_meetings.action ELSE excluded.action END
   `).run(ordinanceId, meetingId, action || 'discussed');
 }
 
@@ -1228,16 +1268,22 @@ export function getOrdinanceByNumber(ordinanceNumber: string): OrdinanceRow | nu
 // Get all agenda items that reference ordinances
 export function getAgendaItemsWithOrdinances(): Array<{
   meeting_id: string;
+  meeting_date: string;
   title: string;
   reference_number: string | null;
 }> {
   const db = getDb();
+  // The meeting date rides along so linking can create a missing ordinance
+  // record with a truthful introduced date.
   return db.prepare(`
-    SELECT meeting_id, title, reference_number
-    FROM agenda_items
-    WHERE type = 'ordinance' OR title LIKE '%ordinance%'
+    SELECT ai.meeting_id, m.date AS meeting_date, ai.title, ai.reference_number
+    FROM agenda_items ai
+    JOIN meetings m ON m.id = ai.meeting_id
+    WHERE ai.type = 'ordinance' OR ai.title LIKE '%ordinance%'
+    ORDER BY m.date ASC
   `).all() as Array<{
     meeting_id: string;
+    meeting_date: string;
     title: string;
     reference_number: string | null;
   }>;

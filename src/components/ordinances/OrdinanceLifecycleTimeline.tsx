@@ -17,7 +17,8 @@ import {
  */
 function buildTimelineSteps(
   readings: OrdinanceLifecycleReading[],
-  showExpectedSteps: boolean
+  showExpectedSteps: boolean,
+  adoptionConfirmed = false
 ): TimelineStepType[] {
   // Create a map of completed actions with their meeting info
   const completedActions = new Map<string, OrdinanceLifecycleReading>();
@@ -49,7 +50,7 @@ function buildTimelineSteps(
   steps.push({
     action: 'first_reading',
     label: ACTION_LABELS['first_reading'],
-    status: getStepStatus('first_reading', completedActions, hasAdopted || hasTabled || hasDenied),
+    status: getStepStatus('first_reading', completedActions, hasAdopted || hasTabled || hasDenied, adoptionConfirmed),
     date: firstReading?.meeting_date || null,
     meetingId: firstReading?.meeting_id || null,
     meetingTitle: firstReading?.meeting_title,
@@ -73,7 +74,7 @@ function buildTimelineSteps(
   steps.push({
     action: 'second_reading',
     label: ACTION_LABELS['second_reading'],
-    status: getStepStatus('second_reading', completedActions, hasAdopted || hasTabled || hasDenied),
+    status: getStepStatus('second_reading', completedActions, hasAdopted || hasTabled || hasDenied, adoptionConfirmed),
     date: secondReading?.meeting_date || null,
     meetingId: secondReading?.meeting_id || null,
     meetingTitle: secondReading?.meeting_title,
@@ -106,7 +107,7 @@ function buildTimelineSteps(
     steps.push({
       action: 'adopted',
       label: ACTION_LABELS['adopted'],
-      status: getStepStatus('adopted', completedActions, hasAdopted),
+      status: getStepStatus('adopted', completedActions, hasAdopted, adoptionConfirmed),
       date: adoptedReading?.meeting_date || null,
       meetingId: adoptedReading?.meeting_id || null,
       meetingTitle: adoptedReading?.meeting_title,
@@ -141,10 +142,17 @@ function normalizeActionKey(action: string): string {
 function getStepStatus(
   action: string,
   completedActions: Map<string, OrdinanceLifecycleReading>,
-  isProcessComplete: boolean
+  isProcessComplete: boolean,
+  adoptionConfirmed = false
 ): TimelineStepStatus {
-  if (completedActions.has(action)) {
-    return 'completed';
+  const reading = completedActions.get(action);
+  if (reading) {
+    // An agenda placing the item on a meeting is not proof the reading took
+    // place. Only a recorded vote makes it completed; otherwise it is what the
+    // city scheduled, and is shown as such — unless the ordinance is known to
+    // have been adopted, which means every step leading to it did happen even
+    // where the portal kept no vote record.
+    return reading.outcome_verified === 1 || adoptionConfirmed ? 'completed' : 'scheduled';
   }
 
   if (isProcessComplete) {
@@ -166,27 +174,32 @@ export function OrdinanceLifecycleTimeline({
   readings: initialReadings,
   ordinanceId,
   showExpectedSteps = false,
+  adoptionConfirmed = false,
   variant = 'auto',
   compact = false,
 }: OrdinanceLifecycleTimelineProps) {
   const [readings, setReadings] = useState<OrdinanceLifecycleReading[]>(initialReadings || []);
-  const [loading, setLoading] = useState(false);
+  // Whether a fetch is needed is known at first render, so the initial value
+  // says so directly. Flipping it on inside the effect meant an extra render
+  // pass before the spinner appeared.
+  const needsFetch = !!ordinanceId && !initialReadings?.length;
+  const [loading, setLoading] = useState(needsFetch);
 
   // Fetch readings if ordinanceId provided and no initial readings
   useEffect(() => {
     if (ordinanceId && !initialReadings?.length) {
-      setLoading(true);
       fetch(`/api/data?type=ordinance-meetings&ordinanceId=${ordinanceId}`)
         .then(res => res.json())
         .then(data => {
           // Transform the API response to match our expected format
           const meetings = data.meetings || [];
           const transformedReadings: OrdinanceLifecycleReading[] = meetings.map(
-            (m: { id: string; date: string; title: string; action: string | null }) => ({
+            (m: { id: string; date: string; title: string; action: string | null; outcome_verified?: number }) => ({
               action: m.action || 'discussed',
               meeting_id: m.id,
               meeting_date: m.date,
               meeting_title: m.title,
+              outcome_verified: m.outcome_verified,
             })
           );
           setReadings(transformedReadings);
@@ -210,7 +223,7 @@ export function OrdinanceLifecycleTimeline({
     return null;
   }
 
-  const steps = buildTimelineSteps(readings, showExpectedSteps);
+  const steps = buildTimelineSteps(readings, showExpectedSteps, adoptionConfirmed);
 
   // Determine layout based on variant
   const isVertical = variant === 'vertical' || (variant === 'auto' && steps.length > 4);

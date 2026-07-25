@@ -9,6 +9,7 @@ import {
   getDb,
 } from '../db';
 import { fetchPdf } from './utils';
+import { classifyReading, extractOrdinanceNumbers, normalizeRefText } from '../ordinanceRefs';
 
 // Extract a clean ordinance title from an agenda item title
 // e.g., "Public Hearing and Second Reading of Ordinance 724 to Consider a Variance Request..."
@@ -362,19 +363,29 @@ export interface LinkResult {
   linked: number;
   notFound: string[];
   errors: string[];
+  /** Auto-created ordinance records dropped because nothing references them. */
+  removedArtifacts?: string[];
 }
 
 // Detect the action type from an agenda item title
 function detectOrdinanceAction(title: string): string {
   const lowerTitle = title.toLowerCase();
 
-  if (lowerTitle.includes('first reading')) return 'first_reading';
-  if (lowerTitle.includes('second reading')) return 'second_reading';
+  // Reading first: it is the most specific signal, and the wording the city
+  // uses ("Second Read to Consider…") is not the phrase a substring test for
+  // "second reading" would catch.
+  const reading = classifyReading(title);
+  if (reading === 'first') return 'first_reading';
+  if (reading === 'second') return 'second_reading';
+
   if (lowerTitle.includes('adopt') || lowerTitle.includes('adoption'))
     return 'adopted';
   if (lowerTitle.includes('introduc')) return 'introduced';
   if (lowerTitle.includes('amend')) return 'amended';
-  if (lowerTitle.includes('table')) return 'tabled';
+  // Only a motion to table, never an incidental mention. Zoning text
+  // amendments cite "Table 9.1" and were being recorded as tabled.
+  if (/\b(?:tabled|to\s+table|motion\s+to\s+table)\b/i.test(lowerTitle))
+    return 'tabled';
   if (lowerTitle.includes('deny') || lowerTitle.includes('denied'))
     return 'denied';
   if (lowerTitle.includes('withdraw')) return 'withdrawn';
@@ -382,18 +393,15 @@ function detectOrdinanceAction(title: string): string {
   return 'discussed';
 }
 
-// Extract ordinance number from text (handles various formats)
-function extractOrdinanceNumber(text: string): string | null {
-  let match = text.match(/ordinance\s*#?\s*(\d{4}[-–]\d+)/i);
-  if (match) return match[1].replace('–', '-');
+// Every ordinance number a piece of text references, newest parser shared with
+// the agenda scraper and the vote-outcome pass so the three cannot drift.
+function extractOrdinanceNumbersFrom(text: string): string[] {
+  const numbers = extractOrdinanceNumbers(text);
+  if (numbers.length > 0) return numbers;
 
-  match = text.match(/ordinance\s*#?\s*(\d+)/i);
-  if (match) return match[1];
-
-  match = text.match(/(\d{4}[-–]\d+)/);
-  if (match) return match[1].replace('–', '-');
-
-  return null;
+  // Older records carry a bare year-prefixed number with no "Ordinance" word.
+  const bare = normalizeRefText(text).match(/\b(\d{4}-\d+)\b/);
+  return bare ? [bare[1]] : [];
 }
 
 // Link ordinances to meetings based on agenda items
@@ -414,60 +422,73 @@ export function linkOrdinancesToMeetings(): LinkResult {
 
     for (const item of agendaItems) {
       try {
-        let ordinanceNum = item.reference_number
-          ? extractOrdinanceNumber(item.reference_number)
-          : null;
+        // The title is the richer source: reference_number holds only the first
+        // of what may be several ordinances moved by one item.
+        const ordinanceNums = [
+          ...new Set([
+            ...extractOrdinanceNumbersFrom(item.title),
+            ...(item.reference_number ? extractOrdinanceNumbersFrom(item.reference_number) : []),
+          ]),
+        ];
 
-        if (!ordinanceNum) {
-          ordinanceNum = extractOrdinanceNumber(item.title);
-        }
-
-        if (!ordinanceNum) {
-          continue;
-        }
-
-        const key = `${item.meeting_id}-${ordinanceNum}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        let ordinance = getOrdinanceByNumber(ordinanceNum);
-
-        if (!ordinance && !ordinanceNum.includes('-')) {
-          const currentYear = new Date().getFullYear();
-          for (let year = currentYear; year >= currentYear - 5; year--) {
-            ordinance = getOrdinanceByNumber(
-              `${year}-${ordinanceNum.padStart(3, '0')}`
-            );
-            if (ordinance) break;
-          }
-        }
-
-        if (!ordinance) {
-          const partialMatch = db
-            .prepare(`SELECT * FROM ordinances WHERE number LIKE ?`)
-            .get(`%${ordinanceNum}%`) as
-            | { id: string; number: string }
-            | undefined;
-
-          if (partialMatch) {
-            ordinance = partialMatch as unknown as typeof ordinance;
-          }
-        }
-
-        if (!ordinance) {
-          result.notFound.push(
-            `Ordinance ${ordinanceNum} (from meeting ${item.meeting_id})`
-          );
+        if (ordinanceNums.length === 0) {
           continue;
         }
 
         const action = detectOrdinanceAction(item.title);
 
-        insertOrdinanceMeeting(ordinance.id, item.meeting_id, action);
-        result.linked++;
-        console.log(
-          `Linked: Ordinance ${ordinance.number} → Meeting ${item.meeting_id} (${action})`
-        );
+        for (const ordinanceNum of ordinanceNums) {
+          const key = `${item.meeting_id}-${ordinanceNum}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          let ordinance = getOrdinanceByNumber(ordinanceNum);
+
+          if (!ordinance && !ordinanceNum.includes('-')) {
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear; year >= currentYear - 5; year--) {
+              ordinance = getOrdinanceByNumber(
+                `${year}-${ordinanceNum.padStart(3, '0')}`
+              );
+              if (ordinance) break;
+            }
+          }
+
+          if (!ordinance) {
+            const partialMatch = db
+              .prepare(`SELECT * FROM ordinances WHERE number LIKE ?`)
+              .get(`%${ordinanceNum}%`) as
+              | { id: string; number: string }
+              | undefined;
+
+            if (partialMatch) {
+              ordinance = partialMatch as unknown as typeof ordinance;
+            }
+          }
+
+          if (!ordinance) {
+            // The agenda names an ordinance we have no record of — typically a
+            // lettered amendment like 702-A that only ever appears in agenda
+            // titles and never gets published to Municode on its own. Create it
+            // from what the agenda says rather than dropping it, so linking
+            // heals stored agenda items without waiting for a re-scrape.
+            createOrdinanceFromAgendaItem(ordinanceNum, item.title, item.meeting_date);
+            ordinance = getOrdinanceByNumber(ordinanceNum);
+
+            if (!ordinance) {
+              result.notFound.push(
+                `Ordinance ${ordinanceNum} (from meeting ${item.meeting_id})`
+              );
+              continue;
+            }
+          }
+
+          insertOrdinanceMeeting(ordinance.id, item.meeting_id, action);
+          result.linked++;
+          console.log(
+            `Linked: Ordinance ${ordinance.number} → Meeting ${item.meeting_id} (${action})`
+          );
+        }
       } catch (err) {
         result.errors.push(`Error processing agenda item: ${err}`);
       }
@@ -476,6 +497,8 @@ export function linkOrdinancesToMeetings(): LinkResult {
     console.log(
       `Linking complete: ${result.linked} links created, ${result.notFound.length} ordinances not found`
     );
+
+    result.removedArtifacts = removeUnreferencedAgendaOrdinances();
   } catch (err) {
     result.errors.push(`Fatal error: ${err}`);
   }
@@ -483,10 +506,64 @@ export function linkOrdinancesToMeetings(): LinkResult {
   return result;
 }
 
+/**
+ * Drop ordinance records that were invented from an agenda title and are no
+ * longer referenced by any agenda item.
+ *
+ * Reading "Ordinance 239-N / 240-N" as plain "239" created a record for an
+ * ordinance the council never acted on — the city clerk read the caption for
+ * 239-N and 240-N, and the motion was to approve 239-N and 240-N. Now that the
+ * reference parses correctly, nothing points at the stray record, and leaving
+ * it would show residents a phantom pending ordinance.
+ *
+ * Deliberately narrow: only records this pipeline auto-created from an agenda
+ * (`ordinance-` id prefix), never published to Municode, and referenced by no
+ * remaining agenda item. Anything the city actually published is untouched, and
+ * a genuine ordinance that reappears on an agenda is simply recreated.
+ */
+export function removeUnreferencedAgendaOrdinances(): string[] {
+  const db = getDb();
+
+  const referenced = new Set<string>();
+  for (const item of getAgendaItemsWithOrdinances()) {
+    for (const num of extractOrdinanceNumbersFrom(item.title)) referenced.add(num);
+    if (item.reference_number) {
+      for (const num of extractOrdinanceNumbersFrom(item.reference_number)) referenced.add(num);
+    }
+  }
+
+  const candidates = db.prepare(`
+    SELECT id, number FROM ordinances
+    WHERE id LIKE 'ordinance-%'
+      AND municode_url IS NULL
+      AND adopted_date IS NULL
+      AND status NOT IN ('adopted', 'denied', 'rejected', 'tabled')
+  `).all() as { id: string; number: string }[];
+
+  const removed: string[] = [];
+  for (const candidate of candidates) {
+    if (referenced.has(candidate.number)) continue;
+
+    db.prepare('DELETE FROM ordinance_meetings WHERE ordinance_id = ?').run(candidate.id);
+    db.prepare('DELETE FROM ordinances WHERE id = ?').run(candidate.id);
+    removed.push(candidate.number);
+    console.log(`Removed unreferenced auto-created ordinance ${candidate.number}`);
+  }
+
+  return removed;
+}
+
 // Update ordinance adoption dates from linked meeting dates
 export function updateOrdinanceDatesFromMeetings(): number {
   const db = getDb();
 
+  // Only a recorded adoption vote sets an adoption date, and it sets the status
+  // in the same breath. Accepting a bare 'second_reading' meant an agenda
+  // *scheduling* a second read was treated as the ordinance having passed one —
+  // and because only the date was written and not the status, the ordinance fell
+  // out of the pending list (which requires a null adoption date) without
+  // entering the adopted list (which requires the adopted status), disappearing
+  // from the site entirely.
   const result = db
     .prepare(
       `
@@ -496,16 +573,19 @@ export function updateOrdinanceDatesFromMeetings(): number {
       FROM ordinance_meetings om
       JOIN meetings m ON m.id = om.meeting_id
       WHERE om.ordinance_id = ordinances.id
-        AND om.action IN ('adopted', 'second_reading', 'approved')
+        AND om.action = 'adopted'
+        AND om.outcome_verified = 1
       ORDER BY m.date DESC
       LIMIT 1
     ),
+    status = 'adopted',
     updated_at = datetime('now')
     WHERE EXISTS (
       SELECT 1 FROM ordinance_meetings om
       JOIN meetings m ON m.id = om.meeting_id
       WHERE om.ordinance_id = ordinances.id
-        AND om.action IN ('adopted', 'second_reading', 'approved')
+        AND om.action = 'adopted'
+        AND om.outcome_verified = 1
     )
   `
     )

@@ -1,4 +1,17 @@
-export type TimelineStepStatus = 'completed' | 'current' | 'upcoming';
+// An applicant can withdraw an item, or council can simply stop bringing it
+// back, and neither leaves a vote behind for the pipeline to read. Without a
+// cutoff those items sit on the page as live legislation indefinitely.
+// Lives here rather than in db.ts so client components can read it without
+// pulling the SQLite driver into the browser bundle.
+export const DORMANT_AFTER_DAYS = 60;
+
+// 'scheduled' means an agenda put this reading on a meeting but no vote is on
+// record for it — either the minutes are not published yet, or the item never
+// actually came up. Distinguishing it from 'completed' keeps the site from
+// asserting a reading happened when the city's record only shows it was
+// calendared: four ordinances withdrawn before their hearing still had their
+// scheduled first reading rendered as a completed one.
+export type TimelineStepStatus = 'completed' | 'scheduled' | 'current' | 'upcoming';
 export type TimelineAction = 'first_reading' | 'public_hearing' | 'second_reading' | 'adopted' | 'tabled' | 'denied';
 
 // Standard ordinance process steps
@@ -51,6 +64,8 @@ export interface OrdinanceLifecycleReading {
   meeting_id: string;
   meeting_date: string;
   meeting_title: string;
+  /** 1 when a recorded council vote confirmed this action, 0 when it is only what the agenda scheduled. */
+  outcome_verified?: number;
 }
 
 // Props for the OrdinanceLifecycleTimeline component
@@ -61,6 +76,14 @@ export interface OrdinanceLifecycleTimelineProps {
   ordinanceId?: string;
   /** Show expected upcoming steps for pending ordinances */
   showExpectedSteps?: boolean;
+  /**
+   * The ordinance's adoption is confirmed by a source other than a council
+   * vote record — Municode publication, typically. Meetings before roughly
+   * September 2025 carry no motions/votes data at all, so without this an
+   * ordinance the city has long since codified would render every step as
+   * merely "scheduled".
+   */
+  adoptionConfirmed?: boolean;
   /** Layout variant */
   variant?: 'horizontal' | 'vertical' | 'auto';
   /** Compact mode for smaller spaces */

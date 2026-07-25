@@ -15,6 +15,7 @@ import {
   fetchCivicClerkOrdinanceAttachments,
 } from '@/lib/scraper';
 import { analyzePdf, analyzeOrdinancePdf } from '@/lib/summarize';
+import { actionRank, extractOrdinanceNumbers, extractResolutionNumbers, resolveOrdinanceVote } from '@/lib/ordinanceRefs';
 import {
   insertMeeting,
   insertAgendaItem,
@@ -72,17 +73,23 @@ export async function handleMeeting(params: HandlerParams) {
     let ordinancesCreated = 0;
     for (const item of agendaItems) {
       // Check if this item references an ordinance (either type='ordinance' or public_hearing with ref number)
-      if (item.referenceNumber && (
+      const isOrdinanceItem =
         item.type === 'ordinance' ||
-        (item.type === 'public_hearing' && item.title.toLowerCase().includes('ordinance'))
-      )) {
-        const existing = getOrdinanceByNumber(item.referenceNumber);
+        (item.type === 'public_hearing' && item.title.toLowerCase().includes('ordinance'));
+      if (!isOrdinanceItem) continue;
+
+      // An item can move several ordinances at once, so each referenced number
+      // gets its own record rather than only the first.
+      const numbers = item.referenceNumbers?.length
+        ? item.referenceNumbers
+        : item.referenceNumber
+          ? [item.referenceNumber]
+          : [];
+
+      for (const number of numbers) {
+        const existing = getOrdinanceByNumber(number);
         if (!existing) {
-          createOrdinanceFromAgendaItem(
-            item.referenceNumber,
-            item.title,
-            meeting.date
-          );
+          createOrdinanceFromAgendaItem(number, item.title, meeting.date);
           ordinancesCreated++;
         }
       }
@@ -464,6 +471,20 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
           JOIN ordinances o ON o.id = om.ordinance_id
           WHERE om.meeting_id = m.id AND o.status = 'proposed'
         )
+        -- Also check meetings whose ordinance items are not linked yet.
+        -- Keying only off already-linked proposed ordinances was circular: an
+        -- item nothing had managed to link was never checked for a vote, so it
+        -- never got linked. That is how two ordinances read on June 18 and
+        -- again on July 15 stayed invisible.
+        OR EXISTS (
+          SELECT 1 FROM agenda_items ai
+          WHERE ai.meeting_id = m.id
+            AND ai.type IN ('ordinance', 'resolution')
+            AND NOT EXISTS (
+              SELECT 1 FROM ordinance_meetings om2
+              WHERE om2.meeting_id = m.id AND om2.outcome_verified = 1
+            )
+        )
       )
     ORDER BY m.date DESC
   `).all() as { id: string; eventId: number; date: string }[];
@@ -498,83 +519,65 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
       console.log(`    Processing vote: "${vote.itemTitle.slice(0, 80)}..." motion=${vote.motion} result=${vote.result}`);
 
       // Check for resolution votes
-      if (vote.itemTitle.toLowerCase().includes('resolution')) {
-        const resMatch = vote.itemTitle.match(/resolution\s+([\d-]+)/i);
-        if (resMatch) {
-          const resNumber = resMatch[1];
-          const status = vote.result === 'passed' ? 'adopted' :
-                         vote.result === 'failed' ? 'rejected' : 'tabled';
-          const result = db.prepare(`
-            UPDATE resolutions SET status = ?, outcome_verified = 1,
-              adopted_date = CASE WHEN ? = 'adopted' THEN ? ELSE adopted_date END
-            WHERE number = ? AND outcome_verified = 0
-          `).run(status, status, meeting.date, resNumber);
+      for (const resNumber of extractResolutionNumbers(vote.itemTitle)) {
+        const status = vote.result === 'passed' ? 'adopted' :
+                       vote.result === 'failed' ? 'rejected' : 'tabled';
+        const result = db.prepare(`
+          UPDATE resolutions SET status = ?, outcome_verified = 1,
+            adopted_date = CASE WHEN ? = 'adopted' THEN ? ELSE adopted_date END
+          WHERE number = ? AND outcome_verified = 0
+        `).run(status, status, meeting.date, resNumber);
 
-          if (result.changes > 0) {
-            console.log(`    ✓ Resolution ${resNumber}: ${vote.result} → status=${status}`);
-            resolutionsUpdated++;
-          } else {
-            console.log(`    - Resolution ${resNumber}: ${vote.result} (no update needed)`);
-          }
+        if (result.changes > 0) {
+          console.log(`    ✓ Resolution ${resNumber}: ${vote.result} → status=${status}`);
+          resolutionsUpdated++;
+        } else {
+          console.log(`    - Resolution ${resNumber}: ${vote.result} (no update needed)`);
         }
       }
 
-      // Check for ordinance votes (any reading, any result)
-      if (vote.itemTitle.toLowerCase().includes('ordinance')) {
-        const ordMatch = vote.itemTitle.match(/ordinance\s+(\d+)/i);
-        if (ordMatch) {
-          const ordNumber = ordMatch[1];
+      // Check for ordinance votes (any reading, any result). One vote can carry
+      // several ordinances — the council moves companion zoning amendments
+      // together — so each referenced number is updated.
+      for (const ordNumber of extractOrdinanceNumbers(vote.itemTitle)) {
+        const { action, newStatus, verified } = resolveOrdinanceVote(vote);
 
-          // Determine the actual outcome based on motion type AND result
-          let action: string;
-          let newStatus: string | null = null;
+        // Update ordinance_meetings.action. A confidently read outcome is
+        // marked verified so a later link-ordinances pass cannot overwrite a
+        // recorded vote with a guess derived from the agenda title. The rank
+        // guard stops a vaguer reading from demoting a more specific one that
+        // is already recorded.
+        const existing = db.prepare(`
+          SELECT om.action FROM ordinance_meetings om
+          JOIN ordinances o ON o.id = om.ordinance_id
+          WHERE om.meeting_id = ? AND (o.number = ? OR o.number LIKE ?)
+        `).get(meetingId, ordNumber, `%${ordNumber}`) as { action: string | null } | undefined;
 
-          if (vote.motion?.toLowerCase() === 'deny' && vote.result === 'passed') {
-            // Motion to deny passed = ordinance denied
-            action = 'denied';
-            newStatus = 'denied';
-          } else if (vote.motion?.toLowerCase() === 'approve' && vote.result === 'passed') {
-            // Motion to approve passed
-            if (vote.itemTitle.toLowerCase().includes('second reading')) {
-              action = 'adopted';
-              newStatus = 'adopted';
-            } else {
-              action = 'first_reading_passed';
-            }
-          } else if (vote.result === 'failed') {
-            action = 'failed';
-          } else if (vote.result === 'tabled') {
-            action = 'tabled';
-            newStatus = 'tabled';
-          } else {
-            action = 'voted'; // Generic fallback
+        const omResult = actionRank(action) >= actionRank(existing?.action)
+          ? db.prepare(`
+              UPDATE ordinance_meetings SET action = ?, outcome_verified = ?
+              WHERE meeting_id = ? AND ordinance_id IN (
+                SELECT id FROM ordinances WHERE number = ? OR number LIKE ?
+              )
+            `).run(action, verified ? 1 : 0, meetingId, ordNumber, `%${ordNumber}`)
+          : { changes: 0 };
+
+        // Update ordinances.status if terminal action
+        if (newStatus) {
+          const ordResult = db.prepare(`
+            UPDATE ordinances SET status = ?,
+              adopted_date = CASE WHEN ? = 'adopted' THEN ? ELSE adopted_date END
+            WHERE (number = ? OR number LIKE ?) AND status = 'proposed'
+          `).run(newStatus, newStatus, meeting.date, ordNumber, `%${ordNumber}`);
+
+          if (ordResult.changes > 0) {
+            console.log(`    ✓ Ordinance ${ordNumber}: ${vote.motion} ${vote.result} → status=${newStatus}`);
+            ordinancesUpdated++;
           }
+        }
 
-          // Update ordinance_meetings.action
-          const omResult = db.prepare(`
-            UPDATE ordinance_meetings SET action = ?
-            WHERE meeting_id = ? AND ordinance_id IN (
-              SELECT id FROM ordinances WHERE number = ? OR number LIKE ?
-            )
-          `).run(action, meetingId, ordNumber, `%${ordNumber}`);
-
-          // Update ordinances.status if terminal action
-          if (newStatus) {
-            const ordResult = db.prepare(`
-              UPDATE ordinances SET status = ?,
-                adopted_date = CASE WHEN ? = 'adopted' THEN ? ELSE adopted_date END
-              WHERE (number = ? OR number LIKE ?) AND status = 'proposed'
-            `).run(newStatus, newStatus, meeting.date, ordNumber, `%${ordNumber}`);
-
-            if (ordResult.changes > 0) {
-              console.log(`    ✓ Ordinance ${ordNumber}: ${vote.motion} ${vote.result} → status=${newStatus}`);
-              ordinancesUpdated++;
-            }
-          }
-
-          if (omResult.changes > 0) {
-            console.log(`    ✓ Ordinance ${ordNumber}: action updated to ${action}`);
-          }
+        if (omResult.changes > 0) {
+          console.log(`    ✓ Ordinance ${ordNumber}: action updated to ${action}`);
         }
       }
     }
@@ -582,6 +585,11 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
 
   const votesUpdated = resolutionsUpdated + ordinancesUpdated;
   console.log(`Vote outcomes: ${resolutionsUpdated} resolutions updated, ${ordinancesUpdated} ordinances updated`);
+
+  // Re-derive adoption dates now that the votes above are known. Step 4 ran
+  // before them, so without this an adoption recorded in this run would not
+  // reach the ordinance until the next scrape.
+  updateOrdinanceDatesFromMeetings();
 
   // Step 6: Auto-generate summaries for past meetings with agenda items
   // Respects batchLimit to prevent timeout issues

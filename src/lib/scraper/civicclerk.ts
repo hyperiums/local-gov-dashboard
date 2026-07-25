@@ -2,6 +2,7 @@
 import { DATA_SOURCES } from '../types';
 import { cityAddress } from '../city-config-client';
 import { extractAgendaItemsFromPdf } from '../summarize';
+import { extractOrdinanceNumbers, extractResolutionNumbers } from '../ordinanceRefs';
 import {
   ScrapedMeeting,
   ScrapedAgendaItem,
@@ -177,15 +178,19 @@ export async function scrapeCivicClerkMeetingDetails(eventId: number): Promise<{
       // Detect type from title
       let type = 'other';
       let referenceNumber: string | undefined;
+      // A single item often carries several numbers ("Ordinances 702-A and
+      // 715-A"), so every one is kept for linking while the first fills the
+      // single-value reference_number column.
+      let referenceNumbers: string[] = [];
 
       if (title.toLowerCase().includes('ordinance')) {
         type = 'ordinance';
-        const ordMatch = title.match(/Ordinance(?:\s+No\.?)?\s+(\d+)/i);
-        if (ordMatch) referenceNumber = ordMatch[1];
+        referenceNumbers = extractOrdinanceNumbers(title);
+        referenceNumber = referenceNumbers[0];
       } else if (title.toLowerCase().includes('resolution')) {
         type = 'resolution';
-        const resMatch = title.match(/Resolution\s+([\d-]+)/i);
-        if (resMatch) referenceNumber = resMatch[1];
+        referenceNumbers = extractResolutionNumbers(title);
+        referenceNumber = referenceNumbers[0];
       } else if (title.toLowerCase().includes('public hearing')) {
         type = 'public_hearing';
       } else if (title.toLowerCase().includes('consider')) {
@@ -201,6 +206,7 @@ export async function scrapeCivicClerkMeetingDetails(eventId: number): Promise<{
         title,
         type,
         referenceNumber,
+        referenceNumbers,
         attachments: [],
       });
     }
@@ -926,6 +932,65 @@ export interface VoteOutcome {
   abstainVotes: string[];
 }
 
+export interface ParsedVoteModal {
+  motion: string;
+  result: string;
+  initiatedBy: string;
+  secondedBy: string;
+  yesCount: number;
+  noCount: number;
+  abstainCount: number;
+  voters: string[];
+}
+
+/**
+ * Parse the text of a CivicClerk "Motions/Votes Detail" modal.
+ *
+ * One agenda item can carry several motions. Council routinely takes a motion
+ * that fails and then another that carries — the Hemingway fencing item on
+ * June 18, 2026 reads "Motion: Advance / Failed, Motion: Advance / Passed".
+ * The operative outcome is the last motion recorded, so scanning the blob for
+ * the first Passed|Failed reported the abandoned motion and would have
+ * published ordinances that are still moving as having failed.
+ */
+export function parseVoteModal(modalText: string): ParsedVoteModal | { debug: string; error: string } {
+  // Each motion owns the text up to the next "Motion:", so a motion with no
+  // recorded result cannot borrow the following motion's result.
+  const motionPairs = [
+    ...modalText.matchAll(/Motion:\s*(\w+)(?:(?!Motion:)[\s\S])*?\b(Passed|Failed|Tabled)\b/gi),
+  ];
+  const decisive = motionPairs.length > 0 ? motionPairs[motionPairs.length - 1] : null;
+  const firstMotion = modalText.match(/Motion:\s*(\w+)/i);
+
+  const initiatedMatch = modalText.match(/Initiated by\s+([^,]+)/i);
+  const secondedMatch = modalText.match(/seconded by\s+([^.\n\d]+)/i);
+  const yesMatch = modalText.match(/Yes\s*(\d+)/i);
+  const noMatch = modalText.match(/No\s+(\d+)/i);
+  const abstainMatch = modalText.match(/Abstain\s*(\d+)/i);
+  const voterLines = modalText.match(/\d+\.\s+[A-Z][a-z]+\s+[A-Z][a-zA-Z]+/g) || [];
+  const voters = voterLines.map(v => v.replace(/^\d+\.\s*/, '').trim());
+
+  const common = {
+    initiatedBy: initiatedMatch?.[1]?.trim() || 'Unknown',
+    secondedBy: secondedMatch?.[1]?.trim() || 'Unknown',
+    yesCount: parseInt(yesMatch?.[1] || '0'),
+    noCount: parseInt(noMatch?.[1] || '0'),
+    abstainCount: parseInt(abstainMatch?.[1] || '0'),
+    voters,
+  };
+
+  if (!decisive) {
+    // A motion to deny with no recorded result is how the portal represents a
+    // denial that carried.
+    if (firstMotion?.[1]?.toLowerCase() === 'deny') {
+      return { motion: 'Deny', result: 'passed', ...common };
+    }
+    return { debug: modalText.slice(0, 300), error: 'No result match' };
+  }
+
+  return { motion: decisive[1], result: decisive[2].toLowerCase(), ...common };
+}
+
 // Fetch vote outcomes from the overview page (more reliable than PDF parsing)
 export async function fetchVoteOutcomesFromOverview(
   eventId: number
@@ -983,10 +1048,15 @@ export async function fetchVoteOutcomesFromOverview(
             if (!parent) break;
             const text = parent.innerText || parent.textContent || '';
             if (text.length > 50 && text.length < 800) {
+              // Zoning items put the ordinance reference at the very end
+              // ("...Sterling on the Lake, Pursuant to Ordinance 239-N /
+              // 240-N." runs 227 characters). A 200-character cap dropped that
+              // reference, so the adoption vote matched no ordinance and the
+              // item stayed "pending" long after council passed it.
               const itemText = text
                 .replace(/MOTIONS \/ VOTES/g, '')
                 .trim()
-                .slice(0, 200);
+                .slice(0, 600);
               results.push({ itemText, buttonIndex });
               break;
             }
@@ -1000,51 +1070,15 @@ export async function fetchVoteOutcomesFromOverview(
 
     console.log(`Found ${itemsWithVotes.length} items with vote buttons`);
 
-    // Helper to extract vote data from current page state
+    // Read the raw modal text out of the page and parse it here, so the parsing
+    // rules are ordinary testable code rather than a regex sealed inside the
+    // browser context.
     const extractVoteData = async () => {
-      return page.evaluate(() => {
-        const bodyText = document.body.innerText;
-        const modalMatch = bodyText.match(/Motions\/Votes Detail[\s\S]{0,800}/);
-        const modalText = modalMatch ? modalMatch[0] : '';
-
-        const motionMatch = modalText.match(/Motion:\s*(\w+)/i);
-        const resultMatch = modalText.match(/(Passed|Failed|Tabled)/i);
-        const initiatedMatch = modalText.match(/Initiated by\s+([^,]+)/i);
-        const secondedMatch = modalText.match(/seconded by\s+([^.\n\d]+)/i);
-        const yesMatch = modalText.match(/Yes\s*(\d+)/i);
-        const noMatch = modalText.match(/No\s+(\d+)/i);
-        const abstainMatch = modalText.match(/Abstain\s*(\d+)/i);
-        const voterLines = modalText.match(/\d+\.\s+[A-Z][a-z]+\s+[A-Z][a-zA-Z]+/g) || [];
-        const voters = voterLines.map(v => v.replace(/^\d+\.\s*/, '').trim());
-
-        if (!resultMatch) {
-          // If motion is "Deny" but no explicit result, assume the motion passed
-          if (motionMatch?.[1]?.toLowerCase() === 'deny') {
-            return {
-              motion: 'Deny',
-              result: 'passed',
-              initiatedBy: initiatedMatch?.[1]?.trim() || 'Unknown',
-              secondedBy: secondedMatch?.[1]?.trim() || 'Unknown',
-              yesCount: parseInt(yesMatch?.[1] || '0'),
-              noCount: parseInt(noMatch?.[1] || '0'),
-              abstainCount: parseInt(abstainMatch?.[1] || '0'),
-              voters,
-            };
-          }
-          return { debug: modalText.slice(0, 300), error: 'No result match' };
-        }
-
-        return {
-          motion: motionMatch?.[1] || 'Unknown',
-          result: resultMatch?.[1]?.toLowerCase() || 'unknown',
-          initiatedBy: initiatedMatch?.[1]?.trim() || 'Unknown',
-          secondedBy: secondedMatch?.[1]?.trim() || 'Unknown',
-          yesCount: parseInt(yesMatch?.[1] || '0'),
-          noCount: parseInt(noMatch?.[1] || '0'),
-          abstainCount: parseInt(abstainMatch?.[1] || '0'),
-          voters,
-        };
+      const modalText = await page.evaluate(() => {
+        const modalMatch = document.body.innerText.match(/Motions\/Votes Detail[\s\S]{0,800}/);
+        return modalMatch ? modalMatch[0] : '';
       });
+      return parseVoteModal(modalText);
     };
 
     // Helper to close modal
@@ -1126,7 +1160,7 @@ export async function fetchVoteOutcomesFromOverview(
           // Extract vote data
           const voteData = await extractVoteData();
 
-          if (voteData && voteData.result && voteData.result !== 'unknown' && !voteData.error) {
+          if ('result' in voteData && voteData.result && voteData.result !== 'unknown') {
             console.log(`    Extracted: ${voteData.result} (${voteData.yesCount}-${voteData.noCount})`);
             outcomes.push({
               itemTitle: item.itemText,
@@ -1143,7 +1177,7 @@ export async function fetchVoteOutcomesFromOverview(
             });
             extracted = true;
             consecutiveFailures = 0;
-          } else if (voteData?.debug) {
+          } else if ('debug' in voteData && voteData.debug) {
             console.log(`    Debug modal text: ${voteData.debug}`);
           } else {
             console.log(`    No vote data extracted`);

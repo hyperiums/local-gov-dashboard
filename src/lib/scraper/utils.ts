@@ -50,6 +50,9 @@ export interface ScrapedAgendaItem {
   title: string;
   type: string;
   referenceNumber?: string;
+  // Every number the item references. One item can move several ordinances at
+  // once ("Ordinances 702-A and 715-A"); referenceNumber holds the first.
+  referenceNumbers?: string[];
   attachments: { name: string; url: string }[];
 }
 
