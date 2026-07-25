@@ -2,12 +2,12 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Clock, Filter, Calendar, Scale, FileText, ChevronDown, ChevronUp, CalendarDays, ExternalLink, List, FileDown } from 'lucide-react';
+import { Clock, Filter, Calendar, Scale, FileText, FileCheck, ChevronDown, ChevronUp, CalendarDays, ExternalLink, List, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { cityName } from '@/lib/city-config-client';
 import { formatSummaryHtml, summaryToPlainText } from '@/lib/sanitize';
 
-type TimelineItemType = 'meeting' | 'ordinance' | 'document';
+type TimelineItemType = 'meeting' | 'ordinance' | 'resolution' | 'document';
 type DateRange = 'month' | 'quarter' | 'year' | 'all';
 
 interface TimelineItem {
@@ -21,6 +21,7 @@ interface TimelineItem {
   metadata?: {
     meetingType?: string;
     ordinanceNumber?: string;
+    resolutionNumber?: string;
     documentType?: string;
     agendaCount?: number;
     agendaPreview?: string;
@@ -82,6 +83,12 @@ const TYPE_CONFIG: Record<TimelineItemType, { label: string; color: string; bgCo
     color: 'text-amber-700 dark:text-amber-300',
     bgColor: 'bg-amber-100 dark:bg-amber-900/50',
     icon: Scale,
+  },
+  resolution: {
+    label: 'Resolution',
+    color: 'text-indigo-700 dark:text-indigo-300',
+    bgColor: 'bg-indigo-100 dark:bg-indigo-900/50',
+    icon: FileCheck,
   },
   document: {
     label: 'Document',
@@ -402,9 +409,9 @@ function TimelineContent() {
                                   <Icon className="w-3 h-3 mr-1" />
                                   {config.label}
                                 </span>
-                                {item.metadata?.ordinanceNumber && (
+                                {(item.metadata?.ordinanceNumber || item.metadata?.resolutionNumber) && (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                                    #{item.metadata.ordinanceNumber}
+                                    #{item.metadata.ordinanceNumber ?? item.metadata.resolutionNumber}
                                   </span>
                                 )}
                                 {item.metadata?.meetingType && (
@@ -449,6 +456,9 @@ function TimelineContent() {
                             )}
                             {item.type === 'ordinance' && (
                               <OrdinanceExpandedContent item={item} />
+                            )}
+                            {item.type === 'resolution' && (
+                              <ResolutionExpandedContent item={item} />
                             )}
                             {item.type === 'document' && (
                               <DocumentExpandedContent item={item} />
@@ -658,6 +668,33 @@ function OrdinanceExpandedContent({ item }: { item: TimelineItem }) {
 }
 
 // Document Expanded Content Component
+// Resolutions have no Municode entry to link out to — they are adopted by the
+// council and live in the meeting packet, so the useful link is back to the
+// resolution itself rather than to a published code.
+function ResolutionExpandedContent({ item }: { item: TimelineItem }) {
+  return (
+    <div className="pt-4 space-y-4">
+      {item.metadata?.resolutionNumber && (
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/resolutions?search=${item.metadata.resolutionNumber}`}
+            className="inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+          >
+            <FileCheck className="w-4 h-4 mr-1.5" />
+            View Details
+          </Link>
+        </div>
+      )}
+
+      {item.fullDescription && (
+        <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
+          <div dangerouslySetInnerHTML={{ __html: formatSummaryHtml(item.fullDescription) }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DocumentExpandedContent({ item }: { item: TimelineItem }) {
   return (
     <div className="pt-4 space-y-4">

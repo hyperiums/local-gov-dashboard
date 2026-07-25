@@ -498,7 +498,7 @@ export async function GET(request: Request) {
         const db = getDb();
         const items: Array<{
           id: string;
-          type: 'meeting' | 'ordinance' | 'document';
+          type: 'meeting' | 'ordinance' | 'resolution' | 'document';
           date: string;
           title: string;
           description: string | null;
@@ -507,6 +507,7 @@ export async function GET(request: Request) {
           metadata?: {
             meetingType?: string;
             ordinanceNumber?: string;
+            resolutionNumber?: string;
             documentType?: string;
             agendaCount?: number;
             agendaPreview?: string;
@@ -623,6 +624,44 @@ export async function GET(request: Request) {
               metadata: {
                 ordinanceNumber: o.number,
                 municodeUrl: o.municode_url || undefined,
+              },
+            });
+          }
+        }
+
+        // Resolutions belong on the timeline in their own right, not only inside
+        // the meeting that passed them. Much of what a council decides arrives
+        // this way — the annual budget, the millage rate, intergovernmental
+        // agreements, the call for a special election — and none of it is an
+        // ordinance, so filtering to "Ordinances" hid all of it.
+        if (!itemType || itemType === 'resolution') {
+          const resolutions = db.prepare(`
+            SELECT id, number, title, description, summary, adopted_date, meeting_id
+            FROM resolutions
+            WHERE adopted_date >= ? AND adopted_date <= ?
+            ORDER BY adopted_date DESC
+          `).all(cutoffStr, today) as Array<{
+            id: string;
+            number: string;
+            title: string;
+            description: string | null;
+            summary: string | null;
+            adopted_date: string;
+            meeting_id: string | null;
+          }>;
+
+          for (const r of resolutions) {
+            const desc = r.summary || r.description;
+            items.push({
+              id: r.id,
+              type: 'resolution',
+              date: r.adopted_date,
+              title: r.title,
+              description: desc ? desc.substring(0, 200) + (desc.length > 200 ? '...' : '') : null,
+              fullDescription: r.summary || r.description || null,
+              link: '/resolutions',
+              metadata: {
+                resolutionNumber: r.number,
               },
             });
           }
