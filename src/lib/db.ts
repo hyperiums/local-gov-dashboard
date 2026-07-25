@@ -209,9 +209,13 @@ function initializeSchema() {
 
   // Schema migrations - safely add columns that may not exist
   addColumnIfNotExists(database, 'resolutions', 'outcome_verified', 'INTEGER DEFAULT 0');
-  // Marks an action that came from a recorded council vote rather than from
-  // reading the agenda title, so re-linking cannot overwrite a known outcome.
+  // Marks an action established by the meeting record — a recorded vote, or a
+  // withdrawal stated in the minutes — rather than guessed from an agenda
+  // title, so re-linking cannot overwrite a known outcome.
   addColumnIfNotExists(database, 'ordinance_meetings', 'outcome_verified', 'INTEGER DEFAULT 0');
+  // The sentence a minutes-derived action was read from, so a disposition the
+  // portal never published can still be traced to its source.
+  addColumnIfNotExists(database, 'ordinance_meetings', 'evidence', 'TEXT');
   addColumnIfNotExists(database, 'ordinances', 'disposition', 'TEXT');
   addColumnIfNotExists(database, 'ordinances', 'minutes_url', 'TEXT');
 
@@ -670,7 +674,7 @@ export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress
   const pendingOrdinances = db.prepare(`
     SELECT o.id, o.number, o.title, o.description, o.summary, o.status, o.introduced_date
     FROM ordinances o
-    WHERE o.status NOT IN ('adopted', 'denied', 'rejected', 'tabled') AND o.adopted_date IS NULL
+    WHERE o.status NOT IN ('adopted', 'denied', 'rejected', 'tabled', 'withdrawn') AND o.adopted_date IS NULL
     ORDER BY CAST(o.number AS INTEGER) DESC
   `).all() as Array<{
     id: string;

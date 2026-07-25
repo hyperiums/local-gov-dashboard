@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Check, X, Pause, Circle } from 'lucide-react';
+import { Check, X, Pause, Circle, XCircle } from 'lucide-react';
 import type { TimelineStep as TimelineStepType } from './types';
 import { formatDate } from '@/lib/dates';
 
@@ -16,9 +16,10 @@ interface TimelineStepProps {
 export function TimelineStep({ step, isLast = false, vertical = false, compact = false }: TimelineStepProps) {
   const { status, label, date, meetingId, action } = step;
 
-  const isTerminal = action === 'tabled' || action === 'denied';
+  const isTerminal = action === 'tabled' || action === 'denied' || action === 'withdrawn';
   const isDenied = action === 'denied';
   const isTabled = action === 'tabled';
+  const isWithdrawn = action === 'withdrawn';
 
   // Style based on status and terminal state
   const getCircleStyles = (): string => {
@@ -27,6 +28,11 @@ export function TimelineStep({ step, isLast = false, vertical = false, compact =
     }
     if (isTabled) {
       return 'bg-amber-500 text-white';
+    }
+    // Neutral rather than red: the applicant pulled it, the council did not
+    // reject it, and the page should not imply a judgement that was never made.
+    if (isWithdrawn) {
+      return 'bg-slate-400 dark:bg-slate-500 text-white';
     }
     switch (status) {
       case 'completed':
@@ -63,6 +69,7 @@ export function TimelineStep({ step, isLast = false, vertical = false, compact =
   const getIcon = () => {
     if (isDenied) return <X className="w-3.5 h-3.5" />;
     if (isTabled) return <Pause className="w-3.5 h-3.5" />;
+    if (isWithdrawn) return <XCircle className="w-3.5 h-3.5" />;
     if (status === 'completed') return <Check className="w-3.5 h-3.5" />;
     if (status === 'current') return <Circle className="w-2.5 h-2.5 fill-current" />;
     return null;

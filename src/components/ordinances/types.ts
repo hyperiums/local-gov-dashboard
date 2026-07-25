@@ -22,7 +22,8 @@ export type TimelineAction =
   | 'adopted'
   | 'tabled'
   | 'denied'
-  | 'considered';
+  | 'considered'
+  | 'withdrawn';
 
 // Standard ordinance process steps
 export const STANDARD_ORDINANCE_STEPS = [
@@ -44,6 +45,7 @@ export const ACTION_LABELS: Record<string, string> = {
   'amended': 'Amended',
   'introduced': 'Introduced',
   'considered': 'Considered',
+  'withdrawn': 'Withdrawn',
 };
 
 /**

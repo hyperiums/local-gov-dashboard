@@ -61,6 +61,7 @@ function OrdinancesContent() {
   const [pendingOrdinances, setPendingOrdinances] = useState<PendingOrdinance[]>([]);
   const [deniedOrdinances, setDeniedOrdinances] = useState<Ordinance[]>([]);
   const [tabledOrdinances, setTabledOrdinances] = useState<Ordinance[]>([]);
+  const [withdrawnOrdinances, setWithdrawnOrdinances] = useState<Ordinance[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const defaultExpandedYears = useMemo(() => new Set(getRecentYears(2)), []);
@@ -87,8 +88,9 @@ function OrdinancesContent() {
     if (pendingOrdinances.find(o => o.number === autoExpandOrdinance)) return 'pending';
     if (deniedOrdinances.find(o => o.number === autoExpandOrdinance)) return 'denied';
     if (tabledOrdinances.find(o => o.number === autoExpandOrdinance)) return 'tabled';
+    if (withdrawnOrdinances.find(o => o.number === autoExpandOrdinance)) return 'withdrawn';
     return null;
-  }, [autoExpandOrdinance, ordinances, pendingOrdinances, deniedOrdinances, tabledOrdinances]);
+  }, [autoExpandOrdinance, ordinances, pendingOrdinances, deniedOrdinances, tabledOrdinances, withdrawnOrdinances]);
 
   // Auto-expand year and scroll when expand param is set and ordinances are loaded
   useEffect(() => {
@@ -115,20 +117,23 @@ function OrdinancesContent() {
     async function loadOrdinances() {
       try {
         // Load adopted, pending, denied, and tabled ordinances in parallel
-        const [adoptedRes, pendingRes, deniedRes, tabledRes] = await Promise.all([
+        const [adoptedRes, pendingRes, deniedRes, tabledRes, withdrawnRes] = await Promise.all([
           fetch('/api/data?type=ordinances&status=adopted&limit=200'),
           fetch('/api/data?type=pending-ordinances'),
           fetch('/api/data?type=ordinances&status=denied'),
           fetch('/api/data?type=ordinances&status=tabled'),
+          fetch('/api/data?type=ordinances&status=withdrawn'),
         ]);
         const adoptedData = await adoptedRes.json();
         const pendingData = await pendingRes.json();
         const deniedData = await deniedRes.json();
         const tabledData = await tabledRes.json();
+        const withdrawnData = await withdrawnRes.json();
         setOrdinances(adoptedData.ordinances || []);
         setPendingOrdinances(pendingData.ordinances || []);
         setDeniedOrdinances(deniedData.ordinances || []);
         setTabledOrdinances(tabledData.ordinances || []);
+        setWithdrawnOrdinances(withdrawnData.ordinances || []);
       } catch (error) {
         console.error('Failed to load ordinances:', error);
       } finally {
@@ -149,9 +154,10 @@ function OrdinancesContent() {
   const filteredPending = pendingOrdinances.filter(filterBySearch);
   const filteredDenied = deniedOrdinances.filter(filterBySearch);
   const filteredTabled = tabledOrdinances.filter(filterBySearch);
+  const filteredWithdrawn = withdrawnOrdinances.filter(filterBySearch);
 
   const totalMatches = searchTerm
-    ? filteredAdopted.length + filteredPending.length + filteredDenied.length + filteredTabled.length
+    ? filteredAdopted.length + filteredPending.length + filteredDenied.length + filteredTabled.length + filteredWithdrawn.length
     : 0;
 
   // Group filtered ordinances by year
@@ -227,6 +233,7 @@ function OrdinancesContent() {
               {filteredPending.length > 0 && <span className="ml-2">• {filteredPending.length} pending</span>}
               {filteredAdopted.length > 0 && <span className="ml-2">• {filteredAdopted.length} adopted</span>}
               {filteredTabled.length > 0 && <span className="ml-2">• {filteredTabled.length} tabled</span>}
+              {filteredWithdrawn.length > 0 && <span className="ml-2">• {filteredWithdrawn.length} withdrawn</span>}
               {filteredDenied.length > 0 && <span className="ml-2">• {filteredDenied.length} denied</span>}
             </p>
             <button
@@ -335,6 +342,15 @@ function OrdinancesContent() {
         <TabledLegislationSection
           ordinances={filteredTabled}
           autoExpand={autoExpandSection === 'tabled' ? autoExpandOrdinance : null}
+          forceExpand={!!searchTerm}
+        />
+      )}
+
+      {/* Withdrawn Legislation Section - pulled before any vote */}
+      {!loading && filteredWithdrawn.length > 0 && (
+        <WithdrawnLegislationSection
+          ordinances={filteredWithdrawn}
+          autoExpand={autoExpandSection === 'withdrawn' ? autoExpandOrdinance : null}
           forceExpand={!!searchTerm}
         />
       )}
@@ -834,6 +850,54 @@ function PendingOrdinanceCard({ ordinance, highlighted }: { ordinance: PendingOr
   );
 }
 
+// Withdrawn Legislation Section - applications pulled before a vote was taken.
+// Kept visible and searchable: a withdrawn application is still part of the
+// public record, and a resident who heard about a project needs to be able to
+// find out what became of it.
+function WithdrawnLegislationSection({ ordinances, autoExpand, forceExpand }: { ordinances: Ordinance[]; autoExpand: string | null; forceExpand?: boolean }) {
+  const [isExpanded, setIsExpanded] = useState(!!autoExpand || !!forceExpand);
+
+  if (ordinances.length === 0) return null;
+
+  return (
+    <div className="mt-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
+        className="w-full flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
+      >
+        <div className="flex items-center">
+          {isExpanded ? (
+            <ChevronDown className="w-5 h-5 text-slate-400 mr-2" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="w-5 h-5 text-slate-400 mr-2" aria-hidden="true" />
+          )}
+          <XCircle className="w-5 h-5 text-slate-400 mr-2" aria-hidden="true" />
+          <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200">Withdrawn</h2>
+          <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+            {ordinances.length}
+          </span>
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="border-t border-slate-200 dark:border-slate-700">
+          <p className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            These were pulled from the agenda before the council voted on them — usually
+            withdrawn by the applicant. The council did not reject them; it never ruled on
+            them at all. An applicant may bring the same request back later.
+          </p>
+          <div className="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800">
+            {ordinances.map((ord) => (
+              <TabledOrdinanceRow key={ord.id} ordinance={ord} highlighted={autoExpand === ord.number} disposition="withdrawn" />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Tabled Legislation Section - shows ordinances that were tabled
 function TabledLegislationSection({ ordinances, autoExpand, forceExpand }: { ordinances: Ordinance[]; autoExpand: string | null; forceExpand?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(!!autoExpand || !!forceExpand);
@@ -880,7 +944,8 @@ function TabledLegislationSection({ ordinances, autoExpand, forceExpand }: { ord
   );
 }
 
-function TabledOrdinanceRow({ ordinance, highlighted }: { ordinance: Ordinance; highlighted?: boolean }) {
+function TabledOrdinanceRow({ ordinance, highlighted, disposition = 'tabled' }: { ordinance: Ordinance; highlighted?: boolean; disposition?: 'tabled' | 'withdrawn' }) {
+  const dispositionLabel = disposition === 'withdrawn' ? 'Withdrawn' : 'Tabled';
   const [meetings, setMeetings] = useState<MeetingWithAction[]>([]);
   const [loadingMeetings, setLoadingMeetings] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -905,7 +970,7 @@ function TabledOrdinanceRow({ ordinance, highlighted }: { ordinance: Ordinance; 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const tablingMeeting = meetings.find(m => m.action === 'tabled');
+  const tablingMeeting = meetings.find(m => m.action === disposition);
 
   return (
     <div
@@ -919,7 +984,7 @@ function TabledOrdinanceRow({ ordinance, highlighted }: { ordinance: Ordinance; 
               #{ordinance.number}
             </span>
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200">
-              Tabled
+              {dispositionLabel}
             </span>
             <h3 className="font-medium text-slate-700 dark:text-slate-200">{ordinance.title}</h3>
           </div>
@@ -931,7 +996,7 @@ function TabledOrdinanceRow({ ordinance, highlighted }: { ordinance: Ordinance; 
               </span>
             ) : tablingMeeting ? (
               <>
-                <span>Tabled:</span>
+                <span>{dispositionLabel}:</span>
                 <Link
                   href={`/meetings?expand=${tablingMeeting.id}&section=ordinances`}
                   className="text-amber-700 dark:text-amber-300 hover:text-amber-800 dark:hover:text-amber-200 hover:underline"

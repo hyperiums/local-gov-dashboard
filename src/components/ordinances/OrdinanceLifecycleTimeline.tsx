@@ -36,11 +36,14 @@ export function buildTimelineSteps(
   // Check for terminal states
   const hasDenied = completedActions.has('denied') || completedActions.has('rejected');
   const hasTabled = completedActions.has('tabled');
+  // A withdrawal ends the item as surely as a denial: the council never voted,
+  // and it is not waiting on a reading it will ever get.
+  const hasWithdrawn = completedActions.has('withdrawn');
   // If second_reading completed and no terminal state, the ordinance is adopted
   // (passing second reading IS adoption - there's no separate adoption vote)
   const hasSecondReading = completedActions.has('second_reading');
   const hasAdopted = completedActions.has('adopted') ||
-    (hasSecondReading && !hasTabled && !hasDenied);
+    (hasSecondReading && !hasTabled && !hasDenied && !hasWithdrawn);
 
   // Determine if there's a public hearing in the data
   const hasPublicHearing = completedActions.has('public_hearing');
@@ -53,7 +56,7 @@ export function buildTimelineSteps(
   steps.push({
     action: 'first_reading',
     label: ACTION_LABELS['first_reading'],
-    status: getStepStatus('first_reading', completedActions, hasAdopted || hasTabled || hasDenied, adoptionConfirmed),
+    status: getStepStatus('first_reading', completedActions, hasAdopted || hasTabled || hasDenied || hasWithdrawn, adoptionConfirmed),
     date: firstReading?.meeting_date || null,
     meetingId: firstReading?.meeting_id || null,
     meetingTitle: firstReading?.meeting_title,
@@ -77,14 +80,24 @@ export function buildTimelineSteps(
   steps.push({
     action: 'second_reading',
     label: ACTION_LABELS['second_reading'],
-    status: getStepStatus('second_reading', completedActions, hasAdopted || hasTabled || hasDenied, adoptionConfirmed),
+    status: getStepStatus('second_reading', completedActions, hasAdopted || hasTabled || hasDenied || hasWithdrawn, adoptionConfirmed),
     date: secondReading?.meeting_date || null,
     meetingId: secondReading?.meeting_id || null,
     meetingTitle: secondReading?.meeting_title,
   });
 
   // Handle terminal states or adoption
-  if (hasDenied) {
+  if (hasWithdrawn) {
+    const withdrawnReading = completedActions.get('withdrawn');
+    steps.push({
+      action: 'withdrawn',
+      label: ACTION_LABELS['withdrawn'],
+      status: 'completed',
+      date: withdrawnReading?.meeting_date || null,
+      meetingId: withdrawnReading?.meeting_id || null,
+      meetingTitle: withdrawnReading?.meeting_title,
+    });
+  } else if (hasDenied) {
     const deniedReading = completedActions.get('denied') || completedActions.get('rejected');
     steps.push({
       action: 'denied',

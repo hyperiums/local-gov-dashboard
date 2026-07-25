@@ -16,6 +16,8 @@ import {
 } from '@/lib/scraper';
 import { analyzePdf, analyzeOrdinancePdf } from '@/lib/summarize';
 import { actionRank, extractOrdinanceNumbers, extractResolutionNumbers, resolveOrdinanceVote } from '@/lib/ordinanceRefs';
+import { recordWithdrawnOrdinances } from '@/lib/withdrawals';
+import { parsePdf } from './shared';
 import {
   insertMeeting,
   insertAgendaItem,
@@ -455,6 +457,7 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
   console.log('Checking for vote outcome updates...');
   let resolutionsUpdated = 0;
   let ordinancesUpdated = 0;
+  let withdrawalsRecorded = 0;
 
   // Get all past meetings from database that might need vote outcome processing
   const allPastMeetings = db.prepare(`
@@ -649,6 +652,17 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
             updateMeetingMinutesSummary(meetingId, summary);
             result.minutes = 'generated';
             console.log(`Generated minutes summary for ${meetingId}`);
+
+            // Withdrawals live only in the minutes narrative — the portal
+            // publishes its agenda before the meeting and never learns an item
+            // was pulled. This rides along with the PDF already in hand so it
+            // costs the city nothing extra.
+            try {
+              const { text: minutesText } = await parsePdf(Buffer.from(minutesPdf, 'base64'));
+              withdrawalsRecorded += recordWithdrawnOrdinances(db, meetingId, minutesText).length;
+            } catch (error) {
+              console.error(`Could not check ${meetingId} minutes for withdrawals:`, error);
+            }
           } else {
             result.minutes = 'no_pdf';
           }
@@ -667,6 +681,7 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
   const agendasGenerated = summaryResults.filter(r => r.agenda === 'generated').length;
   const minutesGenerated = summaryResults.filter(r => r.minutes === 'generated').length;
   console.log(`Generated ${agendasGenerated} agenda summaries, ${minutesGenerated} minutes summaries`);
+  if (withdrawalsRecorded > 0) console.log(`Recorded ${withdrawalsRecorded} withdrawn ordinances from minutes`);
 
   // Step 6.5: Generate agenda summaries for upcoming meetings
   // Agendas are published before meetings, so we can summarize them early

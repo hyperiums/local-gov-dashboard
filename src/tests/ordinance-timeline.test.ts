@@ -87,3 +87,25 @@ describe('buildTimelineSteps', () => {
     expect(unverified?.status).toBe('scheduled');
   });
 });
+
+describe('withdrawn ordinances', () => {
+  it('ends the timeline at the withdrawal rather than waiting on a reading', () => {
+    const steps = buildTimelineSteps(
+      [reading('first_reading', '2026-05-07', 0), reading('withdrawn', '2026-05-07', 1)],
+      true
+    );
+    expect(steps.some(s => s.action === 'withdrawn')).toBe(true);
+    expect(steps.some(s => s.status === 'current')).toBe(false);
+  });
+
+  // A withdrawal is not a rejection. The applicant pulled the item; the council
+  // never ruled on it, and the page should not imply that it did.
+  it('does not report a withdrawn ordinance as adopted or denied', () => {
+    const steps = buildTimelineSteps(
+      [reading('second_reading', '2026-05-07', 0), reading('withdrawn', '2026-05-07', 1)],
+      false
+    );
+    expect(steps.some(s => s.action === 'adopted')).toBe(false);
+    expect(steps.some(s => s.action === 'denied')).toBe(false);
+  });
+});
