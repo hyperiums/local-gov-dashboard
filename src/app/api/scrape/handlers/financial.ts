@@ -1,5 +1,6 @@
 // Financial document scrape handlers (budgets, audits, business reports)
 import { NextResponse } from 'next/server';
+import { SUMMARY_MODEL, type ModelOption } from '@/lib/models';
 import {
   scrapeFinancialReports,
   getFinancialDocumentsByType,
@@ -28,12 +29,12 @@ export async function handleFinancial() {
   });
 }
 
-type ModelOption = 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo';
+
 
 export async function handleGenerateBudgetSummaries(params: HandlerParams) {
   // Generate AI summaries for annual budget documents
   // Dynamically scrapes the city's Financial Reports page for budget PDFs
-  const { forceRefresh = false, limit, model: modelParam = 'gpt-4o-mini' } = params || {};
+  const { forceRefresh = false, limit, model: modelParam = SUMMARY_MODEL } = params || {};
   const model = modelParam as ModelOption;
 
   // Dynamically discover budget documents from city website

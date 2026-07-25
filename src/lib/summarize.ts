@@ -2,6 +2,7 @@
 import OpenAI from 'openai';
 import { getSummary, saveSummary } from './db';
 import { TONE_GUIDELINES, PDF_ANALYSIS_PROMPTS } from './prompts';
+import { SUMMARY_MODEL, EXTRACTION_MODEL, type ModelOption } from './models';
 import { cityName, cityState } from './city-config-client';
 
 // Initialize OpenAI client (requires OPENAI_API_KEY env var)
@@ -28,8 +29,8 @@ export async function summarizeMeetingAgenda(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 1024,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 1024,
     messages: [
       {
         role: 'system',
@@ -76,8 +77,8 @@ export async function summarizeMeetingMinutes(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 1024,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 1024,
     messages: [
       {
         role: 'system',
@@ -125,8 +126,8 @@ export async function explainOrdinance(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 1024,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 1024,
     messages: [
       {
         role: 'system',
@@ -182,8 +183,8 @@ export async function generateWeeklySummary(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 1500,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 1500,
     messages: [
       {
         role: 'system',
@@ -231,8 +232,8 @@ export async function extractKeyDecisions(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 1024,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 1024,
     messages: [
       {
         role: 'system',
@@ -293,8 +294,8 @@ export async function summarizePermitActivity(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 800,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 800,
     messages: [
       {
         role: 'system',
@@ -334,8 +335,8 @@ export async function welcomeNewBusinesses(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 600,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 600,
     messages: [
       {
         role: 'system',
@@ -370,8 +371,8 @@ export async function explainOrdinanceSimple(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 400,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 400,
     messages: [
       {
         role: 'system',
@@ -397,13 +398,13 @@ Be clear you're inferring from the title only. If the title isn't descriptive, s
   return response.choices[0]?.message?.content || 'Click the link to view this ordinance on Municode.';
 }
 
-// Analyze any PDF document using GPT-4o
+// Analyze any PDF document with the configured summary model
 // OpenAI supports direct PDF input - we send the PDF as base64
 export async function analyzePdf(
   documentId: string,
   documentType: 'ordinance' | 'permit' | 'business' | 'meeting' | 'minutes' | 'agenda' | 'budget' | 'audit' | 'splost' | 'notice' | 'strategic' | 'water-quality' | 'resolution' | 'general',
   pdfBase64: string, // Base64-encoded PDF data (without data URL prefix)
-  options?: { forceRefresh?: boolean; metadata?: Record<string, unknown>; model?: 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo'; customPrompt?: string; dryRun?: boolean }
+  options?: { forceRefresh?: boolean; metadata?: Record<string, unknown>; model?: ModelOption; customPrompt?: string; dryRun?: boolean }
 ): Promise<string> {
   if (!options?.forceRefresh) {
     const cached = getSummary(documentType, documentId, 'pdf-analysis');
@@ -420,10 +421,10 @@ export async function analyzePdf(
 
   const client = getClient();
 
-  const selectedModel = options?.model || 'gpt-4o-mini';
+  const selectedModel = options?.model || SUMMARY_MODEL;
   const response = await client.chat.completions.create({
     model: selectedModel,
-    max_tokens: 1500,
+    max_completion_tokens: 1500,
     messages: [
       {
         role: 'system',
@@ -497,8 +498,8 @@ export async function analyzeOrdinanceImage(
   }));
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o', // GPT-4o has vision capabilities
-    max_tokens: 1500,
+    model: EXTRACTION_MODEL,
+    max_completion_tokens: 1500,
     messages: [
       {
         role: 'system',
@@ -613,8 +614,8 @@ export async function generateHeadline(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini', // Using cheaper model for condensing
-    max_tokens: 100,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 100,
     messages: [
       {
         role: 'system',
@@ -661,8 +662,8 @@ export async function generateBriefSummary(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini', // Using cheaper model for condensing
-    max_tokens: 300,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 300,
     messages: [
       {
         role: 'system',
@@ -753,8 +754,8 @@ export async function extractAgendaItemsFromPdf(
   const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini', // Using cheaper model for extraction
-    max_tokens: 4000,
+    model: EXTRACTION_MODEL,
+    max_completion_tokens: 4000,
     response_format: { type: 'json_object' },
     messages: [
       {
@@ -852,8 +853,8 @@ export async function extractResolutionFromAgendaPdf(
   const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 3000,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 3000,
     response_format: { type: 'json_object' },
     messages: [
       {
@@ -924,8 +925,8 @@ Note: This is a draft document. Signature lines are templates, not endorsements.
 Describe what this resolution would do IF adopted. Do not attribute positions to officials.`;
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 1000,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 1000,
     messages: [
       {
         role: 'system',
@@ -976,8 +977,8 @@ export async function extractOrdinanceFromAgendaPdf(
   const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 3000,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 3000,
     response_format: { type: 'json_object' },
     messages: [
       {
@@ -1042,8 +1043,8 @@ export async function generateOrdinanceSummaryFromText(
   const client = getClient();
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 1000,
+    model: SUMMARY_MODEL,
+    max_completion_tokens: 1000,
     messages: [
       {
         role: 'system',
@@ -1105,8 +1106,8 @@ export async function extractOutcomesFromMinutesPdf(
   ).join('\n');
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o',  // Using GPT-4o for better accuracy on structured extraction
-    max_tokens: 4000,
+    model: EXTRACTION_MODEL,
+    max_completion_tokens: 4000,
     response_format: { type: 'json_object' },
     messages: [
       {

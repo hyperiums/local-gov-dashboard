@@ -42,7 +42,8 @@ SQLite Database (data/flowery-branch.db) + Web Scraping (Playwright)
 **`src/lib/summarize.ts`** - AI summarization:
 - Multi-level summaries (headline, brief, detailed, pdf-analysis)
 - Cached in `summaries` table to avoid re-processing
-- Uses GPT-4o for vision, GPT-4o-mini for text
+- Model choice lives in `src/lib/models.ts` (`SUMMARY_MODEL`, `EXTRACTION_MODEL`)
+- This model generation rejects `max_tokens` and an explicit `temperature` — use `max_completion_tokens`
 
 **`src/lib/db.ts`** - SQLite with better-sqlite3:
 - WAL mode for concurrency

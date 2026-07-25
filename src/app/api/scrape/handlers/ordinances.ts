@@ -1,5 +1,6 @@
 // Ordinance-related scrape handlers
 import { NextResponse } from 'next/server';
+import { SUMMARY_MODEL, type ModelOption } from '@/lib/models';
 import {
   scrapeMunicodeOrdinances,
   scrapeMunicodeSupplementHistory,
@@ -201,11 +202,11 @@ export async function handleLinkOrdinances(params: HandlerParams) {
   });
 }
 
-type ModelOption = 'gpt-4o-mini' | 'gpt-4o' | 'gpt-4-turbo';
+
 
 export async function handleGenerateOrdinanceSummaries(params: HandlerParams) {
   // Generate AI summaries for existing ordinances without summaries
-  const { limit = 10, forceRefresh = false, model: modelParam = 'gpt-4o-mini' } = params || {};
+  const { limit = 10, forceRefresh = false, model: modelParam = SUMMARY_MODEL } = params || {};
   const model = modelParam as ModelOption;
 
   // Get ordinances from database

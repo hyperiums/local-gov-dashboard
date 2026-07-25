@@ -126,7 +126,7 @@ curl -X POST http://localhost:3000/api/scrape \
 - **Framework**: [Next.js 16](https://nextjs.org) (App Router)
 - **Database**: SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com)
-- **AI**: [OpenAI GPT-4o](https://openai.com) for document analysis
+- **AI**: [OpenAI](https://openai.com) for document analysis — model set in `src/lib/models.ts`
 - **Scraping**: [Playwright](https://playwright.dev) for browser automation
 
 ## Platform Compatibility
