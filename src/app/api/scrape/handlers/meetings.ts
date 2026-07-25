@@ -881,3 +881,59 @@ export async function handleGenerateMeetingSummaries(params: HandlerParams) {
     results,
   });
 }
+
+/**
+ * Re-read past minutes for withdrawals.
+ *
+ * The detection in the bulk pass rides along with minutes summarization, which
+ * only runs when a meeting has no summary yet — so meetings already summarized
+ * never get checked. This backfills them, and is the operation to run after any
+ * change to the withdrawal rules.
+ *
+ * Only meetings holding an ordinance still in a non-terminal state are fetched,
+ * which keeps it to a handful of requests rather than the whole archive.
+ */
+export async function handleDetectWithdrawals(params: HandlerParams) {
+  const limit = (params?.limit as number) ?? 25;
+  const db = getDb();
+
+  const candidates = db.prepare(`
+    SELECT DISTINCT m.id, m.date,
+           CAST(REPLACE(m.id, 'civicclerk-', '') AS INTEGER) AS eventId
+    FROM meetings m
+    JOIN ordinance_meetings om ON om.meeting_id = m.id
+    JOIN ordinances o ON o.id = om.ordinance_id
+    WHERE m.status = 'past'
+      AND m.id LIKE 'civicclerk-%'
+      AND o.status NOT IN ('adopted', 'denied', 'rejected', 'tabled', 'withdrawn')
+    ORDER BY m.date DESC
+    LIMIT ?
+  `).all(limit) as { id: string; date: string; eventId: number }[];
+
+  console.log(`Checking ${candidates.length} meetings for withdrawn ordinances...`);
+  const results: { meetingId: string; date: string; withdrawn: string[] }[] = [];
+  let checked = 0;
+
+  for (const meeting of candidates) {
+    try {
+      const minutesPdf = await fetchCivicClerkMinutesPdf(meeting.eventId);
+      if (!minutesPdf) continue;
+      checked++;
+      const { text } = await parsePdf(Buffer.from(minutesPdf, 'base64'));
+      const found = recordWithdrawnOrdinances(db, meeting.id, text);
+      if (found.length > 0) {
+        results.push({ meetingId: meeting.id, date: meeting.date, withdrawn: found.map(f => f.number) });
+      }
+    } catch (error) {
+      console.error(`Could not check ${meeting.id} for withdrawals:`, error);
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    meetingsConsidered: candidates.length,
+    meetingsChecked: checked,
+    withdrawalsRecorded: results.reduce((n, r) => n + r.withdrawn.length, 0),
+    results,
+  });
+}

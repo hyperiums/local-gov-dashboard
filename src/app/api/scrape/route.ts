@@ -6,6 +6,7 @@ import {
   handleBulkMeetings,
   handleBulkMeetingsWithAgenda,
   handleGenerateMeetingSummaries,
+  handleDetectWithdrawals,
   handleOrdinances,
   handleSyncMunicodeSupplements,
   handleLinkOrdinances,
@@ -49,6 +50,8 @@ export async function POST(request: Request) {
         return handleBulkMeetings();
       case 'bulk-meetings-with-agenda':
         return handleBulkMeetingsWithAgenda(params);
+      case 'detect-withdrawals':
+        return handleDetectWithdrawals(params);
       case 'generate-meeting-summaries':
         return handleGenerateMeetingSummaries(params);
 

@@ -8,6 +8,7 @@ export {
   handleBulkMeetings,
   handleBulkMeetingsWithAgenda,
   handleGenerateMeetingSummaries,
+  handleDetectWithdrawals,
 } from './meetings';
 
 // Ordinance handlers
