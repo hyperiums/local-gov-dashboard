@@ -42,18 +42,26 @@ Originally built for [Flowery Branch, Georgia](https://flowery-branch.charlestho
    cp .env.example .env
    ```
 
-5. Add your API keys to `.env`:
+5. Load the bundled sample data so the dashboard has something to show:
+   ```bash
+   npm run seed
+   ```
+   `data/seed.db` is a real snapshot of Flowery Branch records. Starting from it
+   means you do not need an OpenAI key or a full scrape of the city's portal just
+   to see the app working.
+
+6. Add your API keys to `.env`:
    ```
    OPENAI_API_KEY=sk-your-openai-api-key
    ADMIN_SECRET=your-random-admin-secret
    ```
 
-6. Start the development server:
+7. Start the development server:
    ```bash
    npm run dev
    ```
 
-7. Open [http://localhost:3000](http://localhost:3000)
+8. Open [http://localhost:3000](http://localhost:3000)
 
 ## Configuration
 

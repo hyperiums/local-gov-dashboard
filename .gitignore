@@ -50,6 +50,13 @@ next-env.d.ts
 /civic-data.db
 /local.db
 
+# The working database is local state, not source. It is rebuilt by the
+# scrapers and, on the production host, is the live copy the deploy hook
+# preserves — tracking it meant every checkout briefly overwrote production
+# with whatever snapshot happened to be committed. Sample data ships as
+# data/seed.db instead; run `npm run seed` to start from it.
+/data/flowery-branch.db
+
 # Claude Code local settings
 .claude/settings.local.json
 

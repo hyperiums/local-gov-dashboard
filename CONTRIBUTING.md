@@ -32,14 +32,25 @@ Found a bug or have a feature suggestion? Please [open an issue](https://github.
    npm install
    ```
 
-2. Copy the example environment file:
+2. Seed the database with sample data:
+   ```bash
+   npm run seed
+   ```
+   This copies `data/seed.db` — a real snapshot of Flowery Branch records — into
+   place so the dashboard has something to show immediately. Without it you would
+   need an OpenAI key and a full scrape of the city's portal just to see the app
+   work, and we would rather not have every contributor loading a small city's
+   servers. The seed is a point-in-time copy; refresh against live sources with
+   `/api/scrape` when you need current data.
+
+3. Copy the example environment file:
    ```bash
    cp .env.example .env
    ```
 
-3. Add your API keys to `.env` (see README for details)
+4. Add your API keys to `.env` (see README for details)
 
-4. Start the development server:
+5. Start the development server:
    ```bash
    npm run dev
    ```

@@ -23,6 +23,7 @@
   ],
   "scripts": {
     "dev": "next dev --webpack",
+    "seed": "node scripts/seed-db.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -179,6 +179,14 @@ Be respectful when scraping the city site: their permit PDFs are public records 
 
 All credentials live in `/var/www/flowerybranch.charlesthompson.me/.env` on the production host and `.env` locally. Both are gitignored. **Never** commit `.env`, API keys, or admin secrets — this repo is public.
 
+**The working database is not tracked.** `data/flowery-branch.db` is gitignored;
+`data/seed.db` is the committed sample, and `npm run seed` copies it into place.
+Tracking the live filename meant every deploy's `git checkout -f` briefly replaced
+production's database with the committed snapshot before the hook restored it, and
+left the file permanently dirty in git because schema migrations rewrite it. Refresh
+the seed deliberately (`sqlite3 prod.db ".backup"` then VACUUM) when the sample data
+is worth updating — it is sample data, not a production backup.
+
 **SQLite WAL note:** Changes live in `flowery-branch.db-wal` until checkpointed. Run `sqlite3 data/flowery-branch.db "PRAGMA wal_checkpoint(TRUNCATE);"` before committing, or git won't see the changes. The deploy script does this automatically.
 
 ## Claude Code Skill
