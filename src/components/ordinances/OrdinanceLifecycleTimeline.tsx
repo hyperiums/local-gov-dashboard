@@ -14,8 +14,11 @@ import {
 /**
  * Build timeline steps from readings data
  * Handles both pending (with showExpectedSteps) and adopted ordinances
+ *
+ * Exported for testing: the ordering and confidence rules here decide what a
+ * resident is told about a public record, so they are worth pinning directly.
  */
-function buildTimelineSteps(
+export function buildTimelineSteps(
   readings: OrdinanceLifecycleReading[],
   showExpectedSteps: boolean,
   adoptionConfirmed = false
@@ -114,12 +117,38 @@ function buildTimelineSteps(
     });
   }
 
-  // If not showing expected steps, filter out upcoming steps
-  if (!showExpectedSteps) {
-    return steps.filter(s => s.status !== 'upcoming');
+  // Councils record plenty of actions that map to no standard stage — an item
+  // can be amended, continued, introduced, or merely discussed, and the
+  // vocabulary varies from city to city. Dropping those hid real meetings from
+  // a public timeline, so each is kept as a dated "Considered" entry. It claims
+  // only what the record supports — the ordinance was before council that day —
+  // and never guesses which reading it was.
+  const stagedMeetingIds = new Set(steps.map(s => s.meetingId).filter(Boolean));
+  for (const reading of readings) {
+    if (stagedMeetingIds.has(reading.meeting_id)) continue;
+    stagedMeetingIds.add(reading.meeting_id);
+    steps.push({
+      action: 'considered',
+      label: ACTION_LABELS['considered'],
+      status: reading.outcome_verified === 1 || adoptionConfirmed ? 'completed' : 'scheduled',
+      date: reading.meeting_date,
+      meetingId: reading.meeting_id,
+      meetingTitle: reading.meeting_title,
+    });
   }
 
-  return steps;
+  // Dated steps run in the order they happened; steps still to come keep their
+  // position at the end of the progression.
+  const dated = steps.filter(s => s.date).sort((a, b) => a.date!.localeCompare(b.date!));
+  const undated = steps.filter(s => !s.date);
+  const ordered = [...dated, ...undated];
+
+  // If not showing expected steps, filter out upcoming steps
+  if (!showExpectedSteps) {
+    return ordered.filter(s => s.status !== 'upcoming');
+  }
+
+  return ordered;
 }
 
 /**

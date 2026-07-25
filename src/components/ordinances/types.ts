@@ -12,7 +12,17 @@ export const DORMANT_AFTER_DAYS = 60;
 // calendared: four ordinances withdrawn before their hearing still had their
 // scheduled first reading rendered as a completed one.
 export type TimelineStepStatus = 'completed' | 'scheduled' | 'current' | 'upcoming';
-export type TimelineAction = 'first_reading' | 'public_hearing' | 'second_reading' | 'adopted' | 'tabled' | 'denied';
+// 'considered' covers a meeting the ordinance came before that maps to none of
+// the named stages. Action vocabularies differ between councils, so the
+// timeline needs a neutral entry rather than silently dropping the meeting.
+export type TimelineAction =
+  | 'first_reading'
+  | 'public_hearing'
+  | 'second_reading'
+  | 'adopted'
+  | 'tabled'
+  | 'denied'
+  | 'considered';
 
 // Standard ordinance process steps
 export const STANDARD_ORDINANCE_STEPS = [
@@ -33,6 +43,7 @@ export const ACTION_LABELS: Record<string, string> = {
   'discussed': 'Discussed',
   'amended': 'Amended',
   'introduced': 'Introduced',
+  'considered': 'Considered',
 };
 
 /**
