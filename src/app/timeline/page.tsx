@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Clock, Filter, Calendar, Scale, FileText, ChevronDown, ChevronUp, CalendarDays, ExternalLink, List, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { cityName } from '@/lib/city-config-client';
-import { formatAndSanitize } from '@/lib/sanitize';
+import { formatSummaryHtml, summaryToPlainText } from '@/lib/sanitize';
 
 type TimelineItemType = 'meeting' | 'ordinance' | 'document';
 type DateRange = 'month' | 'quarter' | 'year' | 'all';
@@ -98,10 +98,6 @@ function parseLocalDate(dateStr: string): Date {
 }
 
 // Strip markdown bold markers for plain text display
-function stripMarkdown(text: string): string {
-  return text.replace(/\*\*([^*]+)\*\*/g, '$1');
-}
-
 export default function TimelinePage() {
   return (
     <Suspense fallback={<TimelineLoading />}>
@@ -420,7 +416,7 @@ function TimelineContent() {
                               </h3>
                               {!isExpanded && item.description && (
                                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                                  {stripMarkdown(item.description)}
+                                  {summaryToPlainText(item.description)}
                                 </p>
                               )}
                             </div>
@@ -620,12 +616,7 @@ function OrdinanceExpandedContent({ item }: { item: TimelineItem }) {
       {/* Full Description/Summary */}
       {item.fullDescription && (
         <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
-          {item.fullDescription.split('\n').filter(p => p.trim()).map((paragraph, idx) => (
-            <p
-              key={idx}
-              dangerouslySetInnerHTML={{ __html: formatAndSanitize(paragraph) }}
-            />
-          ))}
+          <div dangerouslySetInnerHTML={{ __html: formatSummaryHtml(item.fullDescription) }} />
         </div>
       )}
     </div>
@@ -655,12 +646,7 @@ function DocumentExpandedContent({ item }: { item: TimelineItem }) {
       {/* Full Description/Summary */}
       {item.fullDescription && (
         <div className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
-          {item.fullDescription.split('\n').filter(p => p.trim()).slice(0, 10).map((paragraph, idx) => (
-            <p
-              key={idx}
-              dangerouslySetInnerHTML={{ __html: formatAndSanitize(paragraph) }}
-            />
-          ))}
+          <div dangerouslySetInnerHTML={{ __html: formatSummaryHtml(item.fullDescription) }} />
         </div>
       )}
     </div>

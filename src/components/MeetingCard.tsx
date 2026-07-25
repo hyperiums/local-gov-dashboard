@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Calendar, MapPin, FileText, ExternalLink, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { formatAndSanitize } from '@/lib/sanitize';
+import { formatSummaryHtml } from '@/lib/sanitize';
 
 interface MeetingCardProps {
   meeting: {
@@ -22,44 +22,12 @@ interface MeetingCardProps {
   showSummary?: boolean;
 }
 
-// Simple markdown renderer for summaries (with XSS sanitization)
+// Meeting summaries use the same markdown as every other summary on the site,
+// so they go through the shared renderer rather than a second, thinner copy of
+// it — this one emitted bare <li> with no list around them and dropped headings
+// entirely.
 function renderMarkdown(text: string) {
-  return text.split('\n').map((line, i) => {
-    // Handle bullet points
-    if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
-      const bulletContent = line.trim().replace(/^[•-]\s*/, '');
-      return (
-        <li
-          key={i}
-          className="ml-4 text-sm text-slate-700 dark:text-slate-300"
-          dangerouslySetInnerHTML={{ __html: formatAndSanitize(bulletContent) }}
-        />
-      );
-    }
-
-    // Handle bold text with ** markers
-    const formattedLine = formatAndSanitize(line);
-
-    // Regular line (might be a header or paragraph)
-    if (formattedLine.includes('<strong')) {
-      return (
-        <p
-          key={i}
-          className="text-sm text-slate-700 dark:text-slate-300 mt-2 first:mt-0"
-          dangerouslySetInnerHTML={{ __html: formattedLine }}
-        />
-      );
-    }
-
-    // Skip empty lines
-    if (!line.trim()) return null;
-
-    return (
-      <p key={i} className="text-sm text-slate-700 dark:text-slate-300">
-        {line}
-      </p>
-    );
-  });
+  return <div dangerouslySetInnerHTML={{ __html: formatSummaryHtml(text) }} />;
 }
 
 export default function MeetingCard({ meeting, showSummary = false }: MeetingCardProps) {
