@@ -61,6 +61,13 @@ interface MeetingDetail {
     title: string;
     action: string | null;
   }>;
+  relatedResolutions?: Array<{
+    id: string;
+    number: string;
+    title: string;
+    status: string;
+    adopted_date: string | null;
+  }>;
 }
 
 const TYPE_CONFIG: Record<TimelineItemType, { label: string; color: string; bgColor: string; icon: typeof Calendar }> = {
@@ -507,6 +514,7 @@ function MeetingExpandedContent({
 
   const agendaItems = detail?.agendaItems || [];
   const relatedOrdinances = detail?.relatedOrdinances || [];
+  const relatedResolutions = detail?.relatedResolutions || [];
   const displayedAgenda = showAllAgenda ? agendaItems : agendaItems.slice(0, 5);
 
   return (
@@ -550,6 +558,32 @@ function MeetingExpandedContent({
               {showAllAgenda ? 'Show less' : `Show all ${agendaItems.length} items`}
             </button>
           )}
+        </div>
+      )}
+
+      {/* Related Resolutions */}
+      {relatedResolutions.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center">
+            <FileText className="w-4 h-4 mr-1.5" />
+            Related Resolutions
+          </h4>
+          <ul className="space-y-1.5">
+            {relatedResolutions.map((res) => (
+              <li key={res.id} className="text-sm flex items-center">
+                <Link
+                  href={`/resolutions?search=${res.number}`}
+                  className="text-purple-600 dark:text-purple-400 font-medium mr-2 hover:text-purple-700 dark:hover:text-purple-300 hover:underline"
+                >
+                  #{res.number}
+                </Link>
+                <span className="text-slate-600 dark:text-slate-400 truncate flex-1">{res.title}</span>
+                <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded ml-2 capitalize">
+                  {res.status.replace(/_/g, ' ')}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

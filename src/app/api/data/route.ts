@@ -131,10 +131,27 @@ export async function GET(request: Request) {
           action: string | null;
         }>;
 
+        // Resolutions are half of what a council decides — budgets, elections,
+        // intergovernmental agreements — and were missing from the meeting view
+        // entirely even though they are linked to the meeting in the database.
+        const relatedResolutions = db.prepare(`
+          SELECT id, number, title, status, adopted_date
+          FROM resolutions
+          WHERE meeting_id = ?
+          ORDER BY number DESC
+        `).all(id) as Array<{
+          id: string;
+          number: string;
+          title: string;
+          status: string;
+          adopted_date: string | null;
+        }>;
+
         return NextResponse.json({
           meeting,
           agendaItems,
           relatedOrdinances,
+          relatedResolutions,
         });
       }
 
