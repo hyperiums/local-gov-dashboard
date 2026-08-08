@@ -177,7 +177,24 @@ function initializeSchema() {
       UNIQUE(entity_type, entity_id, summary_type)
     );
 
+    -- Collector run log. Feed-status reads from here so "last collected"
+    -- is answered by the collector's own record rather than inferred from
+    -- whether rows happen to exist. A collector that fetches nothing must
+    -- not look identical to one that had nothing new to fetch.
+    CREATE TABLE IF NOT EXISTS scrape_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      feed TEXT NOT NULL,
+      ran_at TEXT NOT NULL DEFAULT (datetime('now')),
+      outcome TEXT NOT NULL,
+      months_attempted INTEGER NOT NULL DEFAULT 0,
+      months_ingested INTEGER NOT NULL DEFAULT 0,
+      rows_ingested INTEGER NOT NULL DEFAULT 0,
+      newest_month_ingested TEXT,
+      detail TEXT
+    );
+
     -- Create indexes
+    CREATE INDEX IF NOT EXISTS idx_scrape_runs_feed ON scrape_runs(feed, ran_at DESC);
     CREATE INDEX IF NOT EXISTS idx_meetings_date ON meetings(date);
     CREATE INDEX IF NOT EXISTS idx_meetings_status ON meetings(status);
     CREATE INDEX IF NOT EXISTS idx_agenda_items_meeting ON agenda_items(meeting_id);
@@ -426,6 +443,59 @@ export function replacePermitsForMonth(
 export function getPermitsByMonth(month: string) {
   const db = getDb();
   return db.prepare('SELECT * FROM permits WHERE month = ?').all(month);
+}
+
+export interface ScrapeRunRow {
+  id: number;
+  feed: string;
+  ran_at: string;
+  outcome: string;
+  months_attempted: number;
+  months_ingested: number;
+  rows_ingested: number;
+  newest_month_ingested: string | null;
+  detail: string | null;
+}
+
+export function recordScrapeRun(run: {
+  feed: string;
+  outcome: string;
+  monthsAttempted: number;
+  monthsIngested: number;
+  rowsIngested: number;
+  newestMonthIngested?: string | null;
+  detail?: unknown;
+}) {
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO scrape_runs
+      (feed, outcome, months_attempted, months_ingested, rows_ingested, newest_month_ingested, detail)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    run.feed,
+    run.outcome,
+    run.monthsAttempted,
+    run.monthsIngested,
+    run.rowsIngested,
+    run.newestMonthIngested ?? null,
+    run.detail === undefined ? null : JSON.stringify(run.detail)
+  );
+}
+
+export function getLatestScrapeRun(feed: string): ScrapeRunRow | null {
+  const db = getDb();
+  return (db.prepare(
+    'SELECT * FROM scrape_runs WHERE feed = ? ORDER BY ran_at DESC, id DESC LIMIT 1'
+  ).get(feed) as ScrapeRunRow | undefined) ?? null;
+}
+
+// The most recent run that actually brought rows in — distinct from the most
+// recent run, which may have reached the source and found nothing new.
+export function getLatestSuccessfulScrapeRun(feed: string): ScrapeRunRow | null {
+  const db = getDb();
+  return (db.prepare(
+    'SELECT * FROM scrape_runs WHERE feed = ? AND rows_ingested > 0 ORDER BY ran_at DESC, id DESC LIMIT 1'
+  ).get(feed) as ScrapeRunRow | undefined) ?? null;
 }
 
 export function getPermitStats(startMonth: string, endMonth: string) {

@@ -72,6 +72,22 @@ Key operation types: `discover-meetings`, `bulk-meetings-with-agenda`, `ordinanc
 - **resolutions** - Extracted from agenda items
 - **ordinance_meetings** - Junction table linking ordinances to meetings
 - **summaries** - Cached AI summaries by entity_type/entity_id/summary_type
+- **scrape_runs** - One row per collection attempt per feed: outcome, months attempted vs ingested, rows ingested, newest month
+
+### Feed Freshness
+
+`src/lib/feed-status.ts` turns the latest `scrape_runs` row into the banner on
+`/development`. Status must come from that table, never from `MAX(permits.month)`:
+a feed nobody is collecting and a feed with nothing new to collect leave
+identical rows, and only the run log tells them apart. Collection outcomes are
+kept distinct for the same reason — `not_published` (city hasn't posted it),
+`unreachable` (fetch refused), `not_machine_readable` (scanned image, no text
+layer), `parsed_empty` (fetched but unreadable) — because collapsing them into
+"not found" is what hid a blocked production scraper for months.
+
+Any new collector should follow the same shape: record a run, report
+`success:false` when collection genuinely failed, and never let an empty result
+pass as a clean one.
 
 ### ID Conventions
 - Meetings: `civicclerk-{eventId}`
@@ -91,6 +107,14 @@ ADMIN_SECRET=<random-string>    # Required for protected routes
 # inlined into the client bundle; see Dockerfile ARGs). Unset = no tracking code.
 NEXT_PUBLIC_UMAMI_SRC=<umami script url>
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=<umami website id>
+
+# Set to 1 where this host cannot fetch the city's permit PDFs — some document
+# CDNs answer datacentre IPs with 403 while serving browsers normally, which is
+# the case in production. The scheduled scrape then skips the permit step
+# instead of failing every run, and permits are pushed in from an unblocked
+# machine with scripts/push-permits.sh. Feed status reads collection runs
+# either way, so a feed nobody is importing still shows as stale.
+PERMITS_VIA_IMPORT=1
 ```
 
 ## Testing

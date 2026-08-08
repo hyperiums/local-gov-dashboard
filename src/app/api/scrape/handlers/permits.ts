@@ -3,11 +3,12 @@ import { NextResponse } from 'next/server';
 import {
   getPermitPdfUrl,
   fetchPdfWithFallback,
+  fetchPdfDiagnosed,
   parsePermitPdfText,
 } from '@/lib/scraper';
 import { analyzePdf } from '@/lib/summarize';
 import { getRecentYears, getAllMonths } from '@/lib/dates';
-import { insertPermit, replacePermitsForMonth } from '@/lib/db';
+import { insertPermit, replacePermitsForMonth, recordScrapeRun } from '@/lib/db';
 import {
   parsePdf,
   formatError,
@@ -132,6 +133,21 @@ export async function handleImportPermits(params: HandlerParams) {
   }
 
   const summaryErrors = summaries.filter(s => !s.success).length;
+
+  // On a deployment whose IP the city's CDN refuses, this push — not the
+  // cron's direct fetch — is how permits actually arrive, so it is the event
+  // the feed-status line must count as a collection. Recording it here keeps
+  // "last collected" true for whichever channel a given deploy relies on.
+  recordScrapeRun({
+    feed: 'permits',
+    outcome: errors.length === 0 ? 'ok' : 'error',
+    monthsAttempted: validByMonth.size,
+    monthsIngested: validByMonth.size - errors.length,
+    rowsIngested: imported,
+    newestMonthIngested: [...validByMonth.keys()].sort().pop() ?? null,
+    detail: { channel: 'import', received: permits.length, rejected: errors.length },
+  });
+
   return NextResponse.json({
     success: errors.length === 0 && summaryErrors === 0,
     imported,
@@ -184,55 +200,131 @@ export async function handleBulkPermits(params: HandlerParams) {
     return NextResponse.json({ error: 'year or years is required' }, { status: 400 });
   }
 
-  const allResults: { year: string; month: string; success: boolean; permitCount?: number; sourceUrl?: string; error?: string }[] = [];
+  // Each month lands in exactly one bucket. "not_published" is the only
+  // benign absence; the others each mean something is broken, and lumping
+  // them together under a blanket success:true is what kept a server that
+  // could not reach the city's CDN reporting clean runs twice a week.
+  type MonthOutcome =
+    | 'ingested'
+    | 'parsed_empty'
+    | 'not_machine_readable'
+    | 'not_published'
+    | 'unreachable'
+    | 'error';
+  const allResults: {
+    year: string;
+    month: string;
+    outcome: MonthOutcome;
+    permitCount?: number;
+    sourceUrl?: string;
+    error?: string;
+  }[] = [];
 
   for (const y of yearsToProcess) {
     for (const month of months as string[]) {
+      const monthKey = `${y}-${month}`;
       try {
-        const urls = getPermitPdfUrl(y, month);
-        const result = await fetchPdfWithFallback(urls);
+        const fetched = await fetchPdfDiagnosed(getPermitPdfUrl(y, month));
 
-        if (result) {
-          const pdfData = await parsePdf(result.buffer);
-          const permits = parsePermitPdfText(pdfData.text, `${y}-${month}`, result.url);
-
-          if (permits.length > 0) {
-            replacePermitsForMonth(`${y}-${month}`, permits);
-          }
-
-          allResults.push({
-            year: y,
-            month,
-            success: true,
-            permitCount: permits.length,
-            sourceUrl: result.url,
-          });
-        } else {
-          allResults.push({
-            year: y,
-            month,
-            success: false,
-            error: 'PDF not found',
-          });
+        if (!fetched.ok) {
+          allResults.push({ year: y, month, outcome: fetched.reason, error: fetched.detail });
+          continue;
         }
-      } catch (error) {
+
+        const pdfData = await parsePdf(fetched.buffer);
+
+        // Jan and Feb 2023 were scanned from paper rather than exported, so
+        // they carry no text layer at all. That is a property of what the
+        // city published, not a parser fault, and calling it a parse failure
+        // would leave a permanent false alarm on two months that can never
+        // improve without OCR.
+        if (pdfData.text.trim().length === 0) {
+          allResults.push({
+            year: y,
+            month,
+            outcome: 'not_machine_readable',
+            sourceUrl: fetched.url,
+            error: 'published as a scanned image with no extractable text',
+          });
+          continue;
+        }
+
+        const permits = parsePermitPdfText(pdfData.text, monthKey, fetched.url);
+
+        if (permits.length === 0) {
+          // We hold the document and could not read a single record from it.
+          // Silence here would be indistinguishable from a quiet month.
+          allResults.push({
+            year: y,
+            month,
+            outcome: 'parsed_empty',
+            permitCount: 0,
+            sourceUrl: fetched.url,
+            error: 'listing downloaded but no records parsed',
+          });
+          continue;
+        }
+
+        replacePermitsForMonth(monthKey, permits);
         allResults.push({
           year: y,
           month,
-          success: false,
-          error: formatError(error),
+          outcome: 'ingested',
+          permitCount: permits.length,
+          sourceUrl: fetched.url,
         });
+      } catch (error) {
+        allResults.push({ year: y, month, outcome: 'error', error: formatError(error) });
       }
     }
   }
 
-  const totalPermits = allResults.filter(r => r.success).reduce((sum, r) => sum + (r.permitCount || 0), 0);
+  const tally = (outcome: MonthOutcome) => allResults.filter((r) => r.outcome === outcome).length;
+  const ingested = allResults.filter((r) => r.outcome === 'ingested');
+  const totalPermits = ingested.reduce((sum, r) => sum + (r.permitCount || 0), 0);
+  const newestMonthIngested = ingested
+    .map((r) => `${r.year}-${r.month}`)
+    .sort()
+    .pop() ?? null;
 
+  // Worst outcome wins: an unreachable source is a fetch failure regardless
+  // of how many other months parsed fine.
+  const runOutcome =
+    tally('unreachable') > 0 ? 'unreachable'
+    : tally('error') > 0 ? 'error'
+    : tally('parsed_empty') > 0 ? 'parsed_empty'
+    : 'ok';
+
+  recordScrapeRun({
+    feed: 'permits',
+    outcome: runOutcome,
+    monthsAttempted: allResults.length,
+    monthsIngested: ingested.length,
+    rowsIngested: totalPermits,
+    newestMonthIngested,
+    detail: {
+      years: yearsToProcess,
+      unreachable: tally('unreachable'),
+      notPublished: tally('not_published'),
+      notMachineReadable: tally('not_machine_readable'),
+      parsedEmpty: tally('parsed_empty'),
+      errors: tally('error'),
+      firstFailure: allResults.find((r) => r.outcome === 'unreachable' || r.outcome === 'error')?.error,
+    },
+  });
+
+  // success reflects whether collection worked. Finding nothing new because
+  // the city has not posted it yet is a success; being unable to look is not.
   return NextResponse.json({
-    success: true,
+    success: runOutcome === 'ok',
+    outcome: runOutcome,
     years: yearsToProcess,
     totalPermits,
-    successfulMonths: allResults.filter(r => r.success).length,
+    monthsIngested: ingested.length,
+    monthsNotPublished: tally('not_published'),
+    monthsNotMachineReadable: tally('not_machine_readable'),
+    monthsUnreachable: tally('unreachable'),
+    monthsParsedEmpty: tally('parsed_empty'),
     results: allResults,
   });
 }

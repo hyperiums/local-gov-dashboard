@@ -124,12 +124,29 @@ run_op "generate-resolution-summaries" \
   '{"type":"generate-resolution-summaries","params":{"limit":10}}'
 
 # Monthly permit reports for this year and last (covers slow republishing).
-# Note: this currently silently fetches 0 PDFs from production because
-# the city's PDF CDN (cms3.revize.com) blocks our droplet IP. The op
-# returns success:true so it doesn't trigger an alert. Refresh permits
-# manually with scripts/push-permits.sh when needed.
-run_op "bulk-permits" \
-  "$(printf '{"type":"bulk-permits","params":{"years":["%s","%s"]}}' "$LAST_YEAR" "$THIS_YEAR")"
+#
+# Skipped where PERMITS_VIA_IMPORT=1. The city's PDF CDN (cms3.revize.com)
+# answers this droplet's IP with 403 while serving the same URLs fine from
+# an ordinary connection, so on this host the op can only ever fail — and
+# it now fails loudly rather than returning success:true having fetched
+# nothing, which is how the blockage went unnoticed for months. A job that
+# alerts on every single run trains everyone to ignore it, so it is turned
+# off here deliberately rather than left to cry wolf.
+#
+# Permits reach this host through scripts/push-permits.sh instead, run from
+# an unblocked machine. That import records a collection run of its own, so
+# the freshness banner on /development still turns red if nobody runs it —
+# the feed cannot go quiet just because the cron stopped asking.
+#
+# Leave PERMITS_VIA_IMPORT unset on any deploy that can reach the CDN.
+if [ "$(read_env PERMITS_VIA_IMPORT)" = "1" ]; then
+  log ""
+  log "$(date): bulk-permits SKIPPED (PERMITS_VIA_IMPORT=1)"
+  log "This host is blocked by the city's PDF CDN; permits arrive via scripts/push-permits.sh."
+else
+  run_op "bulk-permits" \
+    "$(printf '{"type":"bulk-permits","params":{"years":["%s","%s"]}}' "$LAST_YEAR" "$THIS_YEAR")"
+fi
 
 if [ -n "$FAILURES" ]; then
   log ""

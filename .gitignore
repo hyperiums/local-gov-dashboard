@@ -56,6 +56,9 @@ next-env.d.ts
 # with whatever snapshot happened to be committed. Sample data ships as
 # data/seed.db instead; run `npm run seed` to start from it.
 /data/flowery-branch.db
+# ...and its snapshots. Both the deploy hook and manual backfills leave dated
+# copies beside it (.backup, .pre-ordfix-*), each as large as the database.
+/data/flowery-branch.db.*
 
 # Claude Code local settings
 .claude/settings.local.json

@@ -69,6 +69,15 @@ export async function fetchHtml(url: string): Promise<string> {
   return response.text();
 }
 
+// Carries the status code so callers can tell "not posted" (404) from
+// "we were refused" (403) instead of seeing one opaque failure.
+export class HttpStatusError extends Error {
+  constructor(readonly status: number, url: string) {
+    super(`Failed to fetch PDF ${url}: ${status}`);
+    this.name = 'HttpStatusError';
+  }
+}
+
 // Fetch PDF and return buffer
 export async function fetchPdf(url: string): Promise<Buffer> {
   const response = await fetch(url, {
@@ -77,25 +86,66 @@ export async function fetchPdf(url: string): Promise<Buffer> {
     },
   });
   if (!response.ok) {
-    throw new Error(`Failed to fetch PDF ${url}: ${response.status}`);
+    throw new HttpStatusError(response.status, url);
   }
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
+}
+
+// Why a document is absent decides whether anyone should be alarmed: a 404
+// across every candidate URL means the city has not posted that month yet,
+// while a 403 or a connection error means we never got to look. Collapsing
+// both to "not found" is what let a blocked server report clean runs for
+// months — production is served 403 by the city's CDN while a browser on a
+// residential IP gets the same URL fine.
+export type PdfFetchFailure = 'not_published' | 'unreachable';
+
+export type PdfFetchResult =
+  | { ok: true; buffer: Buffer; url: string }
+  | { ok: false; reason: PdfFetchFailure; status?: number; detail: string };
+
+// Try multiple URLs until one works, reporting why the whole set failed.
+export async function fetchPdfDiagnosed(urls: string[]): Promise<PdfFetchResult> {
+  let sawMissing = false;
+  let blocker: { status?: number; detail: string } | null = null;
+
+  for (const url of urls) {
+    try {
+      return { ok: true, buffer: await fetchPdf(url), url };
+    } catch (error) {
+      if (error instanceof HttpStatusError) {
+        if (error.status === 404 || error.status === 410) {
+          sawMissing = true;
+          continue;
+        }
+        // Keep the first non-404 — it is the most informative failure.
+        blocker ??= { status: error.status, detail: `HTTP ${error.status} from ${url}` };
+        continue;
+      }
+      blocker ??= {
+        detail: `${error instanceof Error ? error.message : String(error)} (${url})`,
+      };
+    }
+  }
+
+  if (blocker) {
+    return { ok: false, reason: 'unreachable', status: blocker.status, detail: blocker.detail };
+  }
+  return {
+    ok: false,
+    reason: 'not_published',
+    detail: sawMissing
+      ? `all ${urls.length} candidate URLs returned 404`
+      : 'no candidate URLs to try',
+  };
 }
 
 // Try multiple URLs until one works
 export async function fetchPdfWithFallback(
   urls: string[]
 ): Promise<{ buffer: Buffer; url: string } | null> {
-  for (const url of urls) {
-    try {
-      const buffer = await fetchPdf(url);
-      return { buffer, url };
-    } catch {
-      // Try next URL
-    }
-  }
-  return null;
+  const result = await fetchPdfDiagnosed(urls);
+  return result.ok ? { buffer: result.buffer, url: result.url } : null;
 }
 
 // Convert month name to number

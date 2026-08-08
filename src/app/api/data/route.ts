@@ -16,7 +16,10 @@ import {
   getOrdinancesForMeeting,
   getDb,
   getAllSummaryLevels,
+  getLatestScrapeRun,
+  getLatestSuccessfulScrapeRun,
 } from '@/lib/db';
+import { deriveFeedStatus } from '@/lib/feed-status';
 import { queryNextUpcomingMeeting } from '@/lib/cityUpdates';
 
 export const dynamic = 'force-dynamic';
@@ -226,6 +229,26 @@ export async function GET(request: Request) {
             months: monthlyData.length,
           },
         });
+      }
+
+      case 'permit-feed-status': {
+        // Deliberately sourced from scrape_runs — the collector's own log —
+        // rather than from the newest permit row. A row-derived "last
+        // updated" cannot distinguish a feed nobody is collecting from one
+        // with nothing new to collect, which is the failure this reports.
+        const db = getDb();
+        const newestMonthHeld = (db.prepare(
+          'SELECT MAX(month) as month FROM permits'
+        ).get() as { month: string | null }).month;
+
+        return NextResponse.json(
+          deriveFeedStatus({
+            latestRun: getLatestScrapeRun('permits'),
+            latestSuccessfulRun: getLatestSuccessfulScrapeRun('permits'),
+            newestMonthHeld,
+            now: new Date(),
+          })
+        );
       }
 
       case 'development-summaries': {

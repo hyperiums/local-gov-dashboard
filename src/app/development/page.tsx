@@ -18,6 +18,7 @@ import {
   Legend,
 } from 'recharts';
 import { cityWebsiteUrl, cityName } from '@/lib/city-config-client';
+import PermitFeedStatus from '@/components/PermitFeedStatus';
 
 interface MonthlySummary {
   month: string;
@@ -255,6 +256,10 @@ export default function DevelopmentPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Search &quot;permit&quot; to filter forms</p>
         </div>
       </div>
+
+      {/* Collection status sits above the figures it qualifies, so a stalled
+          or blocked feed is read before the numbers are trusted. */}
+      <PermitFeedStatus />
 
       {/* Building Activity Charts Section - Collapsible */}
       {chartData && chartData.monthly.length > 0 && (

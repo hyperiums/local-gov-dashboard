@@ -8,9 +8,11 @@ export {
   fetchHtml,
   fetchPdf,
   fetchPdfWithFallback,
+  fetchPdfDiagnosed,
+  HttpStatusError,
   getMonthNumber,
 } from './utils';
-export type { ScrapedMeeting, ScrapedAgendaItem } from './utils';
+export type { ScrapedMeeting, ScrapedAgendaItem, PdfFetchResult, PdfFetchFailure } from './utils';
 
 // CivicClerk (meetings, agendas, minutes, votes)
 export {
