@@ -424,7 +424,13 @@ export async function analyzePdf(
   const selectedModel = options?.model || SUMMARY_MODEL;
   const response = await client.chat.completions.create({
     model: selectedModel,
-    max_completion_tokens: 1500,
+    // Reasoning tokens are billed against this budget before a single word of
+    // the answer is written, so it has to cover thinking as well as output. At
+    // 1500 a five-page permit listing spent the lot reasoning and returned
+    // finish_reason "length" with empty content — July 2026 produced no
+    // summary at all while June, one page shorter, fit. The summaries
+    // themselves run under 1k characters; the headroom is for the thinking.
+    max_completion_tokens: 4000,
     messages: [
       {
         role: 'system',
@@ -458,7 +464,21 @@ ${TONE_GUIDELINES}`,
     ],
   });
 
-  const summary = response.choices[0]?.message?.content || '';
+  const choice = response.choices[0];
+  const summary = choice?.message?.content?.trim() || '';
+
+  // An empty completion must not be cached. getSummary treats any stored row
+  // as a hit, so a blank one becomes permanent: the document reads as
+  // "summarised" forever and no later run asks again. July 2026's permit
+  // summary was stored this way and rendered as an empty block on the live
+  // dashboard while the import that produced it reported success.
+  if (!summary) {
+    throw new Error(
+      `Empty summary for ${documentType} ${documentId} ` +
+      `(model ${selectedModel}, finish_reason ${choice?.finish_reason ?? 'unknown'})`
+    );
+  }
+
   if (!options?.dryRun) {
     saveSummary(documentType, documentId, 'pdf-analysis', summary, {
       ...options?.metadata,

@@ -19,6 +19,7 @@ import {
 } from 'recharts';
 import { cityWebsiteUrl, cityName } from '@/lib/city-config-client';
 import PermitFeedStatus from '@/components/PermitFeedStatus';
+import { formatSummaryHtml } from '@/lib/sanitize';
 
 interface MonthlySummary {
   month: string;
@@ -548,69 +549,16 @@ export default function DevelopmentPage() {
   );
 }
 
+// Rendering lives in formatSummaryHtml so every surface accepts the same
+// markdown subset. This page kept its own copy, which understood "### " and
+// "**bold**" but not "## " — so July 2026's summary opened with a literal
+// "## Summary" on the live dashboard.
 function SummaryContent({ summary }: { summary: string }) {
-  // Parse markdown-style formatting
-  const lines = summary.split('\n');
-
   return (
-    <div className="space-y-2">
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return null;
-
-        // Headers with ### (h3)
-        if (trimmed.startsWith('### ')) {
-          const text = trimmed.slice(4);
-          return (
-            <h4 key={i} className="font-semibold text-slate-900 dark:text-slate-100 mt-4 first:mt-0">
-              {text}
-            </h4>
-          );
-        }
-
-        // Headers (bold text with **)
-        if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-          const text = trimmed.slice(2, -2);
-          return (
-            <h4 key={i} className="font-semibold text-slate-900 dark:text-slate-100 mt-3 first:mt-0">
-              {text}
-            </h4>
-          );
-        }
-
-        // Bullet points
-        if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
-          const text = trimmed.replace(/^[•\-*]\s*/, '');
-          // Handle inline bold
-          const parts = text.split(/\*\*([^*]+)\*\*/g);
-          return (
-            <p key={i} className="text-sm text-slate-700 dark:text-slate-300 pl-4">
-              • {parts.map((part, j) =>
-                j % 2 === 1 ? (
-                  <strong key={j} className="font-semibold">{part}</strong>
-                ) : (
-                  part
-                )
-              )}
-            </p>
-          );
-        }
-
-        // Regular text with potential inline bold
-        const parts = trimmed.split(/\*\*([^*]+)\*\*/g);
-        return (
-          <p key={i} className="text-sm text-slate-700 dark:text-slate-300">
-            {parts.map((part, j) =>
-              j % 2 === 1 ? (
-                <strong key={j} className="font-semibold">{part}</strong>
-              ) : (
-                part
-              )
-            )}
-          </p>
-        );
-      })}
-    </div>
+    <div
+      className="space-y-2 text-sm text-slate-700 dark:text-slate-300"
+      dangerouslySetInnerHTML={{ __html: formatSummaryHtml(summary) }}
+    />
   );
 }
 
