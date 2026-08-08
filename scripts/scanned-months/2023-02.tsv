@@ -1,0 +1,29 @@
+# February 2023 permit report, transcribed from a scan. See README.md.
+# Source: https://www.flowerybranchga.org/Documents/Departments/Community%20Development/Monthly%20Permit%20Statistics/2023/feb2023permitlisting.pdf
+# Layout: "Permit Report" — no valuation column, so every value is empty.
+# The report prints "Total Records: 19"; 19 rows are listed, numbered 45 down
+# to 26 with 32 absent. Subdivision and work class are joined into description
+# exactly as parsePermitReport does for the machine-readable months.
+# Misspellings are the city's own and are kept: "STRLING ON THE LAKE" (34),
+# "TITAN SOLAR POWE GA INC" (45).
+#
+# permit	type	address	description
+45	electrical	5995 HOOT OWL LANE	Accessory
+44	commercial	4450 HOG MOUNTAIN ROAD	Accessory
+43	residential	5224 CHATTAHOOCHEE STREET	NEW
+42	residential	5220 CHATTAHOOCHEE STREET	Single Family Home
+41	residential	5909 GAINESVILLE STREET	Accessory
+40	sign	6439 SPOUT SPRINGS ROAD	NEW
+39	residential	6863 WELCOME ROAD LOT 21	STERLING ON THE LAKE NEW
+38	residential	7056 COTTAGE GROVE DRIVE LOT 32	STERLING ON THE LAKE NEW
+37	residential	6799 WELCOME ROAD LOT 5	STERLING ON THE LAKE NEW
+36	residential	6793 WELCOME ROAD LOT 4	STERLING ON THE LAKE NEW
+35	electrical	5947 SCREECH OWL DRIVE	Summit Lake Accessory
+34	residential	7072 COTTAGE GROVE DRIVE LOT 28	STRLING ON THE LAKE NEW
+33	residential	7060 COTTAGE GROVE DRIVE LOT 31	STERLING ON THE LAKE New
+31	residential	6773 WELCOME ROAD LOT 3	STERLING ON THE LAKE NEW
+30	other	6111 MITCHELL STREET	FILMING IN FB
+29	residential	5907 PARK BAY COURT	PARK WALK AT LANIER ADDITION
+28	residential	6092 MORROW DRIVE	Accessory
+27	electrical	5883 SCREECH OWL DRIVE	SUMMIT LAKE NEW - SOLAR PANELS
+26	residential	6769 WELCOME ROAD LOT 2	STERLING ON THE LAKE NEW

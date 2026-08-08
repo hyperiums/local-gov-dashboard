@@ -73,10 +73,11 @@ if [ "$MONTH_COUNT" -gt 24 ]; then
   exit 1
 fi
 
-# Fetch each month's PDF from your local (unblocked) IP and base64 it.
+# Fetch each month's PDF from your local (unblocked) IP.
 PDF_TMP=$(mktemp -d /tmp/fb-permit-pdfs.XXXXXX)
-trap 'rm -rf "$PDF_TMP" "${TMP:-}"' EXIT
-PDFS_JSON_ENTRIES=""
+TMP=$(mktemp /tmp/fb-permits-payload.XXXXXX.json)
+ROWS_TMP=$(mktemp /tmp/fb-permits-rows.XXXXXX.json)
+trap 'rm -rf "$PDF_TMP" "$TMP" "$ROWS_TMP"' EXIT
 echo "Fetching $MONTH_COUNT permit PDF(s) from your local IP..."
 while read -r M URL; do
   [ -z "$M" ] && continue
@@ -89,33 +90,31 @@ while read -r M URL; do
     rm -f "$OUT"
     continue
   fi
-  SIZE=$(wc -c < "$OUT" | tr -d ' ')
-  echo "  $M: ${SIZE}B from $URL"
-  B64=$(base64 < "$OUT" | tr -d '\n')
-  ENTRY=$(python3 -c "import json,sys; print(json.dumps({sys.argv[1]: sys.argv[2]})[1:-1])" "$M" "$B64")
-  if [ -z "$PDFS_JSON_ENTRIES" ]; then
-    PDFS_JSON_ENTRIES="$ENTRY"
-  else
-    PDFS_JSON_ENTRIES="$PDFS_JSON_ENTRIES,$ENTRY"
-  fi
+  echo "  $M: $(wc -c < "$OUT" | tr -d ' ')B from $URL"
 done <<< "$MONTHS"
 
-PAYLOAD=$(python3 -c "
-import json, sys
-rows = json.loads(sys.argv[1])
-pdfs = json.loads('{' + sys.argv[2] + '}') if sys.argv[2] else {}
-print(json.dumps({'type': 'import-permits', 'params': {'permits': rows, 'pdfsByMonth': pdfs}}))
-" "$ROWS_JSON" "$PDFS_JSON_ENTRIES")
+# Rows and base64 PDFs travel through files, never argv: a full-history push
+# is several megabytes and ARG_MAX rejects it ("Argument list too long"),
+# which reads like a broken script rather than a size limit.
+printf '%s' "$ROWS_JSON" > "$ROWS_TMP"
 
-COUNT=$(python3 -c "
-import json, sys
-print(len(json.loads(sys.argv[1])))
-" "$ROWS_JSON")
+COUNT=$(python3 - "$ROWS_TMP" "$PDF_TMP" "$TMP" <<'PY'
+import base64, json, pathlib, sys
+
+rows_path, pdf_dir, out_path = (pathlib.Path(p) for p in sys.argv[1:4])
+rows = json.loads(rows_path.read_text())
+pdfs = {
+    pdf.stem: base64.b64encode(pdf.read_bytes()).decode()
+    for pdf in sorted(pdf_dir.glob('*.pdf'))
+}
+out_path.write_text(json.dumps({
+    'type': 'import-permits',
+    'params': {'permits': rows, 'pdfsByMonth': pdfs},
+}))
+print(len(rows))
+PY
+)
 echo "Pushing $COUNT permit row(s) + $MONTH_COUNT PDF(s) to $PROD_HOST..."
-
-TMP=$(mktemp /tmp/fb-permits-payload.XXXXXX.json)
-trap 'rm -f "$TMP"' EXIT
-printf '%s' "$PAYLOAD" > "$TMP"
 
 REMOTE_TMP="/tmp/fb-permits-import-$$.json"
 scp -q "$TMP" "$PROD_HOST:$REMOTE_TMP"

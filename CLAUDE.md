@@ -89,6 +89,17 @@ Any new collector should follow the same shape: record a run, report
 `success:false` when collection genuinely failed, and never let an empty result
 pass as a clean one.
 
+January and February 2023 are the only months the city published as scans with
+no text layer. They cannot be parsed and were recovered by OCR plus human
+review — see `scripts/scanned-months/`, which keeps the transcriptions as
+reviewable data and records their weaker provenance in `scrape_runs`. Treat
+them as fixed history: re-running `bulk-permits` reports them as
+`not_machine_readable` and leaves them alone.
+
+`AUDIT_PERMITS=1 npx vitest run src/tests/permit-audit.test.ts` re-fetches every
+published report and checks the stored rows against the count each one prints.
+It is the check that catches a layout the parser silently stopped reading.
+
 ### ID Conventions
 - Meetings: `civicclerk-{eventId}`
 - Ordinances: `municode-ord-{number}` or `agenda-ord-{number}`

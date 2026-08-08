@@ -1,0 +1,14 @@
+# January 2023 permit report, transcribed from a scan. See README.md.
+# Source: https://www.flowerybranchga.org/Documents/Departments/Community%20Development/Monthly%20Permit%20Statistics/2023/jan2023permitlisting.pdf
+# Layout: "PERMITS ISSUED BY TYPE" — carries a valuation column, printed $0.00.
+# The report prints "PERMITS ISSUED FOR ELECTRICAL (RESIDENTIAL): 2" and
+# "GRAND TOTAL OF PERMITS: 2".
+#
+# Both rows are the same permit, ELER-001508-2021, listed once per associated
+# party (owner ELI ISMAIL, contractor TESLA ENERGY OPERATIONS). The city counts
+# both, and parseByTypeReport keeps both for the machine-readable months of
+# this era, so the second row takes the "-2" suffix uniqueId would have given it.
+#
+# permit	type	address	description	value
+ELER-001508-2021	electrical	6717 Moondancer Ct	INSTALLATION OF ROOF MOUNTED PHOTO VOLTAIC SYSTEM TO AN EXISTING RESIDENTIAL HOME ROOF 14 SOLAR PANELS 1 ENERGY STORAGE SYSTEM (POWERWALL)	0
+ELER-001508-2021-2	electrical	6717 Moondancer Ct	INSTALLATION OF ROOF MOUNTED PHOTO VOLTAIC SYSTEM TO AN EXISTING RESIDENTIAL HOME ROOF 14 SOLAR PANELS 1 ENERGY STORAGE SYSTEM (POWERWALL)	0

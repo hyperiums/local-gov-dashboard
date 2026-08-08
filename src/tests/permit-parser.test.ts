@@ -173,8 +173,137 @@ describe('parsePermitPdfText - District format (June 2026)', () => {
   });
 });
 
+// The three layouts below predate 2024 and were previously handled by a
+// line-scanning fallback that matched street suffixes inside ordinary words
+// ("Elect" from "Electrical", because Ct/St/Dr need no word boundary) and
+// took the first number on a line as a dollar value. That produced permits
+// with address "74 Elect" valued at 8111 — the parcel number — and got the
+// record count wrong in both directions. Ground truths here come from the
+// PDFs' own totals.
+describe('parsePermitPdfText - Permits Issued By Type (Jan 2021)', () => {
+  const permits = parse('permit-2021-01.txt', '2021-01');
+
+  it('finds all 83 records (per-type totals in the PDF sum to 83)', () => {
+    expect(permits).toHaveLength(83);
+  });
+
+  it('never lifts a street suffix out of the middle of a word', () => {
+    for (const p of permits) {
+      expect(p.address).not.toMatch(/\bElect$/);
+      expect(p.address).toMatch(/^\d/);
+    }
+  });
+
+  it('never reuses the address number as the valuation', () => {
+    for (const p of permits) {
+      const leadingNumber = Number(p.address.split(/\s/)[0]);
+      if (p.value !== undefined && Number.isFinite(leadingNumber)) {
+        expect(p.value).not.toBe(leadingNumber);
+      }
+    }
+  });
+});
+
+describe('parsePermitPdfText - Permits Issued By Type (Jun 2022)', () => {
+  const permits = parse('permit-2022-06.txt', '2022-06');
+
+  it('finds all 63 records (per-type totals in the PDF sum to 63)', () => {
+    expect(permits).toHaveLength(63);
+  });
+
+  it('keeps the whole address when the city name fuses onto it', () => {
+    // Extraction yields "6763 Winding Canyon Rd," / "LOT 22 ZFlowery Branch,"
+    expect(permits.some(p => p.address === '6763 Winding Canyon Rd, LOT 22 Z')).toBe(true);
+    // and "7087 Valley Forge" / "DrFlowery Branch, GA"
+    expect(permits.some(p => p.address === '7087 Valley Forge Dr')).toBe(true);
+  });
+
+  it('reads the description line', () => {
+    const shed = permits.find(p => p.address === '7087 Valley Forge Dr');
+    expect(shed?.description).toBe("STORAGE SHED 8'X15'");
+  });
+
+  it('excludes the city-hall address repeated in every page footer', () => {
+    for (const p of permits) {
+      expect(p.address).not.toMatch(/5410 Pine Street/i);
+    }
+  });
+});
+
+describe('parsePermitPdfText - Permits Issued By Type (Feb 2022)', () => {
+  it('finds all 27 records (per-type totals in the PDF sum to 27)', () => {
+    expect(parse('permit-2022-02.txt', '2022-02')).toHaveLength(27);
+  });
+});
+
+describe('parsePermitPdfText - Permit Report with two-digit permit numbers (Mar 2023)', () => {
+  const permits = parse('permit-2023-03.txt', '2023-03');
+
+  // This report's footer claims "Total Records: 28" but it prints 27 rows —
+  // 8 on page 1, 10 on page 2, 9 on page 3, counted off the rendered pages.
+  // Permit numbers run 46-74 with 59 and 67 absent. The footer is the city's
+  // error; 27 is what the report actually lists.
+  it('finds the 27 records the report actually prints', () => {
+    expect(permits).toHaveLength(27);
+    expect(permits.map(p => p.id.replace('permit-2023-03-', ''))).not.toContain('67');
+  });
+
+  it('reads the address column rather than a fragment of the type column', () => {
+    const byId = new Map(permits.map(p => [p.id, p]));
+    expect(byId.get('permit-2023-03-74')?.address).toBe('5868 SCREECH OWL DRIVE');
+    expect(byId.get('permit-2023-03-74')?.type).toBe('electrical');
+    expect(byId.get('permit-2023-03-72')?.address).toBe('6127 LORIMAR COURT');
+    expect(byId.get('permit-2023-03-72')?.type).toBe('hvac');
+  });
+
+  it('reports no value because this layout has no valuation column', () => {
+    for (const p of permits) {
+      expect(p.value).toBeUndefined();
+    }
+  });
+});
+
+describe('parsePermitPdfText - administrative records without an address (Oct 2023)', () => {
+  const permits = parse('permit-2023-10.txt', '2023-10');
+
+  // Permits 318 and 319 are zoning verification letters: no address, no
+  // parcel, no contractor. The city counts them in "Total Records: 42", so
+  // dropping them left this dashboard reading 40 against a published 42.
+  it('finds all 42 records (PDF says "Total Records: 42")', () => {
+    expect(permits).toHaveLength(42);
+  });
+
+  it('keeps them with an empty address rather than inventing one', () => {
+    const byId = new Map(permits.map(p => [p.id, p]));
+    expect(byId.get('permit-2023-10-318')?.address).toBe('');
+    expect(byId.get('permit-2023-10-319')?.address).toBe('');
+  });
+
+  it('types them apart from construction so they can be filtered out', () => {
+    const byId = new Map(permits.map(p => [p.id, p]));
+    expect(byId.get('permit-2023-10-318')?.type).toBe('zoning');
+    expect(byId.get('permit-2023-10-319')?.type).toBe('zoning');
+  });
+
+  it('still drops a record that has a parcel or city but no readable address', () => {
+    // Guards the relaxation above: an address that failed to parse is a bug,
+    // not an administrative record, and must not be admitted as an empty one.
+    const withParcel = '99 Residential 08111 003303 FLOWERY BRANCH SUMMIT LAKE NEW';
+    const parsed = parsePermitPdfText(withParcel, '2023-10', 'https://example.test/x.pdf');
+    expect(parsed).toHaveLength(0);
+  });
+});
+
 describe('parsePermitPdfText - degenerate input', () => {
   it('returns no permits for empty text', () => {
     expect(parsePermitPdfText('', '2026-01', 'https://example.test/x.pdf')).toEqual([]);
+  });
+
+  // Returning nothing lets the collector record "downloaded but unreadable"
+  // and raise it. Guessing records from unknown text hid a broken parse as
+  // real data for four years of reports.
+  it('returns no permits for text in no recognised layout', () => {
+    const text = '1234 Some Street\nElectrical\n$5,000.00\nSomething else entirely';
+    expect(parsePermitPdfText(text, '2026-01', 'https://example.test/x.pdf')).toEqual([]);
   });
 });
