@@ -48,7 +48,9 @@ for (const file of readdirSync(here).filter((f) => f.endsWith('.tsv')).sort()) {
         month,
         type,
         address,
-        description: description ?? '',
+        // null, not "", for an absent column: insertPermit stores null for a
+        // blank description on every other month, and the two should match.
+        description: description || null,
         // Only the "BY TYPE" layout carries a valuation column; the "Permit
         // Report" layout has none, and an absent column must stay null rather
         // than becoming a zero the report never printed.

@@ -64,6 +64,12 @@ export async function handleImportPermits(params: HandlerParams) {
 
   const isShortString = (v: unknown): v is string =>
     typeof v === 'string' && v.length > 0 && v.length <= MAX_STRING_LEN;
+  // Optional text columns may legitimately be blank — a permit with no
+  // subdivision or work class has an empty description, and the parser emits
+  // "" for it. Requiring non-empty rejected those rows under a "too long"
+  // message, which sent whoever read it looking for the wrong problem.
+  const isOptionalText = (v: unknown): boolean =>
+    v == null || (typeof v === 'string' && v.length <= MAX_STRING_LEN);
   const isValidMonth = (v: unknown): v is string =>
     typeof v === 'string' && VALID_MONTH.test(v);
 
@@ -77,9 +83,9 @@ export async function handleImportPermits(params: HandlerParams) {
       errors.push({ id: p.id, error: 'invalid id, month (YYYY-MM), or sourceUrl' });
       continue;
     }
-    if (p.type != null && !isShortString(p.type)) { errors.push({ id: p.id, error: 'type too long' }); continue; }
-    if (p.address != null && !isShortString(p.address)) { errors.push({ id: p.id, error: 'address too long' }); continue; }
-    if (p.description != null && !isShortString(p.description)) { errors.push({ id: p.id, error: 'description too long' }); continue; }
+    if (!isOptionalText(p.type)) { errors.push({ id: p.id, error: `type must be a string of at most ${MAX_STRING_LEN} characters` }); continue; }
+    if (!isOptionalText(p.address)) { errors.push({ id: p.id, error: `address must be a string of at most ${MAX_STRING_LEN} characters` }); continue; }
+    if (!isOptionalText(p.description)) { errors.push({ id: p.id, error: `description must be a string of at most ${MAX_STRING_LEN} characters` }); continue; }
     if (p.value != null && (typeof p.value !== 'number' || !Number.isFinite(p.value))) {
       errors.push({ id: p.id, error: 'value must be a finite number' }); continue;
     }
