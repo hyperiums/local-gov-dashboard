@@ -21,8 +21,14 @@
 #       trigger AI summary regeneration on prod, so when backfilling
 #       corrected rows for months whose summaries already exist, set
 #       this to the first month that actually needs a new summary.
-# Example:
+#   $3  maximum month to attach PDFs for (default: no limit). Without
+#       an upper bound, correcting rows far back in history drags every
+#       later month's PDF along and trips the 24-summary guard, even
+#       when only one or two months actually need a new summary.
+# Examples:
 #   bash scripts/push-permits.sh 2024-01 2026-05
+#   bash scripts/push-permits.sh 2023-01 2023-01 2023-02   # rows from
+#       2023-01 on, but summaries only for January and February
 #
 # Configuration via env vars (defaults are this project's prod setup;
 # override for forks or staging):
@@ -40,6 +46,7 @@ set -euo pipefail
 LOCAL_DB="${LOCAL_DB:-data/flowery-branch.db}"
 SINCE="${1:-2025-01}"
 PDF_SINCE="${2:-$SINCE}"
+PDF_UNTIL="${3:-9999-12}"
 PROD_HOST="${PROD_HOST:-root@45.55.236.77}"
 PROD_ENV="${PROD_ENV:-/var/www/flowerybranch.charlesthompson.me/.env}"
 PROD_API_BASE="${PROD_API_BASE:-http://localhost:3001}"
@@ -63,13 +70,13 @@ fi
 # found the working URL for every month (the city's file naming varies:
 # June2025 vs Jun2026), so reuse it instead of guessing names.
 MONTHS=$(sqlite3 "$LOCAL_DB" \
-  "SELECT month || ' ' || source_url FROM permits WHERE month >= '$PDF_SINCE' GROUP BY month ORDER BY month")
+  "SELECT month || ' ' || source_url FROM permits WHERE month >= '$PDF_SINCE' AND month <= '$PDF_UNTIL' GROUP BY month ORDER BY month")
 
 # grep -c exits 1 on zero matches (a legitimate case when PDF_SINCE is
 # in the future for a rows-only push), which set -e would treat as fatal
 MONTH_COUNT=$(printf '%s\n' "$MONTHS" | grep -c . || true)
 if [ "$MONTH_COUNT" -gt 24 ]; then
-  echo "Too many summary PDFs ($MONTH_COUNT > 24) in one push. Tighten the PDF_SINCE arg." >&2
+  echo "Too many summary PDFs ($MONTH_COUNT > 24) in one push. Narrow the range with the PDF_SINCE (\$2) and PDF_UNTIL (\$3) args." >&2
   exit 1
 fi
 

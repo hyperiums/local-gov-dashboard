@@ -36,7 +36,7 @@ const ENABLED = process.env.AUDIT_PERMITS === '1';
 // human review instead of by the parser. Counts come from the totals each
 // report prints itself. See scripts/scanned-months/README.md.
 const TRANSCRIBED_FROM_SCANS: Record<string, number> = {
-  '2023-01': 2,
+  '2023-01': 21,
   '2023-02': 19,
 };
 

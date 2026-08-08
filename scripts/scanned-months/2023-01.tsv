@@ -1,14 +1,44 @@
 # January 2023 permit report, transcribed from a scan. See README.md.
 # Source: https://www.flowerybranchga.org/Documents/Departments/Community%20Development/Monthly%20Permit%20Statistics/2023/jan2023permitlisting.pdf
-# Layout: "PERMITS ISSUED BY TYPE" — carries a valuation column, printed $0.00.
-# The report prints "PERMITS ISSUED FOR ELECTRICAL (RESIDENTIAL): 2" and
-# "GRAND TOTAL OF PERMITS: 2".
 #
-# Both rows are the same permit, ELER-001508-2021, listed once per associated
-# party (owner ELI ISMAIL, contractor TESLA ENERGY OPERATIONS). The city counts
-# both, and parseByTypeReport keeps both for the machine-readable months of
-# this era, so the second row takes the "-2" suffix uniqueId would have given it.
+# This file bundles TWO reports, which is why it is four pages long:
+#   pages 1-2  "PERMITS ISSUED BY TYPE" filtered to ELECTRICAL (RESIDENTIAL),
+#              ending "GRAND TOTAL OF PERMITS: 2". Its own footer reads
+#              "Page 2 of 2", which is easy to mistake for the end of the file.
+#   pages 3-4  "Permit Report" for the same month, ending "Total Records: 21".
 #
-# permit	type	address	description	value
-ELER-001508-2021	electrical	6717 Moondancer Ct	INSTALLATION OF ROOF MOUNTED PHOTO VOLTAIC SYSTEM TO AN EXISTING RESIDENTIAL HOME ROOF 14 SOLAR PANELS 1 ENERGY STORAGE SYSTEM (POWERWALL)	0
-ELER-001508-2021-2	electrical	6717 Moondancer Ct	INSTALLATION OF ROOF MOUNTED PHOTO VOLTAIC SYSTEM TO AN EXISTING RESIDENTIAL HOME ROOF 14 SOLAR PANELS 1 ENERGY STORAGE SYSTEM (POWERWALL)	0
+# The rows below are the Permit Report, because that is the whole month and
+# the same format and numbering every other 2023 month uses. The two electrical
+# rows on pages 1-2 are deliberately excluded: they are one permit
+# (ELER-001508-2021) listed once per associated party, carry a different
+# numbering scheme, and appear nowhere in the Permit Report's list — counting
+# them alongside it would mix two systems. January 2023 is the transition month
+# between the two formats, which is why both are present at all.
+#
+# Layout: "Permit Report" — no valuation column, so every value is empty.
+# Permits run 25 down to 5 with no gaps: 11 rows on page 3, 10 on page 4.
+# Addresses on page 4 repeat the street type and number ("5628 CHINOOK COURT
+# CT 5628"); that is how the city printed them and it is kept verbatim.
+#
+# permit	type	address	description
+25	sign	4731 HOG MOUNTAIN ROAD SUITE B	WALL SIGN
+24	residential	7015 VALLEY FORGE DRIVE	Accessory
+23	residential	6765 WELCOME ROAD LOT 01	STERLING ON THE LAKE NEW
+22	residential	6831 WELCOME ROAD LOT 13	STERLING ON THE LAKE NEW
+21	residential	7084 COTTAGE GROVE DRIVE LOT 25	STERLING ON THE LAKE NEW
+20	residential	7080 COTTAGE GROVE DRIVE LOT 26	STERLING ON THE LAKE NEW
+19	residential	7064 COTTAGE GROVE DRIVE LOT 30	STERLING ON THE LAKE NEW
+18	residential	6888 RIVER ROCK DRIVE DR LOT 169	STERLING ON THE LAKE NEW
+17	residential	6871 WELCOME ROAD LOT 23	NEW
+16	residential	6917 RIVER ROCK DRIVE LOT 113	STERLING ON THE LAKE NEW
+15	residential	7076 COTTAGE GROVE DRIVE LOT 27	STERLING ON THE LAKE NEW
+14	hvac	5628 CHINOOK COURT CT 5628	REPLACE HVAC
+13	residential	5909 MITCHELL STREET ST 5909	ACCESSORY
+12	sign	4200 FALCON PARKWAY PKWY 4200
+11	commercial	5329 BRIGGS STREET ST 5329
+10	plumbing	6934 RUNNING DEER COURT CT 6934
+9	commercial	5512 MCEVER ROAD RD 5512-1
+8	commercial	7005 LAKE STERLING BOULEVARD BLVD 7005	ACCESSORY
+7	swimming pool	7460 WHISTLING DUCK WAY WAY 7460
+6	commercial	7004 LAKE STERLING BOULEVARD BLVD 7004
+5	residential	7270 RED MAPLE COURT CT 7270

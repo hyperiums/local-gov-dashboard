@@ -27,9 +27,21 @@ Each page was read twice, independently, and only agreeing values were kept:
 The two disagreed once, on January's address: `Moondancer Cir` by eye,
 `Moondancer Ct` by OCR. The scan supports `Ct`, which is what is recorded.
 
-Counts are checked against the totals each report prints itself — "GRAND TOTAL
-OF PERMITS: 2" for January, "Total Records: 19" for February. February numbers
-its permits 45 down to 26 with 32 absent, which is the city's own gap.
+Counts are checked against the totals each report prints itself — "Total
+Records: 21" for January, "Total Records: 19" for February. February numbers its
+permits 45 down to 26 with 32 absent, which is the city's own gap; January runs
+25 down to 5 with none.
+
+**Check the file's page count before trusting a footer.** January's PDF is four
+pages holding two different reports: an electrical-only "PERMITS ISSUED BY TYPE"
+view on pages 1-2, then the month's actual "Permit Report" on pages 3-4. The
+first report's footer reads "Page 2 of 2", which describes that report and not
+the file. Reading only those two pages produced a first transcription of 2
+permits for a month that issued 21 — caught when the AI summary generated from
+the same PDF cited a total the database disagreed with. January 2023 is the
+month the city switched formats, which is why both appear at all; the
+transcription keeps the Permit Report, since that is the whole month and matches
+how every other month is recorded.
 
 ## Why these are not parsed like every other month
 
