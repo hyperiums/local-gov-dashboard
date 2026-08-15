@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatSummaryHtml, formatAndSanitize, sanitizeHtml, summaryToPlainText } from '@/lib/sanitize';
+import { formatSummaryHtml, formatAndSanitize, formatProseHtml, sanitizeHtml, summaryToPlainText } from '@/lib/sanitize';
 
 // The shape the summarization prompts actually ask for, taken from a live
 // ordinance summary that rendered its markers as literal text on the page.
@@ -121,5 +121,53 @@ describe('summaryToPlainText', () => {
 
   it('handles empty input', () => {
     expect(summaryToPlainText('')).toBe('');
+  });
+});
+
+// content/about.md is operator-authored, so the prose renderer allows links and
+// page-level headings that machine-written summaries deliberately don't get.
+// Wider is not looser: the file is still untrusted input to the renderer, and a
+// deployment that pastes something careless into it must not get script into a
+// public page.
+describe('formatProseHtml', () => {
+  it('renders headings, paragraphs, and inline links', () => {
+    const html = formatProseHtml(
+      '## Why it exists\n\nI built it. The rules are [open source](https://example.org/prompts).'
+    );
+    expect(html).toContain('<h2');
+    expect(html).toContain('Why it exists');
+    expect(html).toContain('href="https://example.org/prompts"');
+    expect(html).toContain('target="_blank"');
+    expect(html).not.toContain('## ');
+  });
+
+  it('joins wrapped lines into one paragraph and splits on blank lines', () => {
+    const html = formatProseHtml('First line\nwrapped here.\n\nSecond paragraph.');
+    expect(html).toContain('First line wrapped here.');
+    expect(html.match(/<p/g)).toHaveLength(2);
+  });
+
+  it('keeps same-page links free of target="_blank"', () => {
+    expect(formatProseHtml('See [the meetings page](/meetings).')).not.toContain('target');
+  });
+
+  // Same escape-then-markup order as summaries: an injected tag never becomes
+  // an element, so its handler survives only as visible characters.
+  it('renders injected tags as inert text rather than elements', () => {
+    const html = formatProseHtml('Hello <script>alert(1)</script> <img src=x onerror=alert(1)>');
+    expect(html).not.toContain('<script');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).toContain('&lt;img');
+  });
+
+  it('drops a javascript: url from a markdown link', () => {
+    const html = formatProseHtml('[click](javascript:alert(1))');
+    expect(html).not.toContain('javascript:');
+  });
+
+  it('handles empty input', () => {
+    expect(formatProseHtml('')).toBe('');
+    expect(formatProseHtml('   \n  ')).toBe('');
   });
 });

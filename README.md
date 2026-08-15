@@ -35,7 +35,7 @@ Originally built for [Flowery Branch, Georgia](https://flowery-branch.charlestho
    npm install
    ```
 
-3. Configure your city by editing `city-config.json` (see [Configuration](#configuration) below)
+3. Configure your city by editing `city-config.json`, and say who you are in `content/about.md` (see [Configuration](#configuration) below)
 
 4. Create a `.env` file from the example:
    ```bash
@@ -79,6 +79,8 @@ The dashboard is configured for your city via `city-config.json` in the project 
     "timezone": "America/New_York"
   },
   "urls": {
+    "site": "https://dashboard.example.com",
+    "repo": "https://github.com/you/your-fork",
     "civicClerk": "https://yourcity.portal.civicclerk.com",
     "cityWebsite": "https://www.yourcity.gov",
     "municode": "https://library.municode.com/st/your_city",
@@ -88,9 +90,38 @@ The dashboard is configured for your city via `city-config.json` in the project 
   },
   "contact": {
     "email": "contact@example.com"
+  },
+  "operator": {
+    "name": "Your Name",
+    "disclosure": "An independent project by Your Name. Not a City of Your City website."
   }
 }
 ```
+
+### Saying who publishes it
+
+This dashboard collects one city's records and carries that city's name on every page, so
+readers reasonably assume the city publishes it. Correcting that is not decoration — it is
+the difference between a helpful reference and something that looks like an official
+notice. Two pieces of configuration carry it:
+
+**`operator` in `city-config.json`** — your name and one sentence of disclosure. That
+sentence renders above the masthead on every page, in the footer, in the page description
+and social metadata, and on the generated link-preview card, which is the only one of
+those that survives when somebody shares a link with none of the site around it. Keep it
+short enough to read on a phone; `src/tests/disclosure.test.ts` checks that it names you,
+denies that the city publishes the site, and stays under 120 characters.
+
+**`content/about.md`** — your section of the `/about` page, in markdown: who you are, why
+you built it, and anything a reader deserves to know about your interest in the subject.
+If you hold or are seeking office in the body you're covering, say so here. The build
+fails if this file is missing, which is deliberate: a dashboard about a government should
+not be able to ship without naming a publisher.
+
+The rest of `/about` — that the originals are the source of truth, that collection is
+automated, that the summaries are model-written and should be checked — lives in the page
+component, because it's true of every deployment and shouldn't be editable away by
+accident.
 
 ### Finding Your Municode Product ID
 

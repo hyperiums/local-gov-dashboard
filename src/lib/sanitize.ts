@@ -5,6 +5,15 @@ import DOMPurify from 'isomorphic-dompurify';
 const ALLOWED_TAGS = ['strong', 'em', 'b', 'i', 'br', 'p', 'span', 'ul', 'li', 'h4'];
 const ALLOWED_ATTR = ['class'];
 
+// Operator-authored prose (content/about.md) gets headings and links on top of
+// the summary subset. The line that matters is authorship, not trust in the
+// markup: a summarizer must never put a clickable destination in front of a
+// resident, while the person running the deployment is writing their own page
+// and needs to cite sources. Everything still goes through DOMPurify, which
+// drops javascript: and data: hrefs.
+const PROSE_TAGS = [...ALLOWED_TAGS, 'h2', 'h3', 'a'];
+const PROSE_ATTR = [...ALLOWED_ATTR, 'href', 'target', 'rel'];
+
 /**
  * Sanitize HTML content to prevent XSS attacks.
  * Only allows safe formatting tags (strong, em, etc.).
@@ -97,6 +106,91 @@ export function formatSummaryHtml(text: string): string {
 
   closeList();
   return sanitizeHtml(html.join(''));
+}
+
+const PROSE_H2_CLASS = 'text-2xl font-semibold text-slate-900 dark:text-slate-100 mt-8 first:mt-0 mb-3';
+const PROSE_H3_CLASS = 'text-lg font-semibold text-slate-900 dark:text-slate-100 mt-6 mb-2';
+const PROSE_P_CLASS = 'mb-3';
+const PROSE_LINK_CLASS = 'text-emerald-600 dark:text-emerald-400 hover:underline';
+
+function proseInline(text: string): string {
+  return escapeHtml(text)
+    .replace(/\*\*([^*]+)\*\*/g, `<strong class="${BOLD_CLASS}">$1</strong>`)
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) => {
+      const external = /^https?:\/\//.test(href);
+      const rest = external ? ' target="_blank" rel="noopener noreferrer"' : '';
+      return `<a href="${href}" class="${PROSE_LINK_CLASS}"${rest}>${label}</a>`;
+    });
+}
+
+/**
+ * Render the operator's own About copy (content/about.md) as safe HTML.
+ *
+ * The About page keeps the structural disclosures in code, where a deployment
+ * can't drop them by accident, and reads the operator's identity, motives, and
+ * conflicts from a markdown file instead. That split is what lets another city
+ * fork this without editing a component to delete somebody else's biography.
+ *
+ * Same escape-then-markup order as formatSummaryHtml, and the same DOMPurify
+ * pass — the subset is wider, not looser.
+ */
+export function formatProseHtml(text: string): string {
+  if (!text?.trim()) return '';
+
+  const html: string[] = [];
+  let listItems: string[] = [];
+
+  const closeList = () => {
+    if (listItems.length === 0) return;
+    html.push(`<ul class="${LIST_CLASS} mb-3">${listItems.join('')}</ul>`);
+    listItems = [];
+  };
+
+  // A blank line ends a paragraph; consecutive non-blank lines are one
+  // paragraph, so the source file can wrap at a readable width.
+  let paragraph: string[] = [];
+  const closeParagraph = () => {
+    if (paragraph.length === 0) return;
+    html.push(`<p class="${PROSE_P_CLASS}">${proseInline(paragraph.join(' '))}</p>`);
+    paragraph = [];
+  };
+
+  for (const rawLine of text.split('\n')) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      closeParagraph();
+      closeList();
+      continue;
+    }
+
+    const heading = line.match(/^(#{2,3})\s+(.*)$/);
+    if (heading) {
+      closeParagraph();
+      closeList();
+      const cls = heading[1].length === 2 ? PROSE_H2_CLASS : PROSE_H3_CLASS;
+      const tag = heading[1].length === 2 ? 'h2' : 'h3';
+      html.push(`<${tag} class="${cls}">${proseInline(heading[2])}</${tag}>`);
+      continue;
+    }
+
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    if (bullet) {
+      closeParagraph();
+      listItems.push(`<li>${proseInline(bullet[1])}</li>`);
+      continue;
+    }
+
+    paragraph.push(line);
+  }
+
+  closeParagraph();
+  closeList();
+
+  return DOMPurify.sanitize(html.join(''), {
+    ALLOWED_TAGS: PROSE_TAGS,
+    ALLOWED_ATTR: PROSE_ATTR,
+  });
 }
 
 /**
