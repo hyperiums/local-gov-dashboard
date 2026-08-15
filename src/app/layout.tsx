@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
+import DisclosureBar from "@/components/DisclosureBar";
 import ContactEmail from "@/components/ContactEmail";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import {
   cityName,
+  cityLocation,
+  siteUrl,
   civicClerkUrl,
   cityWebsiteUrl,
   municodeUrl,
   clearGovSpendingBaseUrl,
   contactEmail,
+  operatorName,
+  operatorDisclosure,
 } from "@/lib/city-config-client";
 
 const umamiSrc = process.env.NEXT_PUBLIC_UMAMI_SRC;
@@ -27,14 +33,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// A tab, a search result, and a shared link are all read without the page in
+// front of you, so none of them may lead with the city as publisher. Every one
+// of them opens on "independent," and the descriptions carry the operator's
+// name rather than an institutional voice.
 export const metadata: Metadata = {
-  title: `${cityName} Informed Citizen Dashboard`,
-  description: `Stay informed about what your local government is doing in ${cityName}. Track meetings, ordinances, permits, and more.`,
-  keywords: [cityName, "city council", "local government", "civic engagement", "transparency"],
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `An Independent Civic Dashboard for ${cityLocation}`,
+    template: `%s · Independent ${cityName} Civic Dashboard`,
+  },
+  description: `${operatorDisclosure} It gathers the city's public records in one place: meetings, ordinances, permits, and budget documents, each linked back to the official source.`,
+  keywords: [cityName, "city council", "local government", "civic engagement", "transparency", "independent"],
   openGraph: {
-    title: `${cityName} Informed Citizen Dashboard`,
-    description: "Making local government understandable, not overwhelming.",
+    title: `An Independent Civic Dashboard for ${cityLocation}`,
+    description: operatorDisclosure,
+    siteName: `Independent ${cityName} Civic Dashboard`,
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `An Independent Civic Dashboard for ${cityLocation}`,
+    description: operatorDisclosure,
   },
 };
 
@@ -53,6 +73,7 @@ export default function RootLayout({
           <a href="#main-content" className="skip-link">
             Skip to main content
           </a>
+          <DisclosureBar />
           <Header />
           <main id="main-content">{children}</main>
           <footer className="bg-slate-100 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 py-8 mt-12">
@@ -61,8 +82,13 @@ export default function RootLayout({
                 <div>
                   <h3 className="text-slate-800 dark:text-slate-200 font-semibold mb-3">About This Dashboard</h3>
                   <p className="text-sm">
-                    An independent civic project making {cityName} local government
+                    {operatorDisclosure} It makes {cityName} local government
                     understandable, not overwhelming. All data sourced from official public records.
+                  </p>
+                  <p className="text-sm mt-2">
+                    <Link href="/about" className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline">
+                      Who runs this site
+                    </Link>
                   </p>
                 </div>
                 <div>
@@ -96,7 +122,7 @@ export default function RootLayout({
                 </div>
               </div>
               <div className="border-t border-slate-200 dark:border-slate-700 mt-8 pt-6 text-center text-sm">
-                <p>Made with care for the {cityName} community</p>
+                <p>Made with care for the {cityName} community by {operatorName}</p>
               </div>
             </div>
           </footer>

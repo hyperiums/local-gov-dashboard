@@ -39,6 +39,10 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/public ./public
+# /about is prerendered, so its HTML is already inside .next. The source ships
+# anyway: a file the build reads and the runtime lacks fails only in production,
+# and only once the page stops being static.
+COPY --from=builder /app/content ./content
 
 # Install Playwright's Chromium headless shell — version-locked to the
 # playwright-core in node_modules so it can't drift like the previous

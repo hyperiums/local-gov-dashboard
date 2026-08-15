@@ -81,15 +81,11 @@ export default function Header() {
     <header className="bg-gradient-to-r from-emerald-700 to-emerald-600 text-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center border border-white/30">
-              <span className="text-xl font-bold">{cityName.split(' ').map(w => w[0]).join('')}</span>
-            </div>
-            <div>
-              <span className="text-lg font-semibold block">{cityName}</span>
-              <span className="text-xs text-emerald-100">Informed Citizen Dashboard</span>
-            </div>
+          {/* Wordmark, deliberately text only: a circular badge of a city's
+              initials reads as a municipal seal. */}
+          <Link href="/" className="flex flex-col justify-center">
+            <span className="text-base sm:text-lg font-semibold leading-tight">{cityName} Civic Dashboard</span>
+            <span className="text-xs text-emerald-100">Public records, in plain language</span>
           </Link>
 
           {/* Desktop Navigation */}

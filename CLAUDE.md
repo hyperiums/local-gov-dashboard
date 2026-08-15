@@ -26,6 +26,58 @@ API Routes (/api/scrape, /api/summarize, /api/data)
 SQLite Database (data/flowery-branch.db) + Web Scraping (Playwright)
 ```
 
+## Independence & attribution
+
+Any deployment of this project is published by someone who is not the government it
+covers, while carrying that government's name on every page. The default reading is
+therefore that the city publishes it, and the site is built to correct that before a
+reader forms the impression. Two files carry everything deployment-specific:
+
+- **`city-config.json` → `operator`** — the name of whoever publishes this, and the one
+  disclosure sentence. It renders above the masthead (`DisclosureBar`), in the footer, in
+  the page description and OpenGraph/Twitter metadata, and on the link-preview card from
+  `src/app/opengraph-image.tsx`. That card is the only one of those that survives a link
+  being shared with none of the site around it.
+- **`content/about.md`** — the operator's own section of `/about`: who they are, why they
+  built it, and any conflict of interest worth disclosing. Rendered by `formatProseHtml`,
+  which allows links and headings that machine-written summaries deliberately don't get.
+
+Rules that hold for every deployment, not just this one:
+
+- **Nothing that reads as the government goes above the fold.** No crest, no flag, no city
+  wordmark, no initials medallion: a badge of a city's initials reads as a municipal seal.
+- **The title never leads with the city as publisher.** Tab titles, search results and
+  shared links are all read without the page in front of them, so each one opens on
+  "independent."
+- **Structural disclosures stay in code; the operator's biography stays in content.**
+  `/about` keeps the source-of-truth, automation, and AI-summary sections in the component
+  because they are true of every deployment and must not be editable away by mistake.
+  Anything about a particular person belongs in `content/about.md`. Adopting this project
+  for another city should never mean deleting somebody else's biography from a component.
+- **No campaign content, ever.** Where the operator holds or seeks office in the body this
+  site covers, `/about` discloses it and nothing else about the campaign appears: no
+  fundraising, no sign-up form, no campaign links, no position-taking on an agenda item.
+  What makes a dashboard like this worth trusting is that it isn't campaign infrastructure.
+- **`src/tests/disclosure.test.ts` asserts the invariants** — the disclosure names the
+  operator, denies that the city publishes the site, and stays short enough to read on a
+  phone. It is the one string on the site that is load-bearing for honesty rather than for
+  content.
+
+### This deployment
+
+Published by Charles Thompson at flowerybranch.charlesthompson.me. He is a candidate for
+Flowery Branch City Council, Post 3, in the special election on November 3, 2026, which
+`content/about.md` discloses.
+
+"Not a City of Flowery Branch website" gets harder to carry if the person publishing it
+joins the council. Should that happen, `operator.disclosure` is the one-line switch and
+`content/about.md` is prose that needs a person, not a find-and-replace. Honest wording
+for a sitting member still says both things: personally published, and not an official
+city communication. What this repo cannot answer is whether an officeholder republishing
+city records personally picks up anything under Georgia's open-records or open-meetings
+law, or whether the site's running costs want campaign-finance treatment. Those are
+city-attorney questions, to be asked before the wording changes rather than settled here.
+
 ### Data Sources
 - **CivicClerk Portal**: Meeting agendas, minutes, packets (scraped via Playwright)
 - **Municode**: Published ordinances with full text

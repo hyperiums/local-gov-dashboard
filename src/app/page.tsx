@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import CityUpdates from '@/components/city-updates';
 import QuickLinks from '@/components/QuickLinks';
 import {
@@ -20,9 +21,20 @@ export default function HomePage() {
         <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-3">
           Stay Informed About {cityName}
         </h1>
-        <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-8">
+        <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-4">
           Understand what your local government is doing, why it matters, and how decisions
           connect over time — using only official, public information.
+        </p>
+
+        {/* The homepage is where someone decides how much to trust what follows,
+            so the two caveats that matter most are stated here rather than left
+            to the per-item badges further down the page. */}
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-8">
+          Records are collected automatically, and the summaries are written by a language model.
+          Check the official source before you rely on one.{' '}
+          <Link href="/about" className="underline hover:text-slate-700 dark:hover:text-slate-300">
+            How this site works
+          </Link>
         </p>
 
         {/* Meeting Info Banner */}

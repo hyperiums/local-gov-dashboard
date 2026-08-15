@@ -14,12 +14,22 @@ export const cityAddress = configJson.city.address;
 export const cityPhone = configJson.city.phone;
 export const meetingSchedule = configJson.city.meetingSchedule;
 export const cityTimezone = configJson.city.timezone;
+export const siteUrl = configJson.urls.site;
+export const repoUrl = configJson.urls.repo;
 export const civicClerkUrl = configJson.urls.civicClerk;
 export const cityWebsiteUrl = configJson.urls.cityWebsite;
 export const municodeUrl = configJson.urls.municode;
 export const clearGovBudgetUrl = configJson.urls.clearGovBudget;
 export const clearGovSpendingBaseUrl = configJson.urls.clearGovSpending;
 export const contactEmail = configJson.contact.email;
+
+// Who publishes this deployment, and the one sentence that says so. The
+// disclosure renders above the fold on every page (DisclosureBar), so nobody
+// has to scroll to learn the site isn't the city's. A fork rewrites both: a
+// dashboard about a government, published by someone who is not that
+// government, has to say so where people actually read.
+export const operatorName = configJson.operator.name;
+export const operatorDisclosure = configJson.operator.disclosure;
 
 // Full location string for display
 export const cityLocation = `${configJson.city.name}, ${configJson.city.stateAbbrev}`;

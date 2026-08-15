@@ -9,6 +9,8 @@
     "timezone": "America/New_York"
   },
   "urls": {
+    "site": "https://flowerybranch.charlesthompson.me",
+    "repo": "https://github.com/hyperiums/local-gov-dashboard",
     "civicClerk": "https://flowerybranchga.portal.civicclerk.com",
     "cityWebsite": "https://www.flowerybranchga.org",
     "municode": "https://library.municode.com/ga/flowery_branch",
@@ -18,5 +20,9 @@
   },
   "contact": {
     "email": "hello@charlesthompson.me"
+  },
+  "operator": {
+    "name": "Charles Thompson",
+    "disclosure": "An independent project by Charles Thompson. Not a City of Flowery Branch website."
   }
 }
