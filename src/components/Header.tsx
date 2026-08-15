@@ -80,16 +80,23 @@ export default function Header() {
   return (
     <header className="bg-gradient-to-r from-emerald-700 to-emerald-600 text-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        {/* min-h, not a fixed h: the wordmark wraps on a narrow screen, and a
+            fixed-height row lets it grow up over the disclosure strip instead
+            of making the header taller. */}
+        <div className="flex items-center justify-between gap-3 min-h-16 py-2">
           {/* Wordmark, deliberately text only: a circular badge of a city's
-              initials reads as a municipal seal. */}
-          <Link href="/" className="flex flex-col justify-center">
-            <span className="text-base sm:text-lg font-semibold leading-tight">{cityName} Civic Dashboard</span>
-            <span className="text-xs text-emerald-100">Public records, in plain language</span>
+              initials reads as a municipal seal.
+
+              The name holds one line from sm up, so the nav is what gives way
+              as the viewport narrows — that's the xl breakpoint below, which
+              keeps the compact menu until there's room for both. */}
+          <Link href="/" className="flex flex-col justify-center sm:shrink-0">
+            <span className="text-base xl:text-lg font-semibold leading-tight sm:whitespace-nowrap">{cityName} Civic Dashboard</span>
+            <span className="hidden xl:block text-xs text-emerald-100 whitespace-nowrap">Public records, in plain language</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
+          <nav className="hidden xl:flex items-center space-x-6" aria-label="Main navigation">
             {/* First two nav links */}
             {navLinks.slice(0, 2).map((link) => (
               <Link
@@ -163,7 +170,7 @@ export default function Header() {
           </nav>
 
           {/* Mobile menu button */}
-          <div className="flex items-center space-x-2 md:hidden">
+          <div className="flex items-center space-x-2 xl:hidden">
             <SearchInput variant="header" />
             <div className="bg-white/10 rounded-lg">
               <ThemeToggle />
@@ -185,7 +192,7 @@ export default function Header() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <nav className="md:hidden pb-4 border-t border-emerald-500/30 pt-4" aria-label="Mobile navigation">
+          <nav className="xl:hidden pb-4 border-t border-emerald-500/30 pt-4" aria-label="Mobile navigation">
             <div className="flex flex-col space-y-1">
               {navLinks.slice(0, 2).map((link) => (
                 <Link
