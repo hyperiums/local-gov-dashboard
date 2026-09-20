@@ -2,7 +2,7 @@
 
 An open-source civic transparency dashboard that makes local government information accessible and understandable for residents. Aggregates public data from city council meetings, ordinances, permits, and budgets into a single, searchable interface with AI-powered summaries.
 
-Originally built for [Flowery Branch, Georgia](https://flowery-branch.charlesthompson.me), this project can be adapted for any city that uses similar data sources (CivicClerk, Municode, ClearGov).
+Originally built for [Flowery Branch, Georgia](https://flowerybranch.charlesthompson.me), this project can be adapted for any city that uses similar data sources (CivicClerk, Municode, ClearGov).
 
 ## Features
 
@@ -26,8 +26,8 @@ Originally built for [Flowery Branch, Georgia](https://flowery-branch.charlestho
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/civic-dashboard.git
-   cd civic-dashboard
+   git clone https://github.com/hyperiums/local-gov-dashboard.git
+   cd local-gov-dashboard
    ```
 
 2. Install dependencies:
