@@ -3,7 +3,7 @@ import path from 'path';
 import { cityName } from './city-config-client';
 import { normalizeAction, DORMANT_AFTER_DAYS } from '@/components/ordinances/types';
 import { classifyReading } from './ordinanceRefs';
-import { todayInCityTimezone } from './dates';
+import { todayInCityTimezone, meetingStatusOn, type MeetingStatus } from './dates';
 
 // Derive database name from city name (e.g., "Flowery Branch" -> "flowery-branch.db")
 const dbSlug = cityName.toLowerCase().replace(/\s+/g, '-');
@@ -325,20 +325,41 @@ export function insertMeeting(meeting: {
   );
 }
 
-export function getMeetings(options?: { status?: string; limit?: number; offset?: number; includeEmpty?: boolean }): MeetingRow[] {
-  const db = getDb();
+// meetings.status is stamped only when a scrape re-captures a meeting (Wed and
+// Sat 06:00 UTC), so it lags the calendar by days and never changes for an
+// event the city deleted. Rows leave the server with status derived from the
+// date; the stored column is a record of the last scrape, not read.
+export function withDateStatus<T extends { date: string; status: string }>(row: T, today: string): T {
+  return { ...row, status: meetingStatusOn(row.date, today) };
+}
+
+export interface MeetingQuery {
+  status?: MeetingStatus;
+  limit?: number;
+  offset?: number;
+  includeEmpty?: boolean;
+}
+
+export function queryMeetings(
+  database: Database.Database,
+  options: MeetingQuery = {},
+  today: string = todayInCityTimezone()
+): MeetingRow[] {
   let query = 'SELECT * FROM meetings m';
   const conditions: string[] = [];
   const params: (string | number)[] = [];
 
   // By default, only show meetings with agenda items or summaries
-  if (!options?.includeEmpty) {
+  if (!options.includeEmpty) {
     conditions.push('(m.summary IS NOT NULL OR EXISTS (SELECT 1 FROM agenda_items WHERE meeting_id = m.id))');
   }
 
-  if (options?.status) {
-    conditions.push('m.status = ?');
-    params.push(options.status);
+  if (options.status === 'upcoming') {
+    conditions.push('m.date >= ?');
+    params.push(today);
+  } else if (options.status === 'past') {
+    conditions.push('m.date < ?');
+    params.push(today);
   }
 
   if (conditions.length > 0) {
@@ -347,22 +368,27 @@ export function getMeetings(options?: { status?: string; limit?: number; offset?
 
   query += ' ORDER BY m.date DESC';
 
-  if (options?.limit) {
+  if (options.limit) {
     query += ' LIMIT ?';
     params.push(options.limit);
   }
 
-  if (options?.offset) {
+  if (options.offset) {
     query += ' OFFSET ?';
     params.push(options.offset);
   }
 
-  return db.prepare(query).all(...params) as MeetingRow[];
+  const rows = database.prepare(query).all(...params) as MeetingRow[];
+  return rows.map(row => withDateStatus(row, today));
 }
 
-export function getMeetingById(id: string) {
+export function getMeetings(options: MeetingQuery = {}): MeetingRow[] {
+  return queryMeetings(getDb(), options);
+}
+
+export function getMeetingById(id: string): MeetingRow | undefined {
   const db = getDb();
-  return db.prepare('SELECT * FROM meetings WHERE id = ?').get(id);
+  return db.prepare('SELECT * FROM meetings WHERE id = ?').get(id) as MeetingRow | undefined;
 }
 
 // Agenda item operations
@@ -1365,11 +1391,15 @@ export function getAgendaItemsWithOrdinances(): Array<{
 }
 
 // Dashboard queries
+export function countUpcomingMeetings(database: Database.Database, today: string = todayInCityTimezone()): number {
+  const row = database.prepare('SELECT COUNT(*) as count FROM meetings WHERE date >= ?').get(today) as { count: number };
+  return row.count;
+}
+
 export function getDashboardStats() {
   const db = getDb();
 
   const meetingCount = db.prepare('SELECT COUNT(*) as count FROM meetings').get() as { count: number };
-  const upcomingMeetings = db.prepare("SELECT COUNT(*) as count FROM meetings WHERE status = 'upcoming'").get() as { count: number };
   const ordinanceCount = db.prepare('SELECT COUNT(*) as count FROM ordinances').get() as { count: number };
 
   // Get counts from AI summaries instead of empty tables
@@ -1378,7 +1408,7 @@ export function getDashboardStats() {
 
   return {
     totalMeetings: meetingCount.count,
-    upcomingMeetings: upcomingMeetings.count,
+    upcomingMeetings: countUpcomingMeetings(db),
     totalOrdinances: ordinanceCount.count,
     recentBusinesses: businessCount,
     recentPermits: permitCount,

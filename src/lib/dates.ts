@@ -86,12 +86,24 @@ export function todayInCityTimezone(now: Date = new Date()): string {
   return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
+export type MeetingStatus = 'upcoming' | 'past';
+
+export function isMeetingStatus(value: string): value is MeetingStatus {
+  return value === 'upcoming' || value === 'past';
+}
+
 /**
  * A meeting dated D stays upcoming through the whole of day D in the city, so
  * a meeting is never shown as over while it is still on tonight's calendar.
+ * Takes the city's today as a string so one request judges every row against
+ * the same day.
  */
-export function getMeetingStatus(meetingDate: string, now: Date = new Date()): 'upcoming' | 'past' {
-  return meetingDate >= todayInCityTimezone(now) ? 'upcoming' : 'past';
+export function meetingStatusOn(meetingDate: string, today: string): MeetingStatus {
+  return meetingDate >= today ? 'upcoming' : 'past';
+}
+
+export function getMeetingStatus(meetingDate: string, now: Date = new Date()): MeetingStatus {
+  return meetingStatusOn(meetingDate, todayInCityTimezone(now));
 }
 
 /**
