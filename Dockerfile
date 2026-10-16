@@ -1,16 +1,18 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 
-# Install build dependencies for native modules
+# Toolchain for better-sqlite3's source-build fallback when no prebuilt binary matches the platform.
 RUN apt-get update && apt-get install -y python3 make g++ git
 
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci
 
-# Copy source code
+# Each playwright-core release drives one Chromium revision. Installing with the CLI that npm ci
+# just placed from package-lock.json keeps the browser in step with the playwright-core the server
+# loads; the runner has no full node_modules, so npx there would fetch the newest Playwright from
+# the registry instead.
+RUN node node_modules/playwright/cli.js install chromium-headless-shell
+
 COPY . .
 
 # NEXT_PUBLIC_* values are inlined into the client bundle, so they must be
@@ -20,39 +22,38 @@ ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
 ENV NEXT_PUBLIC_UMAMI_SRC=$NEXT_PUBLIC_UMAMI_SRC
 ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
 
-# Build the Next.js application
 RUN npm run build
 
-# Production stage
 FROM node:20-slim AS runner
 WORKDIR /app
 
-# Install runtime dependencies for SQLite, curl, and Playwright's Chromium system libs
-RUN apt-get update && apt-get install -y libsqlite3-0 curl \
+# curl is the compose healthcheck; the rest are the system libraries Chromium's headless shell
+# links against. better-sqlite3 compiles SQLite into its own binary, so no libsqlite3 is needed.
+RUN apt-get update && apt-get install -y curl \
     libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 \
     libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
     libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 \
     libasound2 libatspi2.0-0 && rm -rf /var/lib/apt/lists/*
 
-# Copy built application
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
+ENV NODE_ENV=production
+ENV PORT=3000
+# Docker sets HOSTNAME to the container id and the standalone server binds to it, which would
+# leave the healthcheck's curl to localhost unanswered.
+ENV HOSTNAME=0.0.0.0
+
+# The standalone output holds only the modules the server traces as imports, in place of the
+# builder's full node_modules; it leaves out static assets and public/, so those copy separately.
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 # /about is prerendered, so its HTML is already inside .next. The source ships
 # anyway: a file the build reads and the runtime lacks fails only in production,
 # and only once the page stops being static.
 COPY --from=builder /app/content ./content
-
-# Install Playwright's Chromium headless shell — version-locked to the
-# playwright-core in node_modules so it can't drift like the previous
-# host-bind-mount setup did.
-RUN npx playwright install chromium-headless-shell
-
-# Set environment
-ENV NODE_ENV=production
-ENV PORT=3000
+# The scrapers launch Chromium from the server process as root, so the browser goes where
+# playwright-core looks by default for root.
+COPY --from=builder /root/.cache/ms-playwright /root/.cache/ms-playwright
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
