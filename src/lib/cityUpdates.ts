@@ -101,6 +101,11 @@ export function queryNextUpcomingMeeting(
   return row && withDateStatus(row, today);
 }
 
+// Rows for events the city deleted from CivicClerk keep a date but never gain
+// agenda items or a summary; they are not decisions and say nothing about how
+// current the data is.
+const HAS_CONTENT = '(summary IS NOT NULL OR EXISTS (SELECT 1 FROM agenda_items WHERE meeting_id = meetings.id))';
+
 export function queryRecentPastMeetings(
   db: ReturnType<typeof getDb>,
   limit: number,
@@ -110,6 +115,7 @@ export function queryRecentPastMeetings(
     SELECT id, date, title, summary
     FROM meetings
     WHERE date < ?
+      AND ${HAS_CONTENT}
     ORDER BY date DESC
     LIMIT ?
   `).all(today, limit) as Array<Pick<MeetingRow, 'id' | 'date' | 'title' | 'summary'>>;
@@ -119,7 +125,7 @@ export function queryLastPastMeetingDate(
   db: ReturnType<typeof getDb>,
   today: string = todayInCityTimezone()
 ): string | null {
-  const row = db.prepare('SELECT MAX(date) as date FROM meetings WHERE date < ?').get(today) as { date: string | null };
+  const row = db.prepare(`SELECT MAX(date) as date FROM meetings WHERE date < ? AND ${HAS_CONTENT}`).get(today) as { date: string | null };
   return row.date;
 }
 

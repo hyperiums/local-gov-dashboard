@@ -21,6 +21,7 @@ interface Seed {
   date: string;
   status: 'upcoming' | 'past';
   agendaItems: number;
+  summary?: string;
 }
 
 function seedDb(rows: Seed[]) {
@@ -50,11 +51,11 @@ function seedDb(rows: Seed[]) {
     );
   `);
   const insertMeeting = db.prepare(
-    "INSERT INTO meetings (id, date, title, status) VALUES (?, ?, 'City Council Meeting', ?)"
+    "INSERT INTO meetings (id, date, title, status, summary) VALUES (?, ?, 'City Council Meeting', ?, ?)"
   );
   const insertItem = db.prepare('INSERT INTO agenda_items (id, meeting_id, title) VALUES (?, ?, ?)');
   for (const row of rows) {
-    insertMeeting.run(row.id, row.date, row.status);
+    insertMeeting.run(row.id, row.date, row.status, row.summary);
     for (let n = 1; n <= row.agendaItems; n++) {
       insertItem.run(`${row.id}-item-${n}`, row.id, `Item ${n}`);
     }
@@ -145,8 +146,39 @@ describe('Friday after the October 15 meeting, before the Saturday scrape', () =
   it('recent decisions and "Data through" read October 15 as the latest past meeting', () => {
     at(FRIDAY_MORNING);
     const db = friday();
-    expect(ids(queryRecentPastMeetings(db, 3))).toEqual(['civicclerk-86', 'civicclerk-254']);
+    expect(ids(queryRecentPastMeetings(db, 3))).toEqual(['civicclerk-86']);
     expect(queryLastPastMeetingDate(db)).toBe('2026-10-15');
+  });
+});
+
+// The old status = 'past' filter happened to keep CivicClerk-deleted events out
+// of Recent Decisions; judging by date alone let those empty rows fill its three
+// slots. Only meetings with agenda items or a summary count as decisions.
+describe('Recent Decisions and "Data through" with deleted-event rows', () => {
+  it('skip an empty row that shares a date with a real meeting', () => {
+    at(FRIDAY_MORNING);
+    const db = seedDb([
+      { id: 'civicclerk-86', date: '2026-10-15', status: 'upcoming', agendaItems: 3 },
+      { id: 'civicclerk-281', date: '2026-10-17', status: 'upcoming', agendaItems: 0 },
+      { id: 'civicclerk-255', date: '2026-10-01', status: 'upcoming', agendaItems: 0 },
+      { id: 'oct-1-with-agenda', date: '2026-10-01', status: 'past', agendaItems: 1 },
+      { id: 'civicclerk-254', date: '2026-09-03', status: 'upcoming', agendaItems: 0 },
+      { id: 'aug-20-summary-only', date: '2026-08-20', status: 'past', agendaItems: 0, summary: 'Approved the budget.' },
+    ]);
+    expect(ids(queryRecentPastMeetings(db, 3))).toEqual([
+      'civicclerk-86',
+      'oct-1-with-agenda',
+      'aug-20-summary-only',
+    ]);
+  });
+
+  it('never date "Data through" from an empty later-dated past row', () => {
+    at(FRIDAY_MORNING);
+    const db = seedDb([
+      { id: 'civicclerk-271', date: '2026-10-15', status: 'upcoming', agendaItems: 0 },
+      { id: 'oct-1-with-agenda', date: '2026-10-01', status: 'past', agendaItems: 2 },
+    ]);
+    expect(queryLastPastMeetingDate(db)).toBe('2026-10-01');
   });
 });
 

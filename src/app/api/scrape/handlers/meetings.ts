@@ -769,6 +769,13 @@ export async function handleGenerateMeetingSummaries(params: HandlerParams) {
   // summaryType: 'agenda' | 'minutes' | 'both' (default: based on meeting status)
   const { limit = 5, status = 'all', summaryType, forceRefresh = false } = params || {};
 
+  // A mistyped status would otherwise widen the batch to every meeting and spend OpenAI calls on it.
+  if (!['upcoming', 'past', 'all'].includes(status as string)) {
+    return NextResponse.json({
+      error: 'status must be one of: upcoming, past, all',
+    }, { status: 400 });
+  }
+
   const db = getDb();
   const today = todayInCityTimezone();
   let query = 'SELECT id, title, date, agenda_summary, minutes_summary FROM meetings WHERE 1=1';
