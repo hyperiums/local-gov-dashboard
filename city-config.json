@@ -12,6 +12,7 @@
     "site": "https://flowerybranch.charlesthompson.me",
     "repo": "https://github.com/hyperiums/local-gov-dashboard",
     "civicClerk": "https://flowerybranchga.portal.civicclerk.com",
+    "civicClerkApi": "https://flowerybranchga.api.civicclerk.com",
     "cityWebsite": "https://www.flowerybranchga.org",
     "municode": "https://library.municode.com/ga/flowery_branch",
     "municodeProductId": "14328",

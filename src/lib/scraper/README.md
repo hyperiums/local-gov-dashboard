@@ -9,6 +9,7 @@ scraper/
 ├── index.ts        # Re-exports all modules
 ├── utils.ts        # Shared utilities (fetch, month mappings)
 ├── civicclerk.ts   # CivicClerk portal scraping (meetings, agendas, minutes)
+├── civicclerk-events.ts  # CivicClerk Events API: meeting discovery (date, name, minutes flag)
 ├── resolutions.ts  # Resolution/ordinance extraction and linking
 ├── permits.ts      # Permit PDF scraping
 ├── financial.ts    # Financial document scraping
@@ -23,7 +24,7 @@ scraper/
 - **URL**: `https://flowerybranchga.portal.civicclerk.com`
 - **Data**: City council meetings, planning meetings, work sessions
 - **Features**:
-  - Scrapes meeting metadata (date, title, type, location)
+  - Meeting discovery reads the public Events API (`civicclerk-events.ts`, `https://flowerybranchga.api.civicclerk.com/v1/Events`, paged by `@odata.nextLink`). The date is the first 10 characters of `startDateTime`, whose `Z` is the city's wall-clock time, not UTC
   - Extracts agenda items from sidebar (newer meetings) or PDF with AI (older meetings)
   - Fetches agenda/minutes PDFs with direct URL extraction from iframe
   - Resolution attachment fetching with S3 fallback for older meetings

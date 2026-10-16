@@ -24,11 +24,14 @@ export {
   fetchCivicClerkMinutesPdf,
   fetchCivicClerkOrdinanceAttachment,
   fetchCivicClerkOrdinanceAttachments,
-  scrapeCivicClerkMeetingsWithPlaywright,
   fetchVoteOutcomesFromOverview,
   hasVoteDataAvailable,
 } from './civicclerk';
-export type { CivicClerkMeeting, VoteOutcome } from './civicclerk';
+export type { VoteOutcome } from './civicclerk';
+
+// CivicClerk Events API (meeting discovery)
+export { fetchCivicClerkMeetings } from './civicclerk-events';
+export type { CivicClerkMeeting } from './civicclerk-events';
 
 // Resolutions and ordinance linking
 export {

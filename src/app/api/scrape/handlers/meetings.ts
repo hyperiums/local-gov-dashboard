@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import {
   scrapeCivicClerkMeetingDetails,
-  scrapeCivicClerkMeetingsWithPlaywright,
+  fetchCivicClerkMeetings,
   discoverCivicClerkEventIds,
   fetchCivicClerkAgendaPdf,
   fetchCivicClerkMinutesPdf,
@@ -236,8 +236,7 @@ export async function handleDiscoverMeetings() {
 }
 
 export async function handleBulkMeetings() {
-  // Scrape all meetings directly from CivicClerk portal using Playwright
-  const meetings = await scrapeCivicClerkMeetingsWithPlaywright();
+  const meetings = await fetchCivicClerkMeetings();
   const results = [];
 
   for (const meeting of meetings) {
@@ -282,8 +281,8 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
   const { minYear, limit: batchLimit, forceRefresh = false } = params || {};
   console.log(`Starting bulk meetings with agenda items (minYear: ${minYear || 'all'})...`);
 
-  // Step 1: Import all meetings using Playwright
-  const meetings = await scrapeCivicClerkMeetingsWithPlaywright({ minYear: minYear as number | undefined });
+  // Step 1: Import all meetings from CivicClerk's Events API
+  const meetings = await fetchCivicClerkMeetings({ minYear: minYear as number | undefined });
   const meetingResults = [];
 
   for (const meeting of meetings) {

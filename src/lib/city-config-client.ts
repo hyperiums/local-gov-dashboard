@@ -17,6 +17,7 @@ export const cityTimezone = configJson.city.timezone;
 export const siteUrl = configJson.urls.site;
 export const repoUrl = configJson.urls.repo;
 export const civicClerkUrl = configJson.urls.civicClerk;
+export const civicClerkApiUrl = configJson.urls.civicClerkApi;
 export const cityWebsiteUrl = configJson.urls.cityWebsite;
 export const municodeUrl = configJson.urls.municode;
 export const clearGovBudgetUrl = configJson.urls.clearGovBudget;
