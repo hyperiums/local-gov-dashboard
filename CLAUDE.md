@@ -153,7 +153,7 @@ them as fixed history: re-running `bulk-permits` reports them as
 published report and checks the stored rows against the count each one prints.
 It is the check that catches a layout the parser silently stopped reading.
 
-Meeting "today" and upcoming/past status follow the city's calendar day (America/New_York) via src/lib/dates.ts, never UTC: a UTC "today" dropped the evening's meeting from 8 pm Eastern (learned 2026-10-15).
+Meeting "today" and upcoming/past status follow the city's calendar day (America/New_York) via src/lib/dates.ts, never UTC: a UTC "today" dropped the evening's meeting from 8 pm Eastern (learned 2026-10-15). Status is derived from the date at read time (`withDateStatus` in src/lib/db.ts, `m.date >= ?` in SQL); `meetings.status` is still written by the scraper but nothing reads it, because it lags until the next Wed/Sat scrape and never changes for an event the city deleted (learned 2026-10-15). `src/tests/meeting-status-readers.test.ts` fails if server code filters on it again.
 
 ### ID Conventions
 - Meetings: `civicclerk-{eventId}`

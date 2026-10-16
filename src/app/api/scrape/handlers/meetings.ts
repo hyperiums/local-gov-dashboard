@@ -34,7 +34,7 @@ import {
 } from '@/lib/db';
 import { cityName } from '@/lib/city-config-client';
 import { formatError, extractEventId, type HandlerParams } from './shared';
-import { getMeetingStatus, todayInCityTimezone } from '@/lib/dates';
+import { getMeetingStatus, meetingStatusOn, todayInCityTimezone } from '@/lib/dates';
 
 export async function handleMeeting(params: HandlerParams) {
   // Scrape a specific CivicClerk meeting
@@ -460,13 +460,13 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
   let ordinancesUpdated = 0;
   let withdrawalsRecorded = 0;
 
-  // Get all past meetings from database that might need vote outcome processing
+  // Past by the city's calendar day, not the stored status: rows for events the city deleted are never re-stamped.
   const allPastMeetings = db.prepare(`
     SELECT DISTINCT m.id,
            CAST(REPLACE(m.id, 'civicclerk-', '') AS INTEGER) as eventId,
            m.date
     FROM meetings m
-    WHERE m.status = 'past'
+    WHERE m.date < ?
       AND m.id LIKE 'civicclerk-%'
       AND (
         EXISTS (SELECT 1 FROM resolutions r WHERE r.meeting_id = m.id AND r.outcome_verified = 0)
@@ -491,7 +491,7 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
         )
       )
     ORDER BY m.date DESC
-  `).all() as { id: string; eventId: number; date: string }[];
+  `).all(today) as { id: string; eventId: number; date: string }[];
 
   console.log(`  Found ${allPastMeetings.length} meetings needing vote outcome checks`);
 
@@ -769,14 +769,17 @@ export async function handleGenerateMeetingSummaries(params: HandlerParams) {
   // summaryType: 'agenda' | 'minutes' | 'both' (default: based on meeting status)
   const { limit = 5, status = 'all', summaryType, forceRefresh = false } = params || {};
 
-  // Get meetings from database
   const db = getDb();
-  let query = 'SELECT id, title, date, status, agenda_summary, minutes_summary FROM meetings WHERE 1=1';
+  const today = todayInCityTimezone();
+  let query = 'SELECT id, title, date, agenda_summary, minutes_summary FROM meetings WHERE 1=1';
   const queryParams: (string | number)[] = [];
 
-  if (status && status !== 'all') {
-    query += ' AND status = ?';
-    queryParams.push(status as string);
+  if (status === 'upcoming') {
+    query += ' AND date >= ?';
+    queryParams.push(today);
+  } else if (status === 'past') {
+    query += ' AND date < ?';
+    queryParams.push(today);
   }
 
   // Filter based on what summaries are missing (unless forceRefresh)
@@ -798,7 +801,6 @@ export async function handleGenerateMeetingSummaries(params: HandlerParams) {
     id: string;
     title: string;
     date: string;
-    status: string;
     agenda_summary: string | null;
     minutes_summary: string | null;
   }[];
@@ -819,7 +821,7 @@ export async function handleGenerateMeetingSummaries(params: HandlerParams) {
     const shouldGenerateAgenda = summaryType === 'agenda' || summaryType === 'both' ||
       (!summaryType && (forceRefresh || !meeting.agenda_summary));
     const shouldGenerateMinutes = (summaryType === 'minutes' || summaryType === 'both' ||
-      (!summaryType && meeting.status === 'past')) && (forceRefresh || !meeting.minutes_summary);
+      (!summaryType && meetingStatusOn(meeting.date, today) === 'past')) && (forceRefresh || !meeting.minutes_summary);
 
     // Try to generate agenda summary
     if (shouldGenerateAgenda) {
@@ -897,6 +899,7 @@ export async function handleGenerateMeetingSummaries(params: HandlerParams) {
 export async function handleDetectWithdrawals(params: HandlerParams) {
   const limit = (params?.limit as number) ?? 25;
   const db = getDb();
+  const today = todayInCityTimezone();
 
   const candidates = db.prepare(`
     SELECT DISTINCT m.id, m.date,
@@ -904,12 +907,12 @@ export async function handleDetectWithdrawals(params: HandlerParams) {
     FROM meetings m
     JOIN ordinance_meetings om ON om.meeting_id = m.id
     JOIN ordinances o ON o.id = om.ordinance_id
-    WHERE m.status = 'past'
+    WHERE m.date < ?
       AND m.id LIKE 'civicclerk-%'
       AND o.status NOT IN ('adopted', 'denied', 'rejected', 'tabled', 'withdrawn')
     ORDER BY m.date DESC
     LIMIT ?
-  `).all(limit) as { id: string; date: string; eventId: number }[];
+  `).all(today, limit) as { id: string; date: string; eventId: number }[];
 
   console.log(`Checking ${candidates.length} meetings for withdrawn ordinances...`);
   const results: { meetingId: string; date: string; withdrawn: string[] }[] = [];
