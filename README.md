@@ -210,6 +210,8 @@ docker-compose -f docker-compose.prod.yml up -d --build
 
 The app runs on port 3001 by default. Use nginx or similar as a reverse proxy.
 
+The image runs Next's standalone server (`node server.js`) with only the modules it imports, plus Playwright's Chromium for the scrapers. Pass `ADMIN_SECRET` (at least 16 characters) and `OPENAI_API_KEY` through `.env`, which compose reads with `env_file`. The image itself never contains `.env`.
+
 ### Vercel
 
 Works out of the box with Vercel, but note that:

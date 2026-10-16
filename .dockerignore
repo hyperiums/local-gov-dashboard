@@ -8,3 +8,10 @@ node_modules
 *.md
 .DS_Store
 .vscode
+.worktrees
+.autodev
+.claude
+.idea
+.next.nosync
+.superpowers
+.playwright-mcp
