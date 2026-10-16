@@ -155,6 +155,16 @@ describe('civicClerkEventToMeeting', () => {
     ).toMatchObject({ type: 'other', title: 'City Meeting' });
   });
 
+  it('types by the event name before the category, which is City Council for every event', () => {
+    const base = { ...recorded(86), categoryName: 'City Council' };
+    expect(
+      civicClerkEventToMeeting({ ...base, eventName: 'October 20, 2026 Work Session' })
+    ).toMatchObject({ type: 'work_session', title: 'Work Session' });
+    expect(
+      civicClerkEventToMeeting({ ...base, eventName: 'Budget Hearing' })
+    ).toMatchObject({ type: 'city_council', title: 'City Council Meeting' });
+  });
+
   it('refuses an event whose startDateTime has no date', () => {
     expect(() => civicClerkEventToMeeting({ ...recorded(86), startDateTime: '' })).toThrow(
       'CivicClerk event 86 has an unreadable startDateTime'

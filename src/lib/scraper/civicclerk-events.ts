@@ -52,6 +52,16 @@ export function civicClerkEventsUrl(minYear?: number): string {
   return `${civicClerkApiUrl}/v1/Events?${query.join('&')}`;
 }
 
+const OTHER_MEETING = { type: 'other', title: 'City Meeting' };
+
+function classifyMeeting(text: string): { type: string; title: string } | undefined {
+  const lower = text.toLowerCase();
+  if (lower.includes('city council')) return { type: 'city_council', title: 'City Council Meeting' };
+  if (lower.includes('planning')) return { type: 'planning', title: 'Planning Commission Meeting' };
+  if (lower.includes('work session')) return { type: 'work_session', title: 'Work Session' };
+  return undefined;
+}
+
 export function civicClerkEventToMeeting(event: CivicClerkApiEvent): CivicClerkMeeting {
   // CivicClerk writes the city's wall-clock time with a Z suffix (6 PM
   // meetings come back as T18:00:00Z), so the calendar date is the text before
@@ -63,19 +73,9 @@ export function civicClerkEventToMeeting(event: CivicClerkApiEvent): CivicClerkM
   }
   const date = event.startDateTime.slice(0, 10);
 
-  const nameText = `${event.eventName} ${event.categoryName}`.toLowerCase();
-  let type = 'other';
-  let title = 'City Meeting';
-  if (nameText.includes('city council')) {
-    type = 'city_council';
-    title = 'City Council Meeting';
-  } else if (nameText.includes('planning')) {
-    type = 'planning';
-    title = 'Planning Commission Meeting';
-  } else if (nameText.includes('work session')) {
-    type = 'work_session';
-    title = 'Work Session';
-  }
+  // Every event is filed under the "City Council" category, so the category
+  // cannot decide the type; it only applies when the name says nothing.
+  const { type, title } = classifyMeeting(event.eventName) ?? classifyMeeting(event.categoryName) ?? OTHER_MEETING;
 
   const filesUrl = `${civicClerkUrl}/event/${event.id}/files`;
   const hasMinutes = event.publishedFiles.some(file => file.type === 'Minutes');

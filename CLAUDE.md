@@ -79,14 +79,15 @@ law, or whether the site's running costs want campaign-finance treatment. Those 
 city-attorney questions, to be asked before the wording changes rather than settled here.
 
 ### Data Sources
-- **CivicClerk Portal**: Meeting agendas, minutes, packets (scraped via Playwright)
+- **CivicClerk Portal**: Meeting agendas, minutes, packets. Meetings are discovered from CivicClerk's public Events API (`urls.civicClerkApi` in city-config.json); agenda items, PDFs and votes are scraped via Playwright
 - **Municode**: Published ordinances with full text
 - **City Website**: Permit reports, financial documents (PDF parsing)
 
 ### Key Modules
 
 **`src/lib/scraper/`** - Data extraction modules:
-- `civicclerk.ts` - Playwright scraping of meetings with eventIDs
+- `civicclerk-events.ts` - Meeting discovery from the CivicClerk Events API (dates are the city's wall-clock time with a Z suffix; the date is the text before the T)
+- `civicclerk.ts` - Playwright scraping of agenda items, PDFs, and votes per eventID
 - `municode.ts` - Ordinance scraping and PDF extraction
 - `permits.ts` - Monthly permit PDF parsing
 - `resolutions.ts` - Extract resolutions from agenda items
@@ -151,6 +152,8 @@ them as fixed history: re-running `bulk-permits` reports them as
 `AUDIT_PERMITS=1 npx vitest run src/tests/permit-audit.test.ts` re-fetches every
 published report and checks the stored rows against the count each one prints.
 It is the check that catches a layout the parser silently stopped reading.
+
+Meeting "today" and upcoming/past status follow the city's calendar day (America/New_York) via src/lib/dates.ts, never UTC: a UTC "today" dropped the evening's meeting from 8 pm Eastern (learned 2026-10-15).
 
 ### ID Conventions
 - Meetings: `civicclerk-{eventId}`
