@@ -10,6 +10,7 @@ import {
 } from '../db';
 import { fetchPdf } from './utils';
 import { classifyReading, extractOrdinanceNumbers, normalizeRefText } from '../ordinanceRefs';
+import { getMeetingStatus } from '../dates';
 
 // Extract a clean ordinance title from an agenda item title
 // e.g., "Public Hearing and Second Reading of Ordinance 724 to Consider a Variance Request..."
@@ -652,16 +653,15 @@ export function extractResolutionsFromAgendaItems(meetingId?: string): number {
 
     cleanTitle = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
 
-    // Check if meeting is in the future - can't be adopted yet
-    const today = new Date().toISOString().split('T')[0];
-    const isFutureMeeting = item.meeting_date > today;
+    // Nothing can be adopted at a meeting whose day hasn't finished in the city
+    const isUpcomingMeeting = getMeetingStatus(item.meeting_date) === 'upcoming';
 
     // Determine status based on available data
-    // - Future meeting → 'proposed' (hasn't happened yet)
+    // - Upcoming meeting (today or later) → 'proposed' (hasn't happened yet)
     // - Past meeting without outcome → 'pending_minutes' (need to verify from minutes)
     // - Past meeting with explicit outcome → use that outcome
     let status: string;
-    if (isFutureMeeting) {
+    if (isUpcomingMeeting) {
       status = 'proposed';
     } else if (item.outcome) {
       // We have an explicit outcome from the agenda item

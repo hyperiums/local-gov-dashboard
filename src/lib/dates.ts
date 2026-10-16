@@ -1,6 +1,6 @@
 // Dynamic date utilities to avoid hardcoded years
 
-import { clearGovSpendingBaseUrl } from './city-config-client';
+import { cityTimezone, clearGovSpendingBaseUrl } from './city-config-client';
 
 /**
  * Get the current fiscal year (July 1 - June 30)
@@ -63,6 +63,48 @@ export function getClearGovSpendingUrl(): string {
  */
 export function getAllMonths(): string[] {
   return ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+}
+
+/**
+ * Today's date in the city, as YYYY-MM-DD.
+ * The production container runs in UTC, where from 8 PM Eastern (7 PM in
+ * winter) the date is already tomorrow; meeting status has to follow the
+ * city's calendar, not the server's.
+ */
+export function todayInCityTimezone(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: cityTimezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes): string => {
+    const value = parts.find(p => p.type === type)?.value;
+    if (!value) throw new Error(`Intl returned no ${type} for time zone ${cityTimezone}`);
+    return value;
+  };
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+/**
+ * A meeting dated D stays upcoming through the whole of day D in the city, so
+ * a meeting is never shown as over while it is still on tonight's calendar.
+ */
+export function getMeetingStatus(meetingDate: string, now: Date = new Date()): 'upcoming' | 'past' {
+  return meetingDate >= todayInCityTimezone(now) ? 'upcoming' : 'past';
+}
+
+/**
+ * Whole calendar days from `today` to `date` (both YYYY-MM-DD). Counted between
+ * UTC midnights so a daylight-saving change in between can't produce a 23- or
+ * 25-hour day and round the count wrong.
+ */
+export function daysUntil(date: string, today: string): number {
+  const utcDay = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  };
+  return Math.round((utcDay(date) - utcDay(today)) / 86_400_000);
 }
 
 /**

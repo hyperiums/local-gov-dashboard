@@ -50,8 +50,3 @@ export function extractEventId(meetingId: string): number | null {
   const match = meetingId.match(/civicclerk-(\d+)/);
   return match ? parseInt(match[1], 10) : null;
 }
-
-// Get meeting status based on date
-export function getMeetingStatus(dateString: string): 'upcoming' | 'past' {
-  return new Date(dateString) > new Date() ? 'upcoming' : 'past';
-}

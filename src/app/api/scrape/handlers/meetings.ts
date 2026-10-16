@@ -33,7 +33,8 @@ import {
   type MeetingRow,
 } from '@/lib/db';
 import { cityName } from '@/lib/city-config-client';
-import { formatError, extractEventId, getMeetingStatus, type HandlerParams } from './shared';
+import { formatError, extractEventId, type HandlerParams } from './shared';
+import { getMeetingStatus, todayInCityTimezone } from '@/lib/dates';
 
 export async function handleMeeting(params: HandlerParams) {
   // Scrape a specific CivicClerk meeting
@@ -306,9 +307,10 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
 
   console.log(`Imported ${meetingResults.filter(r => r.success).length} meetings`);
 
-  // Step 2: For past meetings, scrape agenda items
-  const today = new Date();
-  const pastMeetings = meetings.filter(m => new Date(m.date) < today);
+  // Step 2: For past meetings, scrape agenda items. Past means the meeting's
+  // day is over in the city, the same rule as the status stored above.
+  const today = todayInCityTimezone();
+  const pastMeetings = meetings.filter(m => m.date < today);
   const agendaResults: {
     eventId: number;
     date?: string;
@@ -686,8 +688,8 @@ export async function handleBulkMeetingsWithAgenda(params: HandlerParams) {
   // Step 6.5: Generate agenda summaries for upcoming meetings
   // Agendas are published before meetings, so we can summarize them early
   const upcomingMeetings = meetings
-    .filter(m => new Date(m.date) >= today)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Soonest first
+    .filter(m => m.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date)); // Soonest first
 
   const upcomingNeedingSummaries = upcomingMeetings.filter(meeting => {
     const meetingId = `civicclerk-${meeting.eventId}`;
