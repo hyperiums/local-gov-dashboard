@@ -1,4 +1,4 @@
-import { getDb, type MeetingRow, type OrdinanceRow } from './db';
+import { getDb, withDateStatus, type MeetingRow, type OrdinanceRow } from './db';
 import { todayInCityTimezone } from './dates';
 
 // Types for the City Updates feature
@@ -84,21 +84,43 @@ function parseAgendaTopics(agendaSummary: string | null): string[] {
 
 // Select the soonest upcoming meeting. Exported for testing.
 //
-// A meeting's status is only recomputed when the scraper re-captures it, so a
-// meeting the city moved or cancelled — CivicClerk deletes the event, and it is
-// never re-captured — can stay frozen at status='upcoming' with a now-past
-// date. The `date >= today` guard keeps such a stranded row from surfacing as
-// the next meeting regardless of its stale status.
+// Chosen by date alone. The stored status is only re-stamped when the scraper
+// re-captures a meeting, so it lags until the next Wed/Sat scrape, and a
+// meeting the city moved or cancelled (CivicClerk deletes the event, and it is
+// never re-captured) keeps its old value forever with a now-past date.
 export function queryNextUpcomingMeeting(
   db: ReturnType<typeof getDb>,
   today: string = todayInCityTimezone()
 ): (MeetingRow & { agenda_summary: string | null }) | undefined {
-  return db.prepare(`
+  const row = db.prepare(`
     SELECT * FROM meetings
-    WHERE status = 'upcoming' AND date >= ?
+    WHERE date >= ?
     ORDER BY date ASC
     LIMIT 1
   `).get(today) as (MeetingRow & { agenda_summary: string | null }) | undefined;
+  return row && withDateStatus(row, today);
+}
+
+export function queryRecentPastMeetings(
+  db: ReturnType<typeof getDb>,
+  limit: number,
+  today: string = todayInCityTimezone()
+): Array<Pick<MeetingRow, 'id' | 'date' | 'title' | 'summary'>> {
+  return db.prepare(`
+    SELECT id, date, title, summary
+    FROM meetings
+    WHERE date < ?
+    ORDER BY date DESC
+    LIMIT ?
+  `).all(today, limit) as Array<Pick<MeetingRow, 'id' | 'date' | 'title' | 'summary'>>;
+}
+
+export function queryLastPastMeetingDate(
+  db: ReturnType<typeof getDb>,
+  today: string = todayInCityTimezone()
+): string | null {
+  const row = db.prepare('SELECT MAX(date) as date FROM meetings WHERE date < ?').get(today) as { date: string | null };
+  return row.date;
 }
 
 // Get the next upcoming meeting with agenda details
@@ -141,14 +163,7 @@ function getRecentDecisions(limit: number = 5): RecentDecision[] {
   const db = getDb();
   const decisions: RecentDecision[] = [];
 
-  // Get recent past meetings with summaries
-  const recentMeetings = db.prepare(`
-    SELECT id, date, title, summary
-    FROM meetings
-    WHERE status = 'past'
-    ORDER BY date DESC
-    LIMIT 3
-  `).all() as (MeetingRow & { summary: string | null })[];
+  const recentMeetings = queryRecentPastMeetings(db, 3);
 
   // Get recently adopted ordinances (last 60 days)
   const recentOrdinances = db.prepare(`
@@ -305,10 +320,6 @@ function getMonthlyStats(): MonthlyStats | null {
 function getFreshnessInfo(): FreshnessInfo {
   const db = getDb();
 
-  const lastMeeting = db.prepare(`
-    SELECT MAX(date) as date FROM meetings WHERE status = 'past'
-  `).get() as { date: string | null };
-
   const nextMeeting = queryNextUpcomingMeeting(db);
 
   const lastUpdate = db.prepare(`
@@ -316,7 +327,7 @@ function getFreshnessInfo(): FreshnessInfo {
   `).get() as { updated: string | null };
 
   return {
-    lastMeetingDate: lastMeeting.date,
+    lastMeetingDate: queryLastPastMeetingDate(db),
     lastDataUpdate: lastUpdate.updated,
     nextMeetingDate: nextMeeting?.date ?? null,
   };

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import {
   getMeetings,
   getMeetingById,
+  withDateStatus,
+  type MeetingRow,
   getAgendaItemsByMeeting,
   getPermitsByMonth,
   getPermitStats,
@@ -20,8 +22,8 @@ import {
   getLatestSuccessfulScrapeRun,
 } from '@/lib/db';
 import { deriveFeedStatus } from '@/lib/feed-status';
-import { queryNextUpcomingMeeting } from '@/lib/cityUpdates';
-import { todayInCityTimezone } from '@/lib/dates';
+import { queryMeetingList } from '@/lib/meeting-list';
+import { isMeetingStatus, todayInCityTimezone, type MeetingStatus } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,23 +52,18 @@ export async function GET(request: Request) {
       }
 
       case 'meetings': {
-        const status = searchParams.get('status') || undefined;
+        const statusParam = searchParams.get('status');
+        let status: MeetingStatus | undefined;
+        if (statusParam !== null) {
+          if (!isMeetingStatus(statusParam)) {
+            return NextResponse.json({ error: 'status must be upcoming or past' }, { status: 400 });
+          }
+          status = statusParam;
+        }
         const limit = searchParams.get('limit')
           ? parseInt(searchParams.get('limit')!)
           : undefined;
-        let meetings = getMeetings({ status, limit });
-
-        // Ensure at least one upcoming meeting is shown (even without agenda items)
-        if (!status || status === 'upcoming') {
-          const hasUpcoming = meetings.some(m => m.status === 'upcoming');
-          if (!hasUpcoming) {
-            const db = getDb();
-            const nextMeeting = queryNextUpcomingMeeting(db);
-            if (nextMeeting) {
-              meetings = [nextMeeting, ...meetings];
-            }
-          }
-        }
+        const meetings = queryMeetingList(getDb(), { status, limit });
 
         return NextResponse.json({ meetings });
       }
@@ -76,9 +73,9 @@ export async function GET(request: Request) {
         if (!id) {
           return NextResponse.json({ error: 'id is required' }, { status: 400 });
         }
-        const meeting = getMeetingById(id);
+        const meeting: MeetingRow | undefined = getMeetingById(id);
         const agendaItems = getAgendaItemsByMeeting(id);
-        return NextResponse.json({ meeting, agendaItems });
+        return NextResponse.json({ meeting: meeting && withDateStatus(meeting, todayInCityTimezone()), agendaItems });
       }
 
       case 'meeting-detail': {
@@ -442,7 +439,8 @@ export async function GET(request: Request) {
         const meetingId = searchParams.get('meetingId');
 
         if (ordinanceId) {
-          const meetings = getMeetingsForOrdinance(ordinanceId);
+          const today = todayInCityTimezone();
+          const meetings = getMeetingsForOrdinance(ordinanceId).map(meeting => withDateStatus(meeting, today));
           return NextResponse.json({ meetings });
         }
 
