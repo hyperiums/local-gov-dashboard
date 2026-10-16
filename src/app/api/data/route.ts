@@ -21,6 +21,7 @@ import {
 } from '@/lib/db';
 import { deriveFeedStatus } from '@/lib/feed-status';
 import { queryNextUpcomingMeeting } from '@/lib/cityUpdates';
+import { todayInCityTimezone } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -496,9 +497,10 @@ export async function GET(request: Request) {
         const itemType = searchParams.get('itemType'); // 'meeting', 'ordinance', 'document', or null for all
         const includeUpcoming = searchParams.get('includeUpcoming') !== 'false';
 
-        // Today's date for past/future filtering
+        // A meeting dated today stays in the upcoming list until the city's day
+        // is over, the same rule as the homepage's next meeting.
         const now = new Date();
-        const today = now.toISOString().split('T')[0];
+        const today = todayInCityTimezone(now);
 
         // Calculate date cutoff based on dateRange
         let cutoffDate: Date;
@@ -555,7 +557,7 @@ export async function GET(request: Request) {
             SELECT m.id, m.date, m.title, m.type,
               (SELECT COUNT(*) FROM agenda_items WHERE meeting_id = m.id) as agendaCount
             FROM meetings m
-            WHERE m.date > ?
+            WHERE m.date >= ?
             ORDER BY m.date ASC
             LIMIT 3
           `).all(today) as typeof upcoming;
@@ -570,7 +572,7 @@ export async function GET(request: Request) {
                 SELECT title FROM agenda_items WHERE meeting_id = m.id AND title NOT LIKE '%Call to Order%' AND title NOT LIKE '%Invocation%' AND title NOT LIKE '%Pledge%' AND title NOT LIKE '%Approval of Agenda%' AND title NOT LIKE '%Approval of Minutes%' LIMIT 3
               )) as agenda_preview
             FROM meetings m
-            WHERE m.date >= ? AND m.date <= ?
+            WHERE m.date >= ? AND m.date < ?
               AND (m.summary IS NOT NULL OR EXISTS (
                 SELECT 1 FROM agenda_items WHERE meeting_id = m.id
               ))

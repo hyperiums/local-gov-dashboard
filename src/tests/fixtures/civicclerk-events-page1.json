@@ -1,0 +1,34 @@
+{
+  "@odata.context": "https://flowerybranchga.api.civicclerk.com/v1/$metadata#Events",
+  "value": [
+    {
+      "id": 97,
+      "eventName": "City Council Regular Session",
+      "eventDate": "2025-01-02T18:00:00Z",
+      "startDateTime": "2025-01-02T18:00:00Z",
+      "categoryName": "City Council",
+      "isPublished": "Published",
+      "isDeleted": false,
+      "hasAgenda": true,
+      "agendaId": 19,
+      "publishedFiles": [
+        { "type": "Agenda", "name": "CityCouncil_RegularSession_agenda_01_02_2025", "url": "stream/FLOWERYBRANCHGA/89b62e1967.pdf", "fileType": 1 },
+        { "type": "Agenda Packet", "name": "CityCouncil_RegularSession_Packet_01_02_2025", "url": "stream/FLOWERYBRANCHGA/a5b5e54a61.pdf", "fileType": 2 },
+        { "type": "Minutes", "name": "CityCouncil_RegularSession_Minutes_01_02_2025", "url": "stream/FLOWERYBRANCHGA/659b9eec36.pdf", "fileType": 4 }
+      ]
+    },
+    {
+      "id": 61,
+      "eventName": "City Council Meeting - CANCELED",
+      "eventDate": "2026-09-17T18:00:00Z",
+      "startDateTime": "2026-09-17T18:00:00Z",
+      "categoryName": "City Council",
+      "isPublished": "Published",
+      "isDeleted": false,
+      "hasAgenda": true,
+      "agendaId": 200,
+      "publishedFiles": []
+    }
+  ],
+  "@odata.nextLink": "https://flowerybranchga.api.civicclerk.com/v1/Events?$filter=startDateTime%20ge%202025-01-01T00%3A00%3A00Z&$orderby=startDateTime&$skiptoken=startDateTime-2026-09-17T18%3A00%3A00Z,id-61"
+}

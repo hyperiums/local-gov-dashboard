@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { queryNextUpcomingMeeting } from '@/lib/cityUpdates';
 
 // A meeting's status ('upcoming'/'past') is only recomputed when the scraper
@@ -61,5 +61,49 @@ describe('queryNextUpcomingMeeting', () => {
     const db = seedDb([{ id: 'civicclerk-59', date: '2026-07-16', status: 'upcoming' }]);
 
     expect(queryNextUpcomingMeeting(db, '2026-07-17')).toBeUndefined();
+  });
+});
+
+// The homepage calls queryNextUpcomingMeeting with no date, so the default is
+// what readers see. These are the instants that showed November 5 as "coming
+// up" while the October 15, 2026 meeting was still in session.
+describe('queryNextUpcomingMeeting default today', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const at = (iso: string) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(iso));
+  };
+
+  const october = () =>
+    seedDb([
+      { id: 'civicclerk-86', date: '2026-10-15', status: 'upcoming' },
+      { id: 'civicclerk-281', date: '2026-10-17', status: 'upcoming' },
+    ]);
+
+  it("keeps tonight's meeting at 23:30 EDT", () => {
+    at('2026-10-16T03:30:00Z');
+    expect(queryNextUpcomingMeeting(october())?.id).toBe('civicclerk-86');
+  });
+
+  it("keeps tonight's meeting at 00:30 UTC (20:30 EDT)", () => {
+    at('2026-10-16T00:30:00Z');
+    expect(queryNextUpcomingMeeting(october())?.id).toBe('civicclerk-86');
+  });
+
+  it('moves to the next meeting once the Eastern day is over', () => {
+    at('2026-10-16T04:30:00Z');
+    expect(queryNextUpcomingMeeting(october())?.id).toBe('civicclerk-281');
+  });
+
+  it("keeps a November meeting through 23:30 EST, after daylight saving ends", () => {
+    at('2026-11-06T04:30:00Z');
+    const db = seedDb([
+      { id: 'nov-5', date: '2026-11-05', status: 'upcoming' },
+      { id: 'nov-19', date: '2026-11-19', status: 'upcoming' },
+    ]);
+    expect(queryNextUpcomingMeeting(db)?.id).toBe('nov-5');
   });
 });

@@ -1,5 +1,5 @@
 import { getDb, type MeetingRow, type OrdinanceRow } from './db';
-import { cityTimezone } from './city-config-client';
+import { todayInCityTimezone } from './dates';
 
 // Types for the City Updates feature
 export interface UpcomingMeeting {
@@ -63,29 +63,6 @@ function parseLocalDate(dateStr: string): Date {
   return new Date(year, month - 1, day);
 }
 
-// Get human-friendly countdown for upcoming meeting
-export function getMeetingCountdown(dateStr: string): string {
-  const meetingDate = parseLocalDate(dateStr);
-  // Get current date in the city's timezone
-  const localNow = new Date(new Date().toLocaleString('en-US', { timeZone: cityTimezone }));
-  localNow.setHours(0, 0, 0, 0); // Reset to start of day for comparison
-
-  const diffTime = meetingDate.getTime() - localNow.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'TODAY';
-  if (diffDays === 1) return 'TOMORROW';
-  if (diffDays <= 7) {
-    const dayName = meetingDate.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-    return `THIS ${dayName}`;
-  }
-  if (diffDays <= 14) {
-    const dayName = meetingDate.toLocaleDateString('en-US', { weekday: 'long' });
-    return `Next ${dayName}`;
-  }
-  return meetingDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-}
-
 // Parse agenda topics from agenda_summary field
 function parseAgendaTopics(agendaSummary: string | null): string[] {
   if (!agendaSummary) return [];
@@ -114,7 +91,7 @@ function parseAgendaTopics(agendaSummary: string | null): string[] {
 // the next meeting regardless of its stale status.
 export function queryNextUpcomingMeeting(
   db: ReturnType<typeof getDb>,
-  today: string = new Date().toISOString().slice(0, 10)
+  today: string = todayInCityTimezone()
 ): (MeetingRow & { agenda_summary: string | null }) | undefined {
   return db.prepare(`
     SELECT * FROM meetings

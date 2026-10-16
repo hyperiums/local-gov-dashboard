@@ -1,0 +1,35 @@
+{
+  "@odata.context": "https://flowerybranchga.api.civicclerk.com/v1/$metadata#Events",
+  "value": [
+    {
+      "id": 86,
+      "eventName": "City Council Meeting",
+      "eventDate": "2026-10-15T18:00:00Z",
+      "startDateTime": "2026-10-15T18:00:00Z",
+      "categoryName": "City Council",
+      "isPublished": "Published",
+      "isDeleted": false,
+      "hasAgenda": true,
+      "agendaId": 202,
+      "publishedFiles": [
+        { "type": "Agenda", "name": "October 15, 2026 Revised (2) Agenda ", "url": "stream/FLOWERYBRANCHGA/578f2522-b10c-4941-91e5-d6229dd871d2.pdf", "fileType": 1 },
+        { "type": "Agenda Packet", "name": "October 15, 2026 Revised (2) Agenda Packet", "url": "stream/FLOWERYBRANCHGA/7b3aee70-be95-4416-906e-7f7b0afa173b.pdf", "fileType": 2 }
+      ]
+    },
+    {
+      "id": 281,
+      "eventName": "October 17, 2026 Special Called City Council Meeting",
+      "eventDate": "2026-10-17T09:00:00Z",
+      "startDateTime": "2026-10-17T09:00:00Z",
+      "categoryName": "City Council",
+      "isPublished": "Published",
+      "isDeleted": false,
+      "hasAgenda": true,
+      "agendaId": 206,
+      "publishedFiles": [
+        { "type": "Agenda", "name": "October 17, 2026 Special Called Meeting Agenda ", "url": "stream/FLOWERYBRANCHGA/86efa525-2518-4861-aa0a-081858379f63.pdf", "fileType": 1 },
+        { "type": "Agenda Packet", "name": "October 17, 2026 Special Called Meeting Agenda Packet", "url": "stream/FLOWERYBRANCHGA/383def48-8e59-4b7e-b214-ef5ea778c853.pdf", "fileType": 2 }
+      ]
+    }
+  ]
+}

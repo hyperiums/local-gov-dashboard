@@ -3,6 +3,7 @@ import path from 'path';
 import { cityName } from './city-config-client';
 import { normalizeAction, DORMANT_AFTER_DAYS } from '@/components/ordinances/types';
 import { classifyReading } from './ordinanceRefs';
+import { todayInCityTimezone } from './dates';
 
 // Derive database name from city name (e.g., "Flowery Branch" -> "flowery-branch.db")
 const dbSlug = cityName.toLowerCase().replace(/\s+/g, '-');
@@ -737,7 +738,7 @@ export interface PendingOrdinanceWithProgress {
 // Get pending ordinances with their reading history and next scheduled action
 export function getPendingOrdinancesWithProgress(): PendingOrdinanceWithProgress[] {
   const db = getDb();
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInCityTimezone();
 
   // First, get pending ordinances from the ordinances table
   // Exclude terminal/separate states: adopted, denied, rejected, tabled

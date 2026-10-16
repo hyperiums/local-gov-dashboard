@@ -21,6 +21,7 @@ import {
 } from '@/lib/db';
 import { cityName } from '@/lib/city-config-client';
 import { formatError, extractEventId, type HandlerParams } from './shared';
+import { todayInCityTimezone } from '@/lib/dates';
 
 export async function handleExtractResolutions() {
   // Extract resolutions from agenda items and store in resolutions table
@@ -47,10 +48,10 @@ export async function handleBackfillResolutionOutcomes(params: HandlerParams) {
     FROM meetings m
     JOIN resolutions r ON r.meeting_id = m.id
     WHERE r.outcome_verified = 0
-      AND m.date < date('now')
+      AND m.date < ?
     ORDER BY m.date DESC
     LIMIT ?
-  `).all(limit as number) as { id: string; date: string }[];
+  `).all(todayInCityTimezone(), limit as number) as { id: string; date: string }[];
 
   console.log(`Found ${meetingsWithResolutions.length} meetings with unverified resolutions`);
 

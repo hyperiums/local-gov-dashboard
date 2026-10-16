@@ -82,6 +82,7 @@ The dashboard is configured for your city via `city-config.json` in the project 
     "site": "https://dashboard.example.com",
     "repo": "https://github.com/you/your-fork",
     "civicClerk": "https://yourcity.portal.civicclerk.com",
+    "civicClerkApi": "https://yourcity.api.civicclerk.com",
     "cityWebsite": "https://www.yourcity.gov",
     "municode": "https://library.municode.com/st/your_city",
     "municodeProductId": "12345",

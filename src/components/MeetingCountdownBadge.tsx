@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { daysUntil, todayInCityTimezone } from '@/lib/dates';
 
-// Client-side version of getMeetingCountdown - runs in browser with user's local time
+// Counted from the city's calendar day, not the reader's, so someone reading
+// from another time zone sees the same TODAY/TOMORROW as the server that chose
+// this meeting.
 function getMeetingCountdown(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const meetingDate = new Date(year, month - 1, day);
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  const diffTime = meetingDate.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const diffDays = daysUntil(dateStr, todayInCityTimezone());
 
   if (diffDays === 0) return 'TODAY';
   if (diffDays === 1) return 'TOMORROW';
