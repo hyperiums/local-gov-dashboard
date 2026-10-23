@@ -1,4 +1,4 @@
-FROM node:20-slim AS builder
+FROM node:22.23.4-slim AS builder
 WORKDIR /app
 
 # Toolchain for better-sqlite3's source-build fallback when no prebuilt binary matches the platform.
@@ -24,7 +24,7 @@ ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
 
 RUN npm run build
 
-FROM node:20-slim AS runner
+FROM node:22.23.4-slim AS runner
 WORKDIR /app
 
 # curl is the compose healthcheck; the rest are the system libraries Chromium's headless shell
