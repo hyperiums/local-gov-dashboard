@@ -2,7 +2,7 @@
   "name": "local-gov-dashboard",
   "version": "0.1.0",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.13.0"
   },
   "description": "Open-source civic transparency dashboard for local government data",
   "license": "MIT",

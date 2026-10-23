@@ -18,7 +18,7 @@ Originally built for [Flowery Branch, Georgia](https://flowerybranch.charlesthom
 
 ### Prerequisites
 
-- Node.js 22.12+
+- Node.js 22.13+
 - npm or yarn
 - OpenAI API key (for AI summaries)
 
