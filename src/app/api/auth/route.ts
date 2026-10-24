@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
+import { clientAddress } from '@/lib/client-address';
 
 // Rate limiting: 5 attempts per 15 minutes per IP
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
@@ -43,31 +44,9 @@ function checkRateLimit(ip: string): { allowed: boolean; remainingAttempts: numb
   return { allowed: true, remainingAttempts: MAX_ATTEMPTS - existing.count, resetTime: existing.resetTime };
 }
 
-// Get client IP from request headers
-function getClientIp(headersList: Headers): string {
-  // Check common proxy headers
-  const xForwardedFor = headersList.get('x-forwarded-for');
-  if (xForwardedFor) {
-    // Take the first IP if there are multiple
-    return xForwardedFor.split(',')[0].trim();
-  }
-
-  const xRealIp = headersList.get('x-real-ip');
-  if (xRealIp) {
-    return xRealIp;
-  }
-
-  // Fallback
-  return 'unknown';
-}
-
 export async function POST(request: Request) {
   try {
-    const headersList = await headers();
-    const clientIp = getClientIp(headersList);
-
-    // Check rate limit
-    const rateLimit = checkRateLimit(clientIp);
+    const rateLimit = checkRateLimit(clientAddress(request.headers));
     if (!rateLimit.allowed) {
       const retryAfter = Math.ceil((rateLimit.resetTime - Date.now()) / 1000);
       return NextResponse.json(
