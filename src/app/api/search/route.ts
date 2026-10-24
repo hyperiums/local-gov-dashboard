@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { search, rebuildSearchIndex, getSearchIndexStats } from '@/lib/search';
+import { clientAddress } from '@/lib/client-address';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,10 +40,7 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
 // GET /api/search - Search across all content
 export async function GET(request: Request) {
   try {
-    // Rate limiting
-    const forwarded = request.headers.get('x-forwarded-for');
-    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
-    const rateLimit = checkRateLimit(ip);
+    const rateLimit = checkRateLimit(clientAddress(request.headers));
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
