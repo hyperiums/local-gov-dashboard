@@ -17,7 +17,9 @@ export function clientAddress(headers: Headers): string {
     return forwardedEntries[forwardedEntries.length - 1];
   }
 
-  // Callers with neither header (host-local requests straight to the
-  // container) share one key, as they always have.
+  // Next fills X-Forwarded-For from the socket address when a request has
+  // none, so host-local requests straight to the container arrive with the
+  // Docker gateway's address and share that one key. This is only a
+  // defensive last resort.
   return 'unknown';
 }
