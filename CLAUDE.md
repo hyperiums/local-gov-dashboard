@@ -198,7 +198,7 @@ Strategic tests that prevent regressions are more valuable than high coverage nu
 
 ## Deployment
 
-Production runs via Docker on port 3001 with nginx reverse proxy on `root@45.55.236.77`. Deploy using the local script:
+Production runs via Docker on 127.0.0.1:3001 behind an nginx reverse proxy on `root@45.55.236.77`. The port binds loopback only because Docker's published ports bypass ufw: a bare "3001:3000" was reachable from the internet until 2026-10-23. The cron scrape and the push-*.sh scripts call it from the host, so they are unaffected. Deploy using the local script:
 ```bash
 bash deploy.sh
 ```
