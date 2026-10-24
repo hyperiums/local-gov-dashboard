@@ -209,7 +209,7 @@ data/
 docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
-The app runs on port 3001 by default. Use nginx or similar as a reverse proxy.
+The compose file publishes the app on 127.0.0.1:3001 only, so put nginx or a similar reverse proxy in front of it.
 
 The image runs Next's standalone server (`node server.js`) with only the modules it imports, plus Playwright's Chromium for the scrapers. Pass `ADMIN_SECRET` (at least 16 characters) and `OPENAI_API_KEY` through `.env`, which compose reads with `env_file`. The image itself never contains `.env`.
 
